@@ -67,6 +67,53 @@ function setupSettingsHandlers() {
     }
   });
 
+  // Get backup history (DB records)
+  ipcMain.handle("backup:getHistory", async () => {
+    try {
+      const sql = `
+        SELECT
+          bh.id,
+          bh.backup_file,
+          bh.backup_path,
+          bh.file_size,
+          bh.backup_type,
+          bh.status,
+          bh.created_at,
+          u.full_name AS user_name
+        FROM backup_history bh
+        LEFT JOIN users u ON bh.user_id = u.id
+        ORDER BY bh.created_at DESC
+      `;
+      return await database.query(sql);
+    } catch (error) {
+      logger.error("Error fetching backup history:", error);
+      throw error;
+    }
+  });
+
+  // Get activity logs
+  ipcMain.handle("activityLogs:get", async () => {
+    try {
+      const sql = `
+        SELECT
+          al.id,
+          u.full_name AS user_name,
+          al.action,
+          al.module,
+          al.description,
+          al.ip_address,
+          al.created_at
+        FROM activity_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        ORDER BY al.created_at DESC
+      `;
+      return await database.query(sql);
+    } catch (error) {
+      logger.error("Error fetching activity logs:", error);
+      throw error;
+    }
+  });
+
   // Get last backup date
   ipcMain.handle("backup:getLastDate", async () => {
     try {

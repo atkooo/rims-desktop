@@ -11,6 +11,8 @@ import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
 import ReportsPage from "./views/ReportsPage.vue";
 import SettingsPage from "./views/SettingsPage.vue";
+import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
+import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
 import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
 import ActiveRentalsView from "./views/reports/ActiveRentalsView.vue";
 import DailySalesView from "./views/reports/DailySalesView.vue";
@@ -120,12 +122,12 @@ const routes = [
   {
     path: "/settings/backup-history",
     name: "settings-backup",
-    component: SettingsPage,
+    component: BackupHistoryView,
   },
   {
     path: "/settings/activity-logs",
     name: "settings-activity",
-    component: SettingsPage,
+    component: ActivityLogsView,
   },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
