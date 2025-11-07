@@ -5,5 +5,3 @@ export default function debounce(fn, wait = 250) {
     timeoutId = setTimeout(() => fn.apply(this, args), wait);
   };
 }
-
-

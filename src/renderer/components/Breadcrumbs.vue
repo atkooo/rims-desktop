@@ -22,9 +22,23 @@ export default {
 };
 </script>
 <style>
-.breadcrumbs { color:#64748b; font-size: 12px; margin-bottom: 12px; }
-.breadcrumbs a { color:#475569; text-decoration:none; }
-.breadcrumbs a:hover { color: var(--primary); }
-.breadcrumbs .sep { margin: 0 6px; color:#94a3b8; }
-</style>
+.breadcrumbs {
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
 
+.breadcrumbs a {
+  color: #475569;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  color: var(--primary);
+}
+
+.breadcrumbs .sep {
+  margin: 0 6px;
+  color: #94a3b8;
+}
+</style>

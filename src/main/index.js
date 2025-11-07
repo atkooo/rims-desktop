@@ -1,7 +1,7 @@
-﻿const { app, BrowserWindow, ipcMain } = require('electron');
-const { registerAuthIpc } = require('./auth');
-const { registerDataIpc } = require('./data-ipc');
-const path = require('path');
+﻿const { app, BrowserWindow, ipcMain } = require("electron");
+const { registerAuthIpc } = require("./auth");
+const { registerDataIpc } = require("./data-ipc");
+const path = require("path");
 
 let mainWindow = null;
 
@@ -10,33 +10,35 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
       contextIsolation: false,
     },
   });
 
   // Filter out Autofill related console messages
-  mainWindow.webContents.on('console-message', (event, level, message) => {
-    if (typeof message === 'string' && message.includes('Autofill')) {
+  mainWindow.webContents.on("console-message", (event, level, message) => {
+    if (typeof message === "string" && message.includes("Autofill")) {
       event.preventDefault();
       return;
     }
   });
 
   // Check if we're in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+  if (process.env.NODE_ENV === "development") {
+    mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'dist', 'index.html'));
+    mainWindow.loadFile(
+      path.join(__dirname, "..", "renderer", "dist", "index.html")
+    );
   }
-  
+
   return mainWindow;
 }
 
 // IPC handler untuk focus window
-ipcMain.handle('window:focus', () => {
+ipcMain.handle("window:focus", () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
@@ -46,14 +48,17 @@ ipcMain.handle('window:focus', () => {
 });
 
 app.whenReady().then(async () => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     try {
-      const { default: installExtension, VUEJS3_DEVTOOLS } = require('electron-devtools-installer');
+      const {
+        default: installExtension,
+        VUEJS3_DEVTOOLS,
+      } = require("electron-devtools-installer");
       await installExtension(VUEJS3_DEVTOOLS)
         .then((name) => console.log(`Added Extension: ${name}`))
-        .catch((err) => console.log('An error occurred: ', err));
+        .catch((err) => console.log("An error occurred: ", err));
     } catch (e) {
-      console.log('Vue Devtools failed to install:', e.toString());
+      console.log("Vue Devtools failed to install:", e.toString());
     }
   }
   registerAuthIpc();
@@ -61,10 +66,10 @@ app.whenReady().then(async () => {
   createWindow();
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

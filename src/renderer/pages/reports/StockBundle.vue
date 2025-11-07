@@ -85,11 +85,14 @@ export default {
   border-collapse: collapse;
   margin-top: 16px;
 }
-.stock-table th, .stock-table td {
+
+.stock-table th,
+.stock-table td {
   border: 1px solid #e5e7eb;
   padding: 8px 12px;
   text-align: left;
 }
+
 .stock-table th {
   background: #f3f4f6;
   color: #374151;

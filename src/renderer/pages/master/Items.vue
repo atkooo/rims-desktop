@@ -35,12 +35,12 @@
         </td>
       </tr>
     </Table>
-    <div v-if="filteredItems.length===0" class="mt-16">
+    <div v-if="filteredItems.length === 0" class="mt-16">
       <EmptyState title="Belum ada barang" description="Tambah barang baru untuk memulai." />
     </div>
     <Pagination class="mt-12" v-model:page="page" :total="filteredCount" v-model:pageSize="pageSize" />
 
-    <Modal :show="showForm" @close="showForm=false">
+    <Modal :show="showForm" @close="showForm = false">
       <h3>{{ form.id ? 'Edit Barang' : 'Tambah Barang' }}</h3>
       <div class="form-grid">
         <input v-model="form.code" placeholder="Kode" />
@@ -54,12 +54,12 @@
         <input v-model.number="form.sale_price" type="number" step="0.01" placeholder="Harga jual" />
       </div>
       <div class="actions">
-        <Button variant="secondary" @click="showForm=false">Batal</Button>
+        <Button variant="secondary" @click="showForm = false">Batal</Button>
         <Button @click="save">Simpan</Button>
       </div>
     </Modal>
   </div>
-  
+
 </template>
 
 <script>
@@ -85,11 +85,11 @@ export default {
         { id: 3, name: 'Pernikahan' }
       ],
       items: [
-        { id:1, code:'BA-001', name:'Kebaya Bali', category_id:1, category_name:'Baju Adat', stock_quantity:10, available_quantity:8, rental_price_per_day:75000, sale_price:450000 },
-        { id:2, code:'AK-010', name:'Siger Sunda', category_id:2, category_name:'Aksesoris', stock_quantity:5, available_quantity:2, rental_price_per_day:50000, sale_price:250000 }
+        { id: 1, code: 'BA-001', name: 'Kebaya Bali', category_id: 1, category_name: 'Baju Adat', stock_quantity: 10, available_quantity: 8, rental_price_per_day: 75000, sale_price: 450000 },
+        { id: 2, code: 'AK-010', name: 'Siger Sunda', category_id: 2, category_name: 'Aksesoris', stock_quantity: 5, available_quantity: 2, rental_price_per_day: 50000, sale_price: 250000 }
       ],
       showForm: false,
-      form: { id:null, code:'', name:'', category_id:null, stock_quantity:0, available_quantity:0, rental_price_per_day:0, sale_price:0 }
+      form: { id: null, code: '', name: '', category_id: null, stock_quantity: 0, available_quantity: 0, rental_price_per_day: 0, sale_price: 0 }
     };
   },
   computed: {
@@ -99,15 +99,15 @@ export default {
         .filter(x => (this.onlyAvailable ? x.available_quantity > 0 : true))
         .filter(x => (this.q ? (x.name.toLowerCase().includes(this.q.toLowerCase()) || x.code.toLowerCase().includes(this.q.toLowerCase())) : true));
     },
-    filteredCount(){ return this.filteredList.length; },
-    filteredItems(){
-      const start = (this.page-1)*this.pageSize;
-      return this.filteredList.slice(start, start+this.pageSize);
+    filteredCount() { return this.filteredList.length; },
+    filteredItems() {
+      const start = (this.page - 1) * this.pageSize;
+      return this.filteredList.slice(start, start + this.pageSize);
     }
   },
   methods: {
     formatCurrency,
-    openNew() { this.form = { id:null, code:'', name:'', category_id:null, stock_quantity:0, available_quantity:0, rental_price_per_day:0, sale_price:0 }; this.showForm = true; },
+    openNew() { this.form = { id: null, code: '', name: '', category_id: null, stock_quantity: 0, available_quantity: 0, rental_price_per_day: 0, sale_price: 0 }; this.showForm = true; },
     edit(item) { this.form = { ...item }; this.showForm = true; },
     save() { this.showForm = false; }
   }
@@ -115,7 +115,25 @@ export default {
 </script>
 
 <style>
-.toolbar { display:flex; gap:8px; align-items:center; margin-bottom: 16px; flex-wrap: wrap; }
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0; }
-.actions { display:flex; justify-content:flex-end; gap:8px; margin-top: 16px; }
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
 </style>

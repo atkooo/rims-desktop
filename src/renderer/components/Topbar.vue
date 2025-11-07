@@ -41,7 +41,7 @@ export default {
         if (ipcRenderer) await ipcRenderer.invoke('auth:logout');
         localStorage.removeItem('currentUser');
         this.$router.push('/login');
-      } catch(e) {
+      } catch (e) {
         console.error('Logout error:', e);
         localStorage.removeItem('currentUser');
         this.$router.push('/login');

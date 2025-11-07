@@ -31,20 +31,9 @@
       <div class="field">
         <label for="username">Username</label>
         <div class="input-shell" :class="{ error: fieldErrors.username }">
-          <input
-            id="username"
-            v-model.trim="username"
-            placeholder="contoh: admin01"
-            autocomplete="username"
-            :disabled="loading"
-          />
-          <button
-            v-if="username"
-            type="button"
-            class="ghost-btn"
-            @click="username = ''"
-            aria-label="Hapus username"
-          >
+          <input id="username" v-model.trim="username" placeholder="contoh: admin01" autocomplete="username"
+            :disabled="loading" />
+          <button v-if="username" type="button" class="ghost-btn" @click="username = ''" aria-label="Hapus username">
             Reset
           </button>
         </div>
@@ -53,14 +42,8 @@
       <div class="field">
         <label for="password">Password</label>
         <div class="input-shell" :class="{ error: fieldErrors.password }">
-          <input
-            id="password"
-            :type="showPassword ? 'text' : 'password'"
-            v-model="password"
-            placeholder="Masukkan password"
-            autocomplete="current-password"
-            :disabled="loading"
-          />
+          <input id="password" :type="showPassword ? 'text' : 'password'" v-model="password"
+            placeholder="Masukkan password" autocomplete="current-password" :disabled="loading" />
           <button type="button" class="ghost-btn" @click="togglePassword" :aria-pressed="showPassword">
             {{ showPassword ? 'Sembunyikan' : 'Lihat' }}
           </button>
@@ -232,7 +215,7 @@ export default {
   pointer-events: none;
 }
 
-.login-hero > * {
+.login-hero>* {
   position: relative;
   z-index: 1;
 }
@@ -365,7 +348,7 @@ export default {
   gap: 6px;
 }
 
-.field + .field {
+.field+.field {
   margin-top: 16px;
 }
 
@@ -501,10 +484,12 @@ export default {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.4);
     opacity: 0.6;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
