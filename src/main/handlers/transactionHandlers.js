@@ -8,15 +8,38 @@ function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
     try {
-      const transactions = await database.query(`
-                SELECT t.*, 
-                       GROUP_CONCAT(ti.item_id) as item_ids,
-                       GROUP_CONCAT(ti.quantity) as quantities
-                FROM transactions t
-                LEFT JOIN transaction_items ti ON t.id = ti.transaction_id
-                GROUP BY t.id
-                ORDER BY t.transaction_date DESC
+      // Get rental transactions
+      const rentalTransactions = await database.query(`
+                SELECT 
+                    rt.*,
+                    GROUP_CONCAT(rtd.item_id) as item_ids,
+                    GROUP_CONCAT(rtd.quantity) as quantities,
+                    'rental' as transaction_type
+                FROM rental_transactions rt
+                LEFT JOIN rental_transaction_details rtd ON rt.id = rtd.rental_transaction_id
+                GROUP BY rt.id
             `);
+
+      // Get sales transactions
+      const salesTransactions = await database.query(`
+                SELECT 
+                    st.*,
+                    GROUP_CONCAT(std.item_id) as item_ids,
+                    GROUP_CONCAT(std.quantity) as quantities,
+                    'sale' as transaction_type
+                FROM sales_transactions st
+                LEFT JOIN sales_transaction_details std ON st.id = std.sales_transaction_id
+                GROUP BY st.id
+            `);
+
+      // Combine and sort both types of transactions
+      const transactions = [...rentalTransactions, ...salesTransactions].sort(
+        (a, b) => {
+          const dateA = new Date(a.created_at);
+          const dateB = new Date(b.created_at);
+          return dateB - dateA;
+        }
+      );
       return transactions;
     } catch (error) {
       logger.error("Error fetching transactions:", error);
