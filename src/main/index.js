@@ -23,16 +23,16 @@ function createWindow() {
     },
   });
 
-  mainWindow.webContents.on("console-message", (event, level, message) => {
-    if (typeof message === "string" && message.includes("Autofill")) {
+  mainWindow.webContents.on("console-message", (event) => {
+    const message = typeof event?.message === "string" ? event.message : "";
+
+    if (message.includes("Autofill")) {
       event.preventDefault();
-      return;
     }
   });
 
   if (process.env.NODE_ENV === "development") {
     mainWindow.loadURL("http://localhost:5173");
-    // Automatically show devtools in detached window to simplify debugging
     mainWindow.webContents.once("dom-ready", () => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -69,7 +69,6 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Connect to database before registering IPC handlers
   const database = require("./helpers/database");
   try {
     await database.connect();
