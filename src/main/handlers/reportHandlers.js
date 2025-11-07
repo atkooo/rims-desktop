@@ -30,7 +30,7 @@ function setupReportHandlers() {
       FROM v_items_with_stock
       ORDER BY name ASC
     `,
-    "items with stock"
+    "items with stock",
   );
 
   registerView(
@@ -47,7 +47,7 @@ function setupReportHandlers() {
       FROM v_active_rentals
       ORDER BY rental_date DESC
     `,
-    "active rentals"
+    "active rentals",
   );
 
   registerView(
@@ -60,7 +60,7 @@ function setupReportHandlers() {
       FROM v_daily_sales
       ORDER BY sale_date DESC
     `,
-    "daily sales"
+    "daily sales",
   );
 
   registerView(
@@ -74,7 +74,7 @@ function setupReportHandlers() {
       FROM v_stock_alerts
       ORDER BY stock_quantity ASC
     `,
-    "stock alerts"
+    "stock alerts",
   );
 
   registerView(
@@ -86,7 +86,7 @@ function setupReportHandlers() {
       FROM v_top_customers
       ORDER BY total_transactions DESC
     `,
-    "top customers"
+    "top customers",
   );
 }
 

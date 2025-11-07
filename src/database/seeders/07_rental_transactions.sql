@@ -1,0 +1,99 @@
+INSERT INTO rental_transactions (
+  transaction_code,
+  customer_id,
+  user_id,
+  rental_date,
+  planned_return_date,
+  actual_return_date,
+  total_days,
+  subtotal,
+  deposit,
+  late_fee,
+  discount,
+  total_amount,
+  payment_method,
+  payment_status,
+  paid_amount,
+  status,
+  notes
+)
+VALUES
+('RNT-2025-0001',
+  (SELECT id FROM customers WHERE code = 'CUS-001'),
+  (SELECT id FROM users WHERE username = 'admin'),
+  '2025-10-15',
+  '2025-10-18',
+  '2025-10-18',
+  3,
+  450.00,
+  150.00,
+  0.00,
+  50.00,
+  550.00,
+  'transfer',
+  'paid',
+  550.00,
+  'returned',
+  'Full wedding set rental'),
+('RNT-2025-0002',
+  (SELECT id FROM customers WHERE code = 'CUS-002'),
+  (SELECT id FROM users WHERE username = 'staff'),
+  '2025-10-20',
+  '2025-10-22',
+  NULL,
+  2,
+  220.00,
+  100.00,
+  0.00,
+  0.00,
+  320.00,
+  'cash',
+  'partial',
+  150.00,
+  'active',
+  'Awaiting fitting schedule')
+ON CONFLICT(transaction_code) DO UPDATE SET
+  customer_id = excluded.customer_id,
+  user_id = excluded.user_id,
+  rental_date = excluded.rental_date,
+  planned_return_date = excluded.planned_return_date,
+  actual_return_date = excluded.actual_return_date,
+  total_days = excluded.total_days,
+  subtotal = excluded.subtotal,
+  deposit = excluded.deposit,
+  late_fee = excluded.late_fee,
+  discount = excluded.discount,
+  total_amount = excluded.total_amount,
+  payment_method = excluded.payment_method,
+  payment_status = excluded.payment_status,
+  paid_amount = excluded.paid_amount,
+  status = excluded.status,
+  notes = excluded.notes,
+  updated_at = CURRENT_TIMESTAMP;
+
+DELETE FROM rental_transaction_details
+WHERE rental_transaction_id IN (
+  SELECT id FROM rental_transactions
+  WHERE transaction_code IN ('RNT-2025-0001', 'RNT-2025-0002')
+);
+
+INSERT INTO rental_transaction_details (
+  rental_transaction_id,
+  item_id,
+  quantity,
+  rental_price,
+  subtotal,
+  is_returned,
+  return_condition,
+  notes
+)
+VALUES
+((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0001'),
+  (SELECT id FROM items WHERE code = 'ITM-001'),
+  1, 85.00, 255.00, 1, 'good', 'Dry cleaned after use'),
+((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0001'),
+  (SELECT id FROM items WHERE code = 'ITM-002'),
+  1, 65.00, 195.00, 1, 'good', 'Minor alterations completed'),
+((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0002'),
+  (SELECT id FROM items WHERE code = 'ITM-003'),
+  1, 110.00, 220.00, 0, NULL, 'Deliver to hotel lobby on 20 Oct');

@@ -6,7 +6,8 @@ function setupTransactionViewHandlers() {
   const register = (channel, sqlBuilder, label) => {
     ipcMain.handle(channel, async () => {
       try {
-        const sql = typeof sqlBuilder === "function" ? sqlBuilder() : sqlBuilder;
+        const sql =
+          typeof sqlBuilder === "function" ? sqlBuilder() : sqlBuilder;
         return await database.query(sql);
       } catch (error) {
         logger.error(`Error fetching ${label}:`, error);
@@ -37,7 +38,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN users u ON rt.user_id = u.id
       ORDER BY rt.rental_date DESC
     `,
-    "rental transactions"
+    "rental transactions",
   );
 
   register(
@@ -58,7 +59,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN items i ON rd.item_id = i.id
       ORDER BY rd.id DESC
     `,
-    "rental transaction details"
+    "rental transaction details",
   );
 
   register(
@@ -80,7 +81,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN users u ON st.user_id = u.id
       ORDER BY st.sale_date DESC
     `,
-    "sales transactions"
+    "sales transactions",
   );
 
   register(
@@ -99,7 +100,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN items i ON sd.item_id = i.id
       ORDER BY sd.id DESC
     `,
-    "sales transaction details"
+    "sales transaction details",
   );
 
   register(
@@ -125,7 +126,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN items i ON b.item_id = i.id
       ORDER BY b.booking_date DESC
     `,
-    "bookings"
+    "bookings",
   );
 
   register(
@@ -148,7 +149,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN users u ON sm.user_id = u.id
       ORDER BY sm.created_at DESC
     `,
-    "stock movements"
+    "stock movements",
   );
 
   register(
@@ -168,7 +169,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN users u ON p.user_id = u.id
       ORDER BY p.payment_date DESC
     `,
-    "payments"
+    "payments",
   );
 }
 

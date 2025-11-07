@@ -14,7 +14,9 @@
     "format": "prettier --write \"src/**/*.{js,vue}\"",
     "backup-db": "node scripts/backup-db.js",
     "db:migrate": "node src/database/migrate.js",
-    "db:fresh": "node scripts/reset-db.js && node src/database/migrate.js"
+    "db:seed": "node src/database/seed.js",
+    "db:fresh": "node scripts/reset-db.js && node src/database/migrate.js",
+    "db:fresh-seed": "npm run db:fresh && npm run db:seed"
   },
   "keywords": [],
   "author": "",

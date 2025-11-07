@@ -33,7 +33,7 @@ export const useTransactionStore = defineStore("transactions", {
         .filter(
           (t) =>
             t.transactionDate.startsWith(today) &&
-            t.status === TRANSACTION_STATUS.COMPLETED
+            t.status === TRANSACTION_STATUS.COMPLETED,
         )
         .reduce((sum, t) => sum + t.totalAmount, 0);
     },
@@ -60,7 +60,7 @@ export const useTransactionStore = defineStore("transactions", {
       try {
         const newTransaction = await ipcRenderer.invoke(
           "transactions:create",
-          transactionData
+          transactionData,
         );
         this.transactions.unshift(newTransaction);
         this.error = null;

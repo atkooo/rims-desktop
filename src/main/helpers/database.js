@@ -138,7 +138,7 @@ class Database {
             return;
           }
           resolve(Boolean(row));
-        }
+        },
       );
     });
   }

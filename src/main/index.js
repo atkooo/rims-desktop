@@ -43,7 +43,7 @@ function createWindow() {
     });
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, "..", "renderer", "dist", "index.html")
+      path.join(__dirname, "..", "renderer", "dist", "index.html"),
     );
   }
 

@@ -50,7 +50,7 @@ function setupTransactionHandlers() {
           const dateA = new Date(a.created_at);
           const dateB = new Date(b.created_at);
           return dateB - dateA;
-        }
+        },
       );
       return transactions;
     } catch (error) {
@@ -104,7 +104,7 @@ function setupTransactionHandlers() {
               transactionData.paidAmount || 0,
               "active",
               transactionData.notes,
-            ]
+            ],
           );
 
           // Insert rental transaction items
@@ -120,13 +120,13 @@ function setupTransactionHandlers() {
                 item.quantity,
                 item.rentalPrice,
                 item.subtotal,
-              ]
+              ],
             );
 
             // Update available quantity for the item
             await database.execute(
               "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
-              [item.quantity, item.itemId]
+              [item.quantity, item.itemId],
             );
           }
         } else {
@@ -150,7 +150,7 @@ function setupTransactionHandlers() {
               transactionData.paymentStatus || "paid",
               transactionData.paidAmount || transactionData.totalAmount,
               transactionData.notes,
-            ]
+            ],
           );
 
           // Insert sales transaction items
@@ -166,13 +166,13 @@ function setupTransactionHandlers() {
                 item.quantity,
                 item.salePrice,
                 item.subtotal,
-              ]
+              ],
             );
 
             // Update available quantity for the item
             await database.execute(
               "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
-              [item.quantity, item.itemId]
+              [item.quantity, item.itemId],
             );
           }
         }
@@ -184,7 +184,7 @@ function setupTransactionHandlers() {
           transactionData.type === "RENTAL"
             ? "SELECT * FROM rental_transactions WHERE id = ?"
             : "SELECT * FROM sales_transactions WHERE id = ?",
-          [result.id]
+          [result.id],
         );
         return newTransaction;
       } catch (error) {
@@ -213,7 +213,7 @@ function setupTransactionHandlers() {
           // Update rental transaction status
           await database.execute(
             "UPDATE rental_transactions SET status = ? WHERE id = ?",
-            [status, transactionId]
+            [status, transactionId],
           );
 
           // If returned, update item quantities and mark items as returned
@@ -222,20 +222,20 @@ function setupTransactionHandlers() {
               `SELECT rtd.item_id, rtd.quantity, rtd.id as detail_id
                FROM rental_transaction_details rtd
                WHERE rtd.rental_transaction_id = ? AND rtd.is_returned = 0`,
-              [transactionId]
+              [transactionId],
             );
 
             for (const item of rentalItems) {
               // Mark item as returned in rental_transaction_details
               await database.execute(
                 "UPDATE rental_transaction_details SET is_returned = 1, return_condition = ? WHERE id = ?",
-                ["good", item.detail_id]
+                ["good", item.detail_id],
               );
 
               // Restore available quantity
               await database.execute(
                 "UPDATE items SET available_quantity = available_quantity + ? WHERE id = ?",
-                [item.quantity, item.item_id]
+                [item.quantity, item.item_id],
               );
             }
           }
@@ -243,7 +243,7 @@ function setupTransactionHandlers() {
           // Update sales transaction status
           await database.execute(
             "UPDATE sales_transactions SET payment_status = ? WHERE id = ?",
-            [status, transactionId]
+            [status, transactionId],
           );
         }
 

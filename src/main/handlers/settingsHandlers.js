@@ -123,7 +123,7 @@ function setupSettingsHandlers() {
       if (backups.length === 0) return null;
 
       const stats = await Promise.all(
-        backups.map((file) => fs.stat(path.join(BACKUPS_DIR, file)))
+        backups.map((file) => fs.stat(path.join(BACKUPS_DIR, file))),
       );
 
       const latestStat = stats.reduce((latest, current) => {

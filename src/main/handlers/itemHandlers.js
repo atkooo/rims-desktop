@@ -9,7 +9,7 @@ function setupItemHandlers() {
   ipcMain.handle("items:getAll", async () => {
     try {
       const items = await database.query(
-        "SELECT * FROM items ORDER BY id DESC"
+        "SELECT * FROM items ORDER BY id DESC",
       );
       return items;
     } catch (error) {
@@ -37,13 +37,13 @@ function setupItemHandlers() {
           itemData.price,
           itemData.type,
           "AVAILABLE",
-        ]
+        ],
       );
 
       // Return item yang baru dibuat
       const newItem = await database.queryOne(
         "SELECT * FROM items WHERE id = ?",
-        [result.id]
+        [result.id],
       );
       return newItem;
     } catch (error) {
@@ -72,7 +72,7 @@ function setupItemHandlers() {
       // Return updated item
       const updatedItem = await database.queryOne(
         "SELECT * FROM items WHERE id = ?",
-        [id]
+        [id],
       );
       return updatedItem;
     } catch (error) {

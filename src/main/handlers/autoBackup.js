@@ -27,7 +27,7 @@ function scheduleBackup() {
     now.getDate() + 1, // besok
     0, // jam 00
     0, // menit 00
-    0 // detik 00
+    0, // detik 00
   );
 
   const msUntilMidnight = night.getTime() - now.getTime();
@@ -45,7 +45,7 @@ async function createBackup() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFile = path.join(
       BACKUPS_DIR,
-      `auto-backup-${timestamp}.sqlite`
+      `auto-backup-${timestamp}.sqlite`,
     );
 
     // Ensure backup directory exists
@@ -97,7 +97,7 @@ async function cleanOldBackups() {
       autoBackups.map(async (backup) => ({
         ...backup,
         time: await backup.time,
-      }))
+      })),
     );
 
     // Sort by time (newest first) and remove old backups

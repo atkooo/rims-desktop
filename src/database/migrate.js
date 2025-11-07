@@ -64,7 +64,7 @@ async function getExecutedMigrations() {
 async function getCurrentBatch() {
   try {
     const result = await getAsync(
-      "SELECT COALESCE(MAX(batch), 0) as batch FROM migrations"
+      "SELECT COALESCE(MAX(batch), 0) as batch FROM migrations",
     );
     return result.batch;
   } catch (error) {
@@ -122,7 +122,7 @@ async function runMigrations() {
       // Record the migration
       await runAsync(
         "INSERT INTO migrations (migration, batch) VALUES (?, ?)",
-        [file, newBatch]
+        [file, newBatch],
       );
 
       console.log(`Completed migration: ${file}`);
@@ -131,7 +131,7 @@ async function runMigrations() {
     // Commit transaction
     await runAsync("COMMIT");
     console.log(
-      `Batch ${newBatch}: ${pendingFiles.length} migrations completed successfully`
+      `Batch ${newBatch}: ${pendingFiles.length} migrations completed successfully`,
     );
   } catch (error) {
     // Rollback on error

@@ -6,7 +6,8 @@ function setupMasterDataViewHandlers() {
   const register = (channel, queryBuilder, label) => {
     ipcMain.handle(channel, async () => {
       try {
-        const sql = typeof queryBuilder === "function" ? queryBuilder() : queryBuilder;
+        const sql =
+          typeof queryBuilder === "function" ? queryBuilder() : queryBuilder;
         return await database.query(sql);
       } catch (error) {
         logger.error(`Error fetching ${label}:`, error);
@@ -34,7 +35,7 @@ function setupMasterDataViewHandlers() {
       FROM accessories
       ORDER BY name ASC
     `,
-    "accessories"
+    "accessories",
   );
 
   register(
@@ -54,7 +55,7 @@ function setupMasterDataViewHandlers() {
       FROM bundles
       ORDER BY name ASC
     `,
-    "bundles"
+    "bundles",
   );
 
   register(
@@ -74,7 +75,7 @@ function setupMasterDataViewHandlers() {
       LEFT JOIN accessories a ON bd.accessory_id = a.id
       ORDER BY b.name ASC, bd.id ASC
     `,
-    "bundle details"
+    "bundle details",
   );
 
   register(
@@ -92,7 +93,7 @@ function setupMasterDataViewHandlers() {
       FROM customers
       ORDER BY name ASC
     `,
-    "customers"
+    "customers",
   );
 
   register(
@@ -105,7 +106,7 @@ function setupMasterDataViewHandlers() {
       FROM roles
       ORDER BY name ASC
     `,
-    "roles"
+    "roles",
   );
 
   register(
@@ -124,7 +125,7 @@ function setupMasterDataViewHandlers() {
       LEFT JOIN roles r ON u.role_id = r.id
       ORDER BY u.full_name ASC
     `,
-    "users"
+    "users",
   );
 }
 

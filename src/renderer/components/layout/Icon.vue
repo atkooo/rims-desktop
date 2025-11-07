@@ -1,4 +1,4 @@
 <script>
-import RootIcon from '../Icon.vue'
-export default RootIcon
+import RootIcon from "../Icon.vue";
+export default RootIcon;
 </script>

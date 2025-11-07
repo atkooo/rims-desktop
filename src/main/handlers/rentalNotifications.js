@@ -31,7 +31,7 @@ async function checkOverdueRentals() {
             AND t.expected_return_date <= ?
             GROUP BY t.id
         `,
-      [today]
+      [today],
     );
 
     // Send notifications for each overdue rental

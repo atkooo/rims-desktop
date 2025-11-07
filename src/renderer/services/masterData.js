@@ -1,25 +1,25 @@
 import { ipcRenderer } from "@/services/ipc";
 
 export function fetchAccessories() {
-    return ipcRenderer.invoke("master:getAccessories");
+  return ipcRenderer.invoke("master:getAccessories");
 }
 
 export function fetchBundles() {
-    return ipcRenderer.invoke("master:getBundles");
+  return ipcRenderer.invoke("master:getBundles");
 }
 
 export function fetchBundleDetails() {
-    return ipcRenderer.invoke("master:getBundleDetails");
+  return ipcRenderer.invoke("master:getBundleDetails");
 }
 
 export function fetchCustomers() {
-    return ipcRenderer.invoke("master:getCustomers");
+  return ipcRenderer.invoke("master:getCustomers");
 }
 
 export function fetchRoles() {
-    return ipcRenderer.invoke("master:getRoles");
+  return ipcRenderer.invoke("master:getRoles");
 }
 
 export function fetchUsers() {
-    return ipcRenderer.invoke("master:getUsers");
+  return ipcRenderer.invoke("master:getUsers");
 }
