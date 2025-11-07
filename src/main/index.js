@@ -6,6 +6,9 @@ const setupItemHandlers = require("./handlers/itemHandlers");
 const setupTransactionHandlers = require("./handlers/transactionHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
+const setupReportHandlers = require("./handlers/reportHandlers");
+const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers");
+const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
@@ -82,6 +85,12 @@ app.whenReady().then(async () => {
   registerDataIpc();
   setupAutoBackup();
   setupCategoryHandlers();
+  setupItemHandlers();
+  setupTransactionHandlers();
+  setupSettingsHandlers();
+  setupReportHandlers();
+  setupMasterDataViewHandlers();
+  setupTransactionViewHandlers();
   createWindow();
 });
 

@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTransactionStore } from '../store/transactions'
 import AppDialog from './AppDialog.vue'
 import FormInput from './FormInput.vue'

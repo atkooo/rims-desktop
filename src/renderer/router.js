@@ -2,6 +2,27 @@ import { createRouter, createWebHashHistory } from "vue-router";
 import Dashboard from "./views/Dashboard.vue";
 import Login from "./views/Login.vue";
 import Categories from "./views/master/Categories.vue";
+import AccessoriesView from "./views/master/AccessoriesView.vue";
+import ItemsPage from "./views/ItemsPage.vue";
+import BundlesView from "./views/master/BundlesView.vue";
+import BundlesDetailView from "./views/master/BundlesDetailView.vue";
+import CustomersView from "./views/master/CustomersView.vue";
+import RolesView from "./views/master/RolesView.vue";
+import UsersView from "./views/master/UsersView.vue";
+import ReportsPage from "./views/ReportsPage.vue";
+import SettingsPage from "./views/SettingsPage.vue";
+import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
+import ActiveRentalsView from "./views/reports/ActiveRentalsView.vue";
+import DailySalesView from "./views/reports/DailySalesView.vue";
+import StockAlertsView from "./views/reports/StockAlertsView.vue";
+import TopCustomersView from "./views/reports/TopCustomersView.vue";
+import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
+import RentalDetailsView from "./views/transaction/RentalDetailsView.vue";
+import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
+import SalesDetailsView from "./views/transaction/SalesDetailsView.vue";
+import BookingsView from "./views/transaction/BookingsView.vue";
+import StockMovementsView from "./views/transaction/StockMovementsView.vue";
+import PaymentsView from "./views/transaction/PaymentsView.vue";
 import { getCurrentUser } from "./services/auth.js";
 
 const routes = [
@@ -9,7 +30,103 @@ const routes = [
   { path: "/login", name: "login", component: Login },
   // Master Data
   { path: "/master/categories", name: "categories", component: Categories },
-  // Fallback route
+  {
+    path: "/master/accessories",
+    name: "accessories",
+    component: AccessoriesView,
+  },
+  { path: "/master/items", name: "items", component: ItemsPage },
+  { path: "/master/bundles", name: "bundles", component: BundlesView },
+  {
+    path: "/master/bundle-details",
+    name: "bundle-details",
+    component: BundlesDetailView,
+  },
+  { path: "/master/customers", name: "customers", component: CustomersView },
+  { path: "/master/roles", name: "roles", component: RolesView },
+  { path: "/master/users", name: "users", component: UsersView },
+  // Transactions (read-only views)
+  {
+    path: "/transactions/rentals",
+    name: "transactions-rentals",
+    component: RentalTransactionsView,
+  },
+  {
+    path: "/transactions/rental-details",
+    name: "transactions-rental-details",
+    component: RentalDetailsView,
+  },
+  {
+    path: "/transactions/sales",
+    name: "transactions-sales",
+    component: SalesTransactionsView,
+  },
+  {
+    path: "/transactions/sales-details",
+    name: "transactions-sales-details",
+    component: SalesDetailsView,
+  },
+  {
+    path: "/transactions/bookings",
+    name: "transactions-bookings",
+    component: BookingsView,
+  },
+  {
+    path: "/transactions/stock-movements",
+    name: "transactions-stock-movements",
+    component: StockMovementsView,
+  },
+  {
+    path: "/transactions/payments",
+    name: "transactions-payments",
+    component: PaymentsView,
+  },
+  // Reports
+  {
+    path: "/reports",
+    name: "reports",
+    component: ReportsPage,
+  },
+  {
+    path: "/reports/items-with-stock",
+    name: "reports-items-stock",
+    component: ItemsWithStockView,
+  },
+  {
+    path: "/reports/active-rentals",
+    name: "reports-active-rentals",
+    component: ActiveRentalsView,
+  },
+  {
+    path: "/reports/daily-sales",
+    name: "reports-daily-sales",
+    component: DailySalesView,
+  },
+  {
+    path: "/reports/stock-alerts",
+    name: "reports-stock-alerts",
+    component: StockAlertsView,
+  },
+  {
+    path: "/reports/top-customers",
+    name: "reports-top-customers",
+    component: TopCustomersView,
+  },
+  {
+    path: "/settings/system",
+    name: "settings-system",
+    component: SettingsPage,
+  },
+  {
+    path: "/settings/backup-history",
+    name: "settings-backup",
+    component: SettingsPage,
+  },
+  {
+    path: "/settings/activity-logs",
+    name: "settings-activity",
+    component: SettingsPage,
+  },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 

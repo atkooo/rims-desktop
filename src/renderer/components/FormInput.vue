@@ -1,6 +1,6 @@
 <template>
     <div class="form-group">
-        <label :for="id" class="form-label">{{ label }}</label>
+        <label v-if="label" :for="id" class="form-label">{{ label }}</label>
         <input :id="id" :type="type" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"
             class="form-input" :class="{ 'is-invalid': !!error }" v-bind="$attrs" />
         <div v-if="error" class="invalid-feedback">
@@ -19,7 +19,7 @@ export default {
         },
         label: {
             type: String,
-            required: true
+            default: ''
         },
         modelValue: {
             type: [String, Number],

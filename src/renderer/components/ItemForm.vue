@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useItemStore } from '../store/items'
 import { ITEM_TYPE } from '../../shared/constants'
 import AppDialog from './AppDialog.vue'
