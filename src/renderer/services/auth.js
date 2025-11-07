@@ -23,7 +23,8 @@ function writeStoredUser(user) {
 }
 
 export async function login(username, password) {
-  if (!username || !password) throw new Error("Username dan password wajib diisi");
+  if (!username || !password)
+    throw new Error("Username dan password wajib diisi");
   if (!isIpcAvailable()) throw new Error("IPC Electron tidak tersedia");
 
   const user = await invoke("auth:login", { username, password });
@@ -58,4 +59,3 @@ export async function getCurrentUser(forceRefresh = false) {
 export function getStoredUser() {
   return readStoredUser();
 }
-

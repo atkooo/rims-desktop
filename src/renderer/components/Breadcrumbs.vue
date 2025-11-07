@@ -1,7 +1,9 @@
 <template>
   <nav class="breadcrumbs">
     <span v-for="(c, idx) in crumbs" :key="idx">
-      <router-link v-if="idx < crumbs.length - 1" :to="c.to">{{ c.label }}</router-link>
+      <router-link v-if="idx < crumbs.length - 1" :to="c.to">{{
+        c.label
+      }}</router-link>
       <span v-else>{{ c.label }}</span>
       <span v-if="idx < crumbs.length - 1" class="sep">/</span>
     </span>
@@ -11,18 +13,18 @@
 export default {
   computed: {
     crumbs() {
-      const path = this.$route.path.split('/').filter(Boolean);
+      const path = this.$route.path.split("/").filter(Boolean);
       const acc = [];
       return path.map((segment, i) => {
-        acc.push('/' + segment);
+        acc.push("/" + segment);
         const label = segment
-          .split('-')
+          .split("-")
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-        return { label, to: acc.join('') };
+          .join(" ");
+        return { label, to: acc.join("") };
       });
-    }
-  }
+    },
+  },
 };
 </script>
 <style>

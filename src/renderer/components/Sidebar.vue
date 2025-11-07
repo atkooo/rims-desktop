@@ -20,61 +20,109 @@
   </aside>
 </template>
 <script>
-import Icon from './Icon.vue';
+import Icon from "./Icon.vue";
 
 const groups = [
   {
-    title: 'Master Data',
+    title: "Master Data",
     items: [
-      { to: '/master/categories', label: 'Kategori', icon: 'tag' },
-      { to: '/master/accessories', label: 'Aksesoris', icon: 'box' },
-      { to: '/master/items', label: 'Barang', icon: 'box' },
-      { to: '/master/bundles', label: 'Paket', icon: 'clipboard' },
-      { to: '/master/bundle-details', label: 'Detail Paket', icon: 'clipboard' },
-      { to: '/master/customers', label: 'Pelanggan', icon: 'users' },
-      { to: '/master/roles', label: 'Peran', icon: 'user' },
-      { to: '/master/users', label: 'Pengguna', icon: 'user' }
-    ]
+      { to: "/master/categories", label: "Kategori", icon: "tag" },
+      { to: "/master/accessories", label: "Aksesoris", icon: "box" },
+      { to: "/master/items", label: "Barang", icon: "box" },
+      { to: "/master/bundles", label: "Paket", icon: "clipboard" },
+      {
+        to: "/master/bundle-details",
+        label: "Detail Paket",
+        icon: "clipboard",
+      },
+      { to: "/master/customers", label: "Pelanggan", icon: "users" },
+      { to: "/master/roles", label: "Peran", icon: "user" },
+      { to: "/master/users", label: "Pengguna", icon: "user" },
+    ],
   },
   {
-    title: 'Transaksi',
+    title: "Transaksi",
     items: [
-      { to: '/transactions/rentals', label: 'Transaksi Sewa', icon: 'key' },
-      { to: '/transactions/rental-details', label: 'Detail Sewa', icon: 'clipboard' },
-      { to: '/transactions/sales', label: 'Transaksi Penjualan', icon: 'money' },
-      { to: '/transactions/sales-details', label: 'Detail Penjualan', icon: 'file' },
-      { to: '/transactions/bookings', label: 'Booking Barang', icon: 'clipboard' },
-      { to: '/transactions/stock-movements', label: 'Pergerakan Stok', icon: 'chart-bar' },
-      { to: '/transactions/payments', label: 'Pembayaran', icon: 'money' }
-    ]
+      { to: "/transactions/rentals", label: "Transaksi Sewa", icon: "key" },
+      {
+        to: "/transactions/rental-details",
+        label: "Detail Sewa",
+        icon: "clipboard",
+      },
+      {
+        to: "/transactions/sales",
+        label: "Transaksi Penjualan",
+        icon: "money",
+      },
+      {
+        to: "/transactions/sales-details",
+        label: "Detail Penjualan",
+        icon: "file",
+      },
+      {
+        to: "/transactions/bookings",
+        label: "Booking Barang",
+        icon: "clipboard",
+      },
+      {
+        to: "/transactions/stock-movements",
+        label: "Pergerakan Stok",
+        icon: "chart-bar",
+      },
+      { to: "/transactions/payments", label: "Pembayaran", icon: "money" },
+    ],
   },
   {
-    title: 'Laporan & View',
+    title: "Laporan & View",
     items: [
-      { to: '/reports/items-with-stock', label: 'Item dengan Stok', icon: 'chart-bar' },
-      { to: '/reports/active-rentals', label: 'Sewa Aktif', icon: 'chart-line' },
-      { to: '/reports/daily-sales', label: 'Penjualan Harian', icon: 'chart-line' },
-      { to: '/reports/stock-alerts', label: 'Peringatan Stok', icon: 'chart-bar' },
-      { to: '/reports/top-customers', label: 'Pelanggan Teratas', icon: 'users' }
-    ]
+      {
+        to: "/reports/items-with-stock",
+        label: "Item dengan Stok",
+        icon: "chart-bar",
+      },
+      {
+        to: "/reports/active-rentals",
+        label: "Sewa Aktif",
+        icon: "chart-line",
+      },
+      {
+        to: "/reports/daily-sales",
+        label: "Penjualan Harian",
+        icon: "chart-line",
+      },
+      {
+        to: "/reports/stock-alerts",
+        label: "Peringatan Stok",
+        icon: "chart-bar",
+      },
+      {
+        to: "/reports/top-customers",
+        label: "Pelanggan Teratas",
+        icon: "users",
+      },
+    ],
   },
   {
-    title: 'Pengaturan',
+    title: "Pengaturan",
     items: [
-      { to: '/settings/system', label: 'Pengaturan Sistem', icon: 'settings' },
-      { to: '/settings/backup-history', label: 'Riwayat Backup', icon: 'save' },
-      { to: '/settings/activity-logs', label: 'Log Aktivitas', icon: 'clipboard' }
-    ]
-  }
+      { to: "/settings/system", label: "Pengaturan Sistem", icon: "settings" },
+      { to: "/settings/backup-history", label: "Riwayat Backup", icon: "save" },
+      {
+        to: "/settings/activity-logs",
+        label: "Log Aktivitas",
+        icon: "clipboard",
+      },
+    ],
+  },
 ];
 
 export default {
   components: { Icon },
   data() {
     return {
-      groups
+      groups,
     };
-  }
+  },
 };
 </script>
 <style>
@@ -89,7 +137,7 @@ export default {
 .sidebar h3 {
   margin: 0 0 10px;
   font-size: 18px;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
   color: #111827;
 }
 
@@ -105,7 +153,9 @@ export default {
   padding: 8px 10px;
   border-radius: 8px;
   text-decoration: none;
-  transition: background .15s, color .15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .sidebar a:hover {
@@ -137,6 +187,6 @@ export default {
   font-size: 12px;
   margin: 10px 6px 6px;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
 }
 </style>

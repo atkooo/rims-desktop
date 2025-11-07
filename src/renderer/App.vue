@@ -15,9 +15,9 @@
 </template>
 
 <script>
-import Sidebar from './components/Sidebar.vue';
-import Topbar from './components/Topbar.vue';
-import Breadcrumbs from './components/Breadcrumbs.vue';
+import Sidebar from "./components/Sidebar.vue";
+import Topbar from "./components/Topbar.vue";
+import Breadcrumbs from "./components/Breadcrumbs.vue";
 export default { components: { Sidebar, Topbar, Breadcrumbs } };
 </script>
 

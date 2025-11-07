@@ -16,7 +16,7 @@ function verifyPassword(inputPassword, storedHash) {
     const derived = crypto.scryptSync(inputPassword, salt, 32).toString("hex");
     return crypto.timingSafeEqual(
       Buffer.from(hash, "hex"),
-      Buffer.from(derived, "hex")
+      Buffer.from(derived, "hex"),
     );
   }
   if (storedHash.startsWith("sha256:")) {
@@ -26,7 +26,7 @@ function verifyPassword(inputPassword, storedHash) {
       .digest("hex");
     return crypto.timingSafeEqual(
       Buffer.from(storedHash.slice(7), "hex"),
-      Buffer.from(hash, "hex")
+      Buffer.from(hash, "hex"),
     );
   }
   return false;
@@ -44,7 +44,7 @@ function registerAuthIpc() {
        LEFT JOIN roles r ON r.id = u.role_id
        WHERE u.username = ?
        LIMIT 1`,
-      [username]
+      [username],
     );
 
     if (!user || !user.is_active)
@@ -54,7 +54,7 @@ function registerAuthIpc() {
 
     await runAsync(
       "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
-      [user.id]
+      [user.id],
     );
     currentUser = {
       id: user.id,
@@ -78,7 +78,7 @@ function registerAuthIpc() {
     const hash = scryptHash(newPassword);
     getDb()
       .prepare(
-        "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
       )
       .run(hash, userId);
     return true;

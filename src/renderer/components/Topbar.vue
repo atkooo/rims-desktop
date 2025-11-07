@@ -5,30 +5,34 @@
     </div>
     <div class="right">
       <span class="role" v-if="currentUser">{{ currentUser.role }}</span>
-      <div class="user">{{ currentUser?.full_name || 'Pengguna' }}</div>
+      <div class="user">{{ currentUser?.full_name || "Pengguna" }}</div>
       <button class="logout-btn" @click="logout">Keluar</button>
     </div>
   </header>
 </template>
 <script>
-import { getStoredUser, getCurrentUser, logout as authLogout } from '../services/auth.js';
+import {
+  getStoredUser,
+  getCurrentUser,
+  logout as authLogout,
+} from "../services/auth.js";
 
 export default {
   data() {
     return {
       currentUser: null,
       syncing: false,
-      storageListener: null
+      storageListener: null,
     };
   },
   async mounted() {
     await this.refreshUser(true);
     this.storageListener = (event) => this.handleStorage(event);
-    window.addEventListener('storage', this.storageListener);
+    window.addEventListener("storage", this.storageListener);
   },
   beforeUnmount() {
     if (this.storageListener) {
-      window.removeEventListener('storage', this.storageListener);
+      window.removeEventListener("storage", this.storageListener);
       this.storageListener = null;
     }
   },
@@ -47,13 +51,13 @@ export default {
         const user = await getCurrentUser(force);
         this.currentUser = user || null;
       } catch (error) {
-        console.warn('Gagal sinkronisasi pengguna', error);
+        console.warn("Gagal sinkronisasi pengguna", error);
       } finally {
         this.syncing = false;
       }
     },
     handleStorage(event) {
-      if (event.key === 'currentUser') {
+      if (event.key === "currentUser") {
         this.refreshUser();
       }
     },
@@ -61,13 +65,13 @@ export default {
       try {
         await authLogout();
       } catch (error) {
-        console.error('Gagal logout', error);
+        console.error("Gagal logout", error);
       } finally {
         this.currentUser = null;
-        this.$router.push('/login');
+        this.$router.push("/login");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 <style>
@@ -98,7 +102,7 @@ export default {
 .role {
   text-transform: uppercase;
   font-size: 12px;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   color: #6366f1;
   background: #eef2ff;
   padding: 4px 8px;
@@ -118,7 +122,7 @@ export default {
   color: var(--text);
   cursor: pointer;
   font-size: 13px;
-  transition: background .15s;
+  transition: background 0.15s;
 }
 
 .logout-btn:hover {

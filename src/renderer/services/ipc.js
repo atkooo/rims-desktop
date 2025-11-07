@@ -36,4 +36,3 @@ export function once(channel, listener) {
     throw new Error("ipcRenderer is not available in the current context");
   ipcRenderer.once(channel, listener);
 }
-

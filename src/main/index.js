@@ -1,7 +1,14 @@
 ﻿const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
+const database = require("./helpers/database");
+const logger = require("./helpers/logger");
+const setupItemHandlers = require("./handlers/itemHandlers");
+const setupTransactionHandlers = require("./handlers/transactionHandlers");
+const setupSettingsHandlers = require("./handlers/settingsHandlers");
+const setupCategoryHandlers = require("./handlers/categoryHandlers");
+const setupAutoBackup = require("./handlers/autoBackup");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
-const path = require("path");
 
 let mainWindow = null;
 
@@ -58,6 +65,8 @@ app.whenReady().then(async () => {
   }
   registerAuthIpc();
   registerDataIpc();
+  setupAutoBackup();
+  setupCategoryHandlers();
   createWindow();
 });
 

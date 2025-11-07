@@ -37,7 +37,7 @@ function allAsync(sql, params = []) {
 function tableExists(tableName) {
   return getAsync(
     "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-    [tableName]
+    [tableName],
   );
 }
 

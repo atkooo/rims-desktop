@@ -9,7 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "rebuild": "npm rebuild sqlite3 --build-from-source"
+    "rebuild": "npm rebuild sqlite3 --build-from-source",
+    "lint": "eslint . --ext .js,.vue",
+    "format": "prettier --write \"src/**/*.{js,vue}\"",
+    "backup-db": "node scripts/backup-db.js"
   },
   "keywords": [],
   "author": "",
@@ -21,12 +24,16 @@
     "cross-env": "^10.1.0",
     "electron": "^39.1.1",
     "electron-devtools-installer": "^4.0.0",
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2",
     "vite": "^5.0.0",
     "vue": "^3.3.8",
     "wait-on": "^9.0.1"
   },
   "dependencies": {
+    "pinia": "^3.0.4",
     "sqlite3": "^5.0.2",
-    "vue-router": "^4.6.3"
+    "vue-router": "^4.6.3",
+    "winston": "^3.18.3"
   }
 }
