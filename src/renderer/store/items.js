@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ipcRenderer } from "electron";
+import { ipcRenderer } from "@/services/ipc";
 
 export const useItemStore = defineStore("items", {
   state: () => ({

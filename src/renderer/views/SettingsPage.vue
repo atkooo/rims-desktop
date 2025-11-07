@@ -87,7 +87,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { ipcRenderer } from 'electron'
+import { ipcRenderer } from '@/services/ipc'
 import AppButton from '../components/AppButton.vue'
 import AppDialog from '../components/AppDialog.vue'
 import FormInput from '../components/FormInput.vue'

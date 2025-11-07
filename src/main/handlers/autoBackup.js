@@ -2,9 +2,11 @@ const { ipcMain } = require("electron");
 const fs = require("fs").promises;
 const path = require("path");
 const database = require("../helpers/database");
+const dbConfig = require("../config/database");
 const logger = require("../helpers/logger");
 
 const BACKUPS_DIR = path.join(__dirname, "../../../data/backups");
+const DATABASE_FILE = dbConfig.path;
 const MAX_BACKUPS = 10; // Simpan maksimal 10 backup terakhir
 
 function setupAutoBackup() {
@@ -53,10 +55,7 @@ async function createBackup() {
     database.close();
 
     // Copy database file
-    await fs.copyFile(
-      path.join(__dirname, "../../../data/database.sqlite"),
-      backupFile
-    );
+    await fs.copyFile(DATABASE_FILE, backupFile);
 
     // Reconnect to database
     await database.connect();

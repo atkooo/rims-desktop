@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ipcRenderer } from "electron";
+import { ipcRenderer } from "@/services/ipc";
 import { TRANSACTION_STATUS } from "../../shared/constants";
 
 export const useTransactionStore = defineStore("transactions", {

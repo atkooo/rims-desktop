@@ -1,25 +1,24 @@
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import path from 'path';
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import path from "path";
 
 export default defineConfig({
-  root: path.resolve(__dirname, 'src', 'renderer'),
+  root: path.resolve(__dirname, "src", "renderer"),
   plugins: [vue()],
   resolve: {
     alias: {
-      '@renderer': path.resolve(__dirname, 'src/renderer')
-    }
+      "@renderer": path.resolve(__dirname, "src", "renderer"),
+      "@": path.resolve(__dirname, "src", "renderer"),
+    },
   },
   server: {
     port: 5173,
     strictPort: true,
-    open: false
+    open: false,
   },
-  publicDir: path.resolve(__dirname, 'public'),
+  publicDir: path.resolve(__dirname, "public"),
   build: {
-    outDir: path.resolve(__dirname, 'dist', 'renderer'),
-    emptyOutDir: true
-  }
+    outDir: path.resolve(__dirname, "dist", "renderer"),
+    emptyOutDir: true,
+  },
 });
-
-

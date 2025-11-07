@@ -4,7 +4,7 @@ const path = require("path");
  * Konfigurasi database SQLite
  */
 const dbConfig = {
-  path: path.join(__dirname, "../../../data/database.sqlite"),
+  path: path.join(__dirname, "../../../data/rims.db"),
   options: {
     // Mengaktifkan foreign keys
     pragma: {

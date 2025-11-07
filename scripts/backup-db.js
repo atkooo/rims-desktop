@@ -1,10 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const logger = require("../src/main/helpers/logger");
+const dbConfig = require("../src/main/config/database");
 
 // Membuat backup database
 async function backupDatabase() {
-  const sourceFile = path.join(__dirname, "../data/database.sqlite");
+  const sourceFile = dbConfig.path;
   const backupDir = path.join(__dirname, "../data/backups");
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupFile = path.join(backupDir, `backup-${timestamp}.sqlite`);

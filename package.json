@@ -4,8 +4,8 @@
   "description": "Aplikasi desktop untuk penyewaan dan penjualan baju/aksesoris rental.",
   "main": "src/main/index.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "concurrently -k \"vite --host\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "start": "node scripts/run-electron.js --node-env=production",
+    "dev": "concurrently -k \"vite --host\" \"wait-on http://localhost:5173 && node scripts/run-electron.js --node-env=development\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",

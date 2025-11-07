@@ -2,11 +2,13 @@ const { ipcMain } = require("electron");
 const fs = require("fs").promises;
 const path = require("path");
 const database = require("../helpers/database");
+const dbConfig = require("../config/database");
 const logger = require("../helpers/logger");
 
 // File paths
 const SETTINGS_FILE = path.join(__dirname, "../../../data/settings.json");
 const BACKUPS_DIR = path.join(__dirname, "../../../data/backups");
+const DATABASE_FILE = dbConfig.path;
 
 function setupSettingsHandlers() {
   // Get settings
@@ -101,10 +103,7 @@ function setupSettingsHandlers() {
       database.close();
 
       // Copy database file
-      await fs.copyFile(
-        path.join(__dirname, "../../../data/database.sqlite"),
-        backupFile
-      );
+      await fs.copyFile(DATABASE_FILE, backupFile);
 
       // Reconnect to database
       await database.connect();
@@ -121,7 +120,6 @@ function setupSettingsHandlers() {
   ipcMain.handle("backup:restore", async (event, backupFile) => {
     try {
       const backupPath = path.join(BACKUPS_DIR, backupFile);
-      const dbPath = path.join(__dirname, "../../../data/database.sqlite");
 
       // Verify backup file exists
       await fs.access(backupPath);
@@ -130,7 +128,7 @@ function setupSettingsHandlers() {
       database.close();
 
       // Copy backup file to database location
-      await fs.copyFile(backupPath, dbPath);
+      await fs.copyFile(backupPath, DATABASE_FILE);
 
       // Reconnect to database
       await database.connect();

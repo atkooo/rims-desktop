@@ -18,8 +18,8 @@ function createWindow() {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
@@ -32,7 +32,12 @@ function createWindow() {
 
   if (process.env.NODE_ENV === "development") {
     mainWindow.loadURL("http://localhost:5173");
-    // mainWindow.webContents.openDevTools();
+    // Automatically show devtools in detached window to simplify debugging
+    mainWindow.webContents.once("dom-ready", () => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.openDevTools({ mode: "detach" });
+      }
+    });
   } else {
     mainWindow.loadFile(
       path.join(__dirname, "..", "renderer", "dist", "index.html")
@@ -63,6 +68,17 @@ app.whenReady().then(async () => {
       app.emit("devtools-install-failed", error);
     }
   }
+
+  // Connect to database before registering IPC handlers
+  const database = require("./helpers/database");
+  try {
+    await database.connect();
+  } catch (err) {
+    console.error("Failed to connect to database", err);
+    app.quit();
+    return;
+  }
+
   registerAuthIpc();
   registerDataIpc();
   setupAutoBackup();

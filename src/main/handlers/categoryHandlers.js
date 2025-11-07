@@ -17,7 +17,7 @@ function setupCategoryHandlers() {
                 FROM categories 
                 ORDER BY name ASC
             `;
-      const categories = await database.all(sql);
+      const categories = await database.query(sql);
       return categories;
     } catch (error) {
       logger.error("Error fetching categories:", error);
@@ -38,7 +38,7 @@ function setupCategoryHandlers() {
                 FROM categories 
                 WHERE id = ?
             `;
-      const category = await database.get(sql, [id]);
+      const category = await database.queryOne(sql, [id]);
       return category;
     } catch (error) {
       logger.error(`Error fetching category ${id}:`, error);
@@ -61,10 +61,10 @@ function setupCategoryHandlers() {
                 ) VALUES (?, ?, ?, ?)
             `;
 
-      const result = await database.run(sql, [name, description, now, now]);
+      const result = await database.execute(sql, [name, description, now, now]);
 
       return {
-        id: result.lastID,
+        id: result.id,
         name,
         description,
         created_at: now,
@@ -91,7 +91,7 @@ function setupCategoryHandlers() {
                 WHERE id = ?
             `;
 
-      await database.run(sql, [name, description, now, id]);
+      await database.execute(sql, [name, description, now, id]);
 
       return {
         id,
@@ -114,14 +114,15 @@ function setupCategoryHandlers() {
                 FROM items 
                 WHERE category_id = ?
             `;
-      const { count } = await database.get(checkSql, [id]);
+      const countRow = await database.queryOne(checkSql, [id]);
+      const count = countRow ? countRow.count : 0;
 
       if (count > 0) {
         throw new Error("Cannot delete category that is being used by items");
       }
 
       const sql = `DELETE FROM categories WHERE id = ?`;
-      await database.run(sql, [id]);
+      await database.execute(sql, [id]);
       return true;
     } catch (error) {
       logger.error(`Error deleting category ${id}:`, error);
