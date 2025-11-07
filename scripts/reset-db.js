@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const Database = require("better-sqlite3");
+const sqlite3 = require("sqlite3").verbose();
 
 // Function to backup existing database
 function backupDatabase(dbPath) {
@@ -50,28 +50,11 @@ function main() {
     // Backup existing database
     const hadExistingDb = backupDatabase(dbPath);
 
-    // Create new database with a temporary name first
-    const tempDbPath = `${dbPath}.temp`;
-    const db = new Database(tempDbPath);
-
-    // If we succeed in creating the schema and seed, we'll replace the old file
-    process.on("exit", () => {
-      try {
-        if (fs.existsSync(tempDbPath)) {
-          if (fs.existsSync(dbPath)) {
-            try {
-              fs.unlinkSync(dbPath);
-            } catch (e) {
-              // If we can't delete the old file, try to rename it
-              fs.renameSync(dbPath, `${dbPath}.old`);
-            }
-          }
-          fs.renameSync(tempDbPath, dbPath);
-        }
-      } catch (e) {
-        console.error("Error cleaning up:", e.message);
-      }
-    });
+    // Create new database
+    if (fs.existsSync(dbPath)) {
+      fs.unlinkSync(dbPath);
+    }
+    const db = new sqlite3.Database(dbPath);
     console.log("Created new database file");
 
     // Read and execute schema
@@ -84,19 +67,40 @@ function main() {
     );
     const schemaSql = fs.readFileSync(schemaPath, "utf-8");
     console.log("Creating database schema...");
-    db.exec(schemaSql);
-    console.log("Schema created successfully");
+    db.exec(schemaSql, (err) => {
+      if (err) {
+        console.error("Error creating schema:", err.message);
+        process.exit(1);
+      }
+      console.log("Schema created successfully");
 
-    // Read and execute seed
-    const seedPath = path.join(__dirname, "..", "src", "database", "seed.sql");
-    const seedSql = fs.readFileSync(seedPath, "utf-8");
-    console.log("Seeding database...");
-    db.exec(seedSql);
-    console.log("Database seeded successfully");
-
-    // Close database connection
-    db.close();
-    console.log(`Database has been reset and seeded at: ${dbPath}`);
+      // Read and execute seed
+      const seedPath = path.join(
+        __dirname,
+        "..",
+        "src",
+        "database",
+        "seed.sql"
+      );
+      if (fs.existsSync(seedPath)) {
+        const seedSql = fs.readFileSync(seedPath, "utf-8");
+        console.log("Seeding database...");
+        db.exec(seedSql, (err) => {
+          if (err) {
+            console.error("Error seeding database:", err.message);
+            process.exit(1);
+          }
+          console.log("Database seeded successfully");
+          db.close();
+          console.log(`Database has been reset and seeded at: ${dbPath}`);
+        });
+      } else {
+        db.close();
+        console.log(
+          `Database has been reset at: ${dbPath} (no seed file found)`
+        );
+      }
+    });
   } catch (error) {
     console.error("Error:", error.message);
     process.exit(1);

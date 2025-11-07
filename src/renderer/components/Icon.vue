@@ -18,6 +18,14 @@
       <path d="M7 4.5l10 4" />
     </svg>
 
+    <svg v-else-if="name === 'layers'" :width="size" :height="size" viewBox="0 0 24 24" fill="none"
+      xmlns="http://www.w3.org/2000/svg" stroke="currentColor" :stroke-width="strokeWidth" stroke-linecap="round"
+      stroke-linejoin="round">
+      <path d="M12 2l9 4-9 4-9-4 9-4z" />
+      <path d="M3 10l9 4 9-4" />
+      <path d="M3 14l9 4 9-4" />
+    </svg>
+
     <svg v-else-if="name === 'tag'" :width="size" :height="size" viewBox="0 0 24 24" fill="none"
       xmlns="http://www.w3.org/2000/svg" stroke="currentColor" :stroke-width="strokeWidth" stroke-linecap="round"
       stroke-linejoin="round">
@@ -100,7 +108,6 @@
       <path d="M17 21v-8H7v8" />
     </svg>
 
-    <!-- fallback: simple square so layout doesn't break -->
     <svg v-else :width="size" :height="size" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
       stroke="currentColor" :stroke-width="strokeWidth" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -132,3 +139,4 @@ export default {
   display: block;
 }
 </style>
+

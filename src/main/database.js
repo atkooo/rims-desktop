@@ -7,7 +7,6 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = process.env.DATABASE_PATH || path.join(dataDir, "rims.db");
 const db = new sqlite3.Database(dbPath);
 
-// Make db.run, db.get, db.all return promises
 function runAsync(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -44,7 +43,7 @@ function tableExists(tableName) {
 
 async function initializeIfNeeded() {
   const exists = await tableExists("users");
-  if (exists) return; // already initialized
+  if (exists) return;
 
   const schemaPath = path.join(__dirname, "..", "database", "schema.sql");
   const seedPath = path.join(__dirname, "..", "database", "seed.sql");
@@ -66,10 +65,10 @@ async function initializeIfNeeded() {
   });
 }
 
-// Initialize database when module is loaded
-initializeIfNeeded().catch(console.error);
+initializeIfNeeded().catch((error) => {
+  throw error;
+});
 
-// Export the database and helper functions
 module.exports = {
   getDb: () => db,
   runAsync,

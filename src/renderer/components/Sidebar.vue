@@ -5,82 +5,77 @@
       <router-link to="/" active-class="active">
         <Icon name="dashboard" class="icon" /> Dashboard
       </router-link>
-      <div class="group">
-        <div class="group-title">Master Data</div>
-        <router-link to="/master/items" active-class="active">
-          <Icon name="box" class="icon" /> Barang/Baju
-        </router-link>
-        <router-link to="/master/accessories" active-class="active">
-          <Icon name="star" class="icon" /> Aksesoris
-        </router-link>
-        <router-link to="/master/categories" active-class="active">
-          <Icon name="tag" class="icon" /> Kategori
-        </router-link>
-        <router-link to="/master/bundles" active-class="active">
-          <Icon name="layers" class="icon" /> Paket/Bundling
-        </router-link>
-        <router-link to="/master/customers" active-class="active">
-          <Icon name="users" class="icon" /> Pelanggan
-        </router-link>
-        <router-link to="/master/users" active-class="active">
-          <Icon name="user" class="icon" /> Pengguna
-        </router-link>
-      </div>
-      <div class="group">
-        <div class="group-title">Transaksi</div>
-        <router-link to="/transactions/sale" active-class="active">
-          <Icon name="money" class="icon" /> Penjualan Baru
-        </router-link>
-        <router-link to="/transactions/sales" active-class="active">
-          <Icon name="file" class="icon" /> Daftar Penjualan
-        </router-link>
-        <router-link to="/transactions/rental" active-class="active">
-          <Icon name="key" class="icon" /> Sewa Baru
-        </router-link>
-        <router-link to="/transactions/rentals" active-class="active">
-          <Icon name="clipboard" class="icon" /> Daftar Sewa
-        </router-link>
-      </div>
-      <div class="group">
-        <div class="group-title">Stok</div>
-        <router-link to="/stock/items" active-class="active">
-          <Icon name="archive" class="icon" /> Stok Barang
-        </router-link>
-        <router-link to="/stock/bundles" active-class="active">
-          <Icon name="layers" class="icon" /> Stok Paket
-        </router-link>
-      </div>
-      <div class="group">
-        <div class="group-title">Laporan</div>
-        <router-link to="/reports/sales" active-class="active">
-          <Icon name="chart-line" class="icon" /> Penjualan
-        </router-link>
-        <router-link to="/reports/rentals" active-class="active">
-          <Icon name="chart-bar" class="icon" /> Sewa
-        </router-link>
-        <router-link to="/reports/stock" active-class="active">
-          <Icon name="archive" class="icon" /> Stok
-        </router-link>
-        <router-link to="/reports/bundles" active-class="active">
-          <Icon name="layers" class="icon" /> Paket
-        </router-link>
-      </div>
-      <div class="group">
-        <div class="group-title">Pengaturan</div>
-        <router-link to="/settings/system" active-class="active">
-          <Icon name="settings" class="icon" /> Sistem
-        </router-link>
-        <router-link to="/settings/backup" active-class="active">
-          <Icon name="save" class="icon" /> Backup
+      <div v-for="group in groups" :key="group.title" class="group">
+        <div class="group-title">{{ group.title }}</div>
+        <router-link
+          v-for="item in group.items"
+          :key="item.to"
+          :to="item.to"
+          active-class="active"
+        >
+          <Icon :name="item.icon" class="icon" /> {{ item.label }}
         </router-link>
       </div>
     </nav>
   </aside>
 </template>
 <script>
-import Icon from './ui/Icon.vue';
+import Icon from './Icon.vue';
 
-export default { components: { Icon } };
+const groups = [
+  {
+    title: 'Master Data',
+    items: [
+      { to: '/master/categories', label: 'Kategori', icon: 'tag' },
+      { to: '/master/accessories', label: 'Aksesoris', icon: 'box' },
+      { to: '/master/items', label: 'Barang', icon: 'box' },
+      { to: '/master/bundles', label: 'Paket', icon: 'clipboard' },
+      { to: '/master/bundle-details', label: 'Detail Paket', icon: 'clipboard' },
+      { to: '/master/customers', label: 'Pelanggan', icon: 'users' },
+      { to: '/master/roles', label: 'Peran', icon: 'user' },
+      { to: '/master/users', label: 'Pengguna', icon: 'user' }
+    ]
+  },
+  {
+    title: 'Transaksi',
+    items: [
+      { to: '/transactions/rentals', label: 'Transaksi Sewa', icon: 'key' },
+      { to: '/transactions/rental-details', label: 'Detail Sewa', icon: 'clipboard' },
+      { to: '/transactions/sales', label: 'Transaksi Penjualan', icon: 'money' },
+      { to: '/transactions/sales-details', label: 'Detail Penjualan', icon: 'file' },
+      { to: '/transactions/bookings', label: 'Booking Barang', icon: 'clipboard' },
+      { to: '/transactions/stock-movements', label: 'Pergerakan Stok', icon: 'chart-bar' },
+      { to: '/transactions/payments', label: 'Pembayaran', icon: 'money' }
+    ]
+  },
+  {
+    title: 'Laporan & View',
+    items: [
+      { to: '/reports/items-with-stock', label: 'Item dengan Stok', icon: 'chart-bar' },
+      { to: '/reports/active-rentals', label: 'Sewa Aktif', icon: 'chart-line' },
+      { to: '/reports/daily-sales', label: 'Penjualan Harian', icon: 'chart-line' },
+      { to: '/reports/stock-alerts', label: 'Peringatan Stok', icon: 'chart-bar' },
+      { to: '/reports/top-customers', label: 'Pelanggan Teratas', icon: 'users' }
+    ]
+  },
+  {
+    title: 'Pengaturan',
+    items: [
+      { to: '/settings/system', label: 'Pengaturan Sistem', icon: 'settings' },
+      { to: '/settings/backup-history', label: 'Riwayat Backup', icon: 'save' },
+      { to: '/settings/activity-logs', label: 'Log Aktivitas', icon: 'clipboard' }
+    ]
+  }
+];
+
+export default {
+  components: { Icon },
+  data() {
+    return {
+      groups
+    };
+  }
+};
 </script>
 <style>
 .sidebar {

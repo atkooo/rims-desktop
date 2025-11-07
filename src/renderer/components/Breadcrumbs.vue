@@ -15,7 +15,11 @@ export default {
       const acc = [];
       return path.map((segment, i) => {
         acc.push('/' + segment);
-        return { label: segment.charAt(0).toUpperCase() + segment.slice(1), to: acc.join('') };
+        const label = segment
+          .split('-')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+        return { label, to: acc.join('') };
       });
     }
   }

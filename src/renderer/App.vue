@@ -6,14 +6,10 @@
     <Sidebar />
     <main class="content">
       <Topbar />
-      <div class="content-wrapper">
-        <div class="card pad">
-          <Breadcrumbs />
-          <ToastProvider>
-            <router-view />
-          </ToastProvider>
-        </div>
-      </div>
+      <section class="content-wrapper">
+        <Breadcrumbs />
+        <router-view />
+      </section>
     </main>
   </div>
 </template>
@@ -22,8 +18,7 @@
 import Sidebar from './components/Sidebar.vue';
 import Topbar from './components/Topbar.vue';
 import Breadcrumbs from './components/Breadcrumbs.vue';
-import ToastProvider from './components/ui/ToastProvider.vue';
-export default { components: { Sidebar, Topbar, Breadcrumbs, ToastProvider } };
+export default { components: { Sidebar, Topbar, Breadcrumbs } };
 </script>
 
 <style>
@@ -40,8 +35,10 @@ export default { components: { Sidebar, Topbar, Breadcrumbs, ToastProvider } };
 
 .content-wrapper {
   flex: 1;
-  padding: 18px;
-  padding-top: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .auth {

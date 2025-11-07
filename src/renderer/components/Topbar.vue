@@ -3,49 +3,36 @@
     <div class="left">
       <h2>RIMS Desktop</h2>
     </div>
-    <div class="center">
-      <input v-model="q" @input="onInput" placeholder="Cari cepat (Barang, Pelanggan, Transaksi)"
-        aria-label="Pencarian cepat" autocomplete="off" />
-    </div>
     <div class="right">
-      <div class="user">{{ currentUser?.full_name || 'User' }}</div>
-      <button class="logout-btn" @click="logout" title="Logout">Keluar</button>
+      <span class="role" v-if="currentUser">{{ currentUser.role }}</span>
+      <div class="user">{{ currentUser?.full_name || 'Pengguna' }}</div>
+      <button class="logout-btn" @click="logout">Keluar</button>
     </div>
   </header>
 </template>
 <script>
-import debounce from '@utils/debounce';
-const { ipcRenderer } = window.require ? window.require('electron') : { ipcRenderer: null };
-
 export default {
-  emits: ['search'],
   data() {
     return {
-      q: '',
-      debounced: null,
       currentUser: null
     };
   },
   mounted() {
-    this.debounced = debounce((val) => this.$emit('search', val), 250);
-    this.loadUser();
+    this.syncUser();
+    window.addEventListener('storage', this.syncUser);
+  },
+  beforeUnmount() {
+    window.removeEventListener('storage', this.syncUser);
   },
   methods: {
-    onInput() { this.debounced && this.debounced(this.q); },
-    loadUser() {
+    syncUser() {
       const userRaw = localStorage.getItem('currentUser');
       this.currentUser = userRaw ? JSON.parse(userRaw) : null;
     },
-    async logout() {
-      try {
-        if (ipcRenderer) await ipcRenderer.invoke('auth:logout');
-        localStorage.removeItem('currentUser');
-        this.$router.push('/login');
-      } catch (e) {
-        console.error('Logout error:', e);
-        localStorage.removeItem('currentUser');
-        this.$router.push('/login');
-      }
+    logout() {
+      localStorage.removeItem('currentUser');
+      this.currentUser = null;
+      this.$router.push('/login');
     }
   }
 };
@@ -69,20 +56,20 @@ export default {
   font-size: 16px;
 }
 
-.topbar .center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.topbar .center input {
-  width: 60%;
-}
-
 .topbar .right {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.role {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: #6366f1;
+  background: #eef2ff;
+  padding: 4px 8px;
+  border-radius: 999px;
 }
 
 .user {

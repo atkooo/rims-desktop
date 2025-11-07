@@ -16,7 +16,6 @@ function createWindow() {
     },
   });
 
-  // Filter out Autofill related console messages
   mainWindow.webContents.on("console-message", (event, level, message) => {
     if (typeof message === "string" && message.includes("Autofill")) {
       event.preventDefault();
@@ -24,7 +23,6 @@ function createWindow() {
     }
   });
 
-  // Check if we're in development mode
   if (process.env.NODE_ENV === "development") {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
@@ -37,7 +35,6 @@ function createWindow() {
   return mainWindow;
 }
 
-// IPC handler untuk focus window
 ipcMain.handle("window:focus", () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
@@ -54,11 +51,9 @@ app.whenReady().then(async () => {
         default: installExtension,
         VUEJS3_DEVTOOLS,
       } = require("electron-devtools-installer");
-      await installExtension(VUEJS3_DEVTOOLS)
-        .then((name) => console.log(`Added Extension: ${name}`))
-        .catch((err) => console.log("An error occurred: ", err));
-    } catch (e) {
-      console.log("Vue Devtools failed to install:", e.toString());
+      await installExtension(VUEJS3_DEVTOOLS);
+    } catch (error) {
+      app.emit("devtools-install-failed", error);
     }
   }
   registerAuthIpc();

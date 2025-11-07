@@ -38,7 +38,7 @@ function registerAuthIpc() {
 
   ipcMain.handle("auth:login", async (event, { username, password }) => {
     const user = await getAsync(
-      "SELECT id, username, full_name, email, role, is_active, password_hash FROM users WHERE username = ? LIMIT 1",
+      "SELECT id, username, full_name, email, role_id, is_active, password_hash FROM users WHERE username = ? LIMIT 1",
       [username]
     );
 
@@ -53,6 +53,7 @@ function registerAuthIpc() {
     );
     currentUser = {
       id: user.id,
+      role_id: user.role_id,
       username: user.username,
       full_name: user.full_name,
       email: user.email,

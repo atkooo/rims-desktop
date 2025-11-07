@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const Database = require("better-sqlite3");
+const sqlite3 = require("sqlite3").verbose();
 
 // Main function
 async function main() {
@@ -12,15 +12,15 @@ async function main() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    // Create a new database with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const dbPath = path.join(dataDir, `rims-${timestamp}.db`);
-
-    // Create new database
-    const db = new Database(dbPath, { verbose: console.log });
+    // Path database
+    const dbPath = path.join(dataDir, "rims.db");
+    if (fs.existsSync(dbPath)) {
+      fs.unlinkSync(dbPath);
+    }
+    const db = new sqlite3.Database(dbPath);
     console.log(`Created new database at: ${dbPath}`);
 
-    // Read and execute schema
+    // Read schema
     const schemaPath = path.join(
       __dirname,
       "..",
@@ -30,26 +30,31 @@ async function main() {
     );
     const schemaSql = fs.readFileSync(schemaPath, "utf-8");
     console.log("Creating database schema...");
-    db.exec(schemaSql);
+    await new Promise((resolve, reject) => {
+      db.exec(schemaSql, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
     console.log("Schema created successfully");
 
-    // Read and execute seed
+    // Read seed
     const seedPath = path.join(__dirname, "..", "src", "database", "seed.sql");
-    const seedSql = fs.readFileSync(seedPath, "utf-8");
-    console.log("Seeding database...");
-    db.exec(seedSql);
-    console.log("Database seeded successfully");
+    if (fs.existsSync(seedPath)) {
+      const seedSql = fs.readFileSync(seedPath, "utf-8");
+      console.log("Seeding database...");
+      await new Promise((resolve, reject) => {
+        db.exec(seedSql, (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+      console.log("Database seeded successfully");
+    }
 
     // Close database connection
     db.close();
-
-    // Create symlink to the new database
-    const finalPath = path.join(dataDir, "rims.db");
-    if (fs.existsSync(finalPath)) {
-      fs.unlinkSync(finalPath);
-    }
-    fs.renameSync(dbPath, finalPath);
-    console.log(`Database has been reset and seeded at: ${finalPath}`);
+    console.log(`Database has been reset and seeded at: ${dbPath}`);
   } catch (error) {
     console.error("Error:", error.message);
     process.exit(1);
