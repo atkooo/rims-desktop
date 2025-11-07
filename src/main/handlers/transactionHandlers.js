@@ -4,6 +4,18 @@ const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 const { TRANSACTION_STATUS } = require("../../shared/constants");
 
+function generateTransactionCode(type) {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const random = Math.floor(Math.random() * 9999)
+    .toString()
+    .padStart(4, "0");
+  const prefix = type === "RENTAL" ? "RNT" : "SLS";
+  return `${prefix}${year}${month}${day}${random}`;
+}
+
 function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
@@ -65,31 +77,103 @@ function setupTransactionHandlers() {
       await database.execute("BEGIN TRANSACTION");
 
       try {
-        // Insert transaction
-        const result = await database.execute(
-          "INSERT INTO transactions (transaction_date, total_amount, status, customer_name, notes) VALUES (?, ?, ?, ?, ?)",
-          [
-            transactionData.transactionDate,
-            transactionData.totalAmount,
-            TRANSACTION_STATUS.PENDING,
-            transactionData.customerName,
-            transactionData.notes,
-          ]
-        );
+        let result;
+        const transactionCode = generateTransactionCode(transactionData.type);
 
-        // Insert transaction items
-        for (const item of transactionData.items) {
-          await database.execute(
-            "INSERT INTO transaction_items (transaction_id, item_id, quantity, price) VALUES (?, ?, ?, ?)",
-            [result.id, item.itemId, item.quantity, item.price]
+        if (transactionData.type === "RENTAL") {
+          // Insert rental transaction
+          result = await database.execute(
+            `INSERT INTO rental_transactions (
+              transaction_code, customer_id, user_id, rental_date, 
+              planned_return_date, total_days, subtotal, deposit,
+              total_amount, payment_method, payment_status, paid_amount,
+              status, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              transactionCode,
+              transactionData.customerId,
+              transactionData.userId,
+              transactionData.rentalDate,
+              transactionData.plannedReturnDate,
+              transactionData.totalDays,
+              transactionData.subtotal,
+              transactionData.deposit,
+              transactionData.totalAmount,
+              transactionData.paymentMethod || "cash",
+              transactionData.paymentStatus || "unpaid",
+              transactionData.paidAmount || 0,
+              "active",
+              transactionData.notes,
+            ]
           );
 
-          // Update item status jika rental
-          if (item.type === "RENTAL") {
-            await database.execute("UPDATE items SET status = ? WHERE id = ?", [
-              "RENTED",
-              item.itemId,
-            ]);
+          // Insert rental transaction items
+          for (const item of transactionData.items) {
+            await database.execute(
+              `INSERT INTO rental_transaction_details (
+                rental_transaction_id, item_id, quantity, 
+                rental_price, subtotal
+              ) VALUES (?, ?, ?, ?, ?)`,
+              [
+                result.id,
+                item.itemId,
+                item.quantity,
+                item.rentalPrice,
+                item.subtotal,
+              ]
+            );
+
+            // Update available quantity for the item
+            await database.execute(
+              "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
+              [item.quantity, item.itemId]
+            );
+          }
+        } else {
+          // Insert sales transaction
+          result = await database.execute(
+            `INSERT INTO sales_transactions (
+              transaction_code, customer_id, user_id, sale_date,
+              subtotal, discount, tax, total_amount, payment_method,
+              payment_status, paid_amount, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              transactionCode,
+              transactionData.customerId,
+              transactionData.userId,
+              transactionData.saleDate,
+              transactionData.subtotal,
+              transactionData.discount || 0,
+              transactionData.tax || 0,
+              transactionData.totalAmount,
+              transactionData.paymentMethod || "cash",
+              transactionData.paymentStatus || "paid",
+              transactionData.paidAmount || transactionData.totalAmount,
+              transactionData.notes,
+            ]
+          );
+
+          // Insert sales transaction items
+          for (const item of transactionData.items) {
+            await database.execute(
+              `INSERT INTO sales_transaction_details (
+                sales_transaction_id, item_id, quantity,
+                sale_price, subtotal
+              ) VALUES (?, ?, ?, ?, ?)`,
+              [
+                result.id,
+                item.itemId,
+                item.quantity,
+                item.salePrice,
+                item.subtotal,
+              ]
+            );
+
+            // Update available quantity for the item
+            await database.execute(
+              "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
+              [item.quantity, item.itemId]
+            );
           }
         }
 
@@ -97,7 +181,9 @@ function setupTransactionHandlers() {
 
         // Return created transaction
         const newTransaction = await database.queryOne(
-          "SELECT * FROM transactions WHERE id = ?",
+          transactionData.type === "RENTAL"
+            ? "SELECT * FROM rental_transactions WHERE id = ?"
+            : "SELECT * FROM sales_transactions WHERE id = ?",
           [result.id]
         );
         return newTransaction;
@@ -121,27 +207,44 @@ function setupTransactionHandlers() {
       await database.execute("BEGIN TRANSACTION");
 
       try {
-        // Update status
-        await database.execute(
-          "UPDATE transactions SET status = ? WHERE id = ?",
-          [status, id]
-        );
+        const { transactionType, transactionId } = id;
 
-        // Jika completed, update item status
-        if (status === TRANSACTION_STATUS.COMPLETED) {
-          const items = await database.query(
-            "SELECT ti.item_id, i.type FROM transaction_items ti JOIN items i ON ti.item_id = i.id WHERE ti.transaction_id = ?",
-            [id]
+        if (transactionType === "RENTAL") {
+          // Update rental transaction status
+          await database.execute(
+            "UPDATE rental_transactions SET status = ? WHERE id = ?",
+            [status, transactionId]
           );
 
-          for (const item of items) {
-            if (item.type === "RENTAL") {
+          // If returned, update item quantities and mark items as returned
+          if (status === "returned") {
+            const rentalItems = await database.query(
+              `SELECT rtd.item_id, rtd.quantity, rtd.id as detail_id
+               FROM rental_transaction_details rtd
+               WHERE rtd.rental_transaction_id = ? AND rtd.is_returned = 0`,
+              [transactionId]
+            );
+
+            for (const item of rentalItems) {
+              // Mark item as returned in rental_transaction_details
               await database.execute(
-                "UPDATE items SET status = ? WHERE id = ?",
-                ["AVAILABLE", item.item_id]
+                "UPDATE rental_transaction_details SET is_returned = 1, return_condition = ? WHERE id = ?",
+                ["good", item.detail_id]
+              );
+
+              // Restore available quantity
+              await database.execute(
+                "UPDATE items SET available_quantity = available_quantity + ? WHERE id = ?",
+                [item.quantity, item.item_id]
               );
             }
           }
+        } else {
+          // Update sales transaction status
+          await database.execute(
+            "UPDATE sales_transactions SET payment_status = ? WHERE id = ?",
+            [status, transactionId]
+          );
         }
 
         await database.execute("COMMIT");

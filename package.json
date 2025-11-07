@@ -12,7 +12,9 @@
     "rebuild": "npm rebuild sqlite3 --build-from-source",
     "lint": "eslint . --ext .js,.vue",
     "format": "prettier --write \"src/**/*.{js,vue}\"",
-    "backup-db": "node scripts/backup-db.js"
+    "backup-db": "node scripts/backup-db.js",
+    "db:migrate": "node src/database/migrate.js",
+    "db:fresh": "node scripts/reset-db.js && node src/database/migrate.js"
   },
   "keywords": [],
   "author": "",
