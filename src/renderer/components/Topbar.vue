@@ -11,28 +11,61 @@
   </header>
 </template>
 <script>
+import { getStoredUser, getCurrentUser, logout as authLogout } from '../services/auth.js';
+
 export default {
   data() {
     return {
-      currentUser: null
+      currentUser: null,
+      syncing: false,
+      storageListener: null
     };
   },
-  mounted() {
-    this.syncUser();
-    window.addEventListener('storage', this.syncUser);
+  async mounted() {
+    await this.refreshUser(true);
+    this.storageListener = (event) => this.handleStorage(event);
+    window.addEventListener('storage', this.storageListener);
   },
   beforeUnmount() {
-    window.removeEventListener('storage', this.syncUser);
+    if (this.storageListener) {
+      window.removeEventListener('storage', this.storageListener);
+      this.storageListener = null;
+    }
   },
   methods: {
-    syncUser() {
-      const userRaw = localStorage.getItem('currentUser');
-      this.currentUser = userRaw ? JSON.parse(userRaw) : null;
+    async refreshUser(force = false) {
+      if (this.syncing) return;
+      this.syncing = true;
+      try {
+        if (!force) {
+          const stored = getStoredUser();
+          if (stored) {
+            this.currentUser = stored;
+            return;
+          }
+        }
+        const user = await getCurrentUser(force);
+        this.currentUser = user || null;
+      } catch (error) {
+        console.warn('Gagal sinkronisasi pengguna', error);
+      } finally {
+        this.syncing = false;
+      }
     },
-    logout() {
-      localStorage.removeItem('currentUser');
-      this.currentUser = null;
-      this.$router.push('/login');
+    handleStorage(event) {
+      if (event.key === 'currentUser') {
+        this.refreshUser();
+      }
+    },
+    async logout() {
+      try {
+        await authLogout();
+      } catch (error) {
+        console.error('Gagal logout', error);
+      } finally {
+        this.currentUser = null;
+        this.$router.push('/login');
+      }
     }
   }
 };

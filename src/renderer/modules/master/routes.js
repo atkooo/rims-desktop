@@ -1,4 +1,5 @@
 import SchemaPage from '../schema/SchemaPage.vue';
+import BundlesPage from './BundlesPage.vue';
 
 export const masterRoutes = [
   {
@@ -25,8 +26,7 @@ export const masterRoutes = [
   {
     path: '/master/bundles',
     name: 'master-bundles',
-    component: SchemaPage,
-    props: { schemaKey: 'bundles' },
+    component: BundlesPage,
     meta: { title: 'Paket', group: 'master' }
   },
   {
