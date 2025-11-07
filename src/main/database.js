@@ -8,29 +8,35 @@ const dbPath = process.env.DATABASE_PATH || path.join(dataDir, 'rims.db');
 const db = new sqlite3.Database(dbPath);
 
 // Make db.run, db.get, db.all return promises
-db.runAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function(err) {
-    if (err) reject(err);
-    else resolve(this);
+function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
   });
-});
+}
 
-db.getAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) reject(err);
-    else resolve(row);
+function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
   });
-});
+}
 
-db.allAsync = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) reject(err);
-    else resolve(rows);
+function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
   });
-});
+}
 
 function tableExists(tableName) {
-  return db.getAsync("SELECT name FROM sqlite_master WHERE type='table' AND name=?", [tableName]);
+  return getAsync("SELECT name FROM sqlite_master WHERE type='table' AND name=?", [tableName]);
 }
 
 async function initializeIfNeeded() {
@@ -63,7 +69,7 @@ initializeIfNeeded().catch(console.error);
 // Export the database and helper functions
 module.exports = {
   getDb: () => db,
-  runAsync: (sql, params) => db.runAsync(sql, params),
-  getAsync: (sql, params) => db.getAsync(sql, params),
-  allAsync: (sql, params) => db.allAsync(sql, params)
+  runAsync,
+  getAsync,
+  allAsync
 };

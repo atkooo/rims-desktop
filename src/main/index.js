@@ -16,6 +16,14 @@ function createWindow() {
     },
   });
 
+  // Filter out Autofill related console messages
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    if (typeof message === 'string' && message.includes('Autofill')) {
+      event.preventDefault();
+      return;
+    }
+  });
+
   // Check if we're in development mode
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
@@ -37,7 +45,21 @@ ipcMain.handle('window:focus', () => {
   return false;
 });
 
-app.whenReady().then(() => { registerAuthIpc(); registerDataIpc(); createWindow(); });
+app.whenReady().then(async () => {
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { default: installExtension, VUEJS3_DEVTOOLS } = require('electron-devtools-installer');
+      await installExtension(VUEJS3_DEVTOOLS)
+        .then((name) => console.log(`Added Extension: ${name}`))
+        .catch((err) => console.log('An error occurred: ', err));
+    } catch (e) {
+      console.log('Vue Devtools failed to install:', e.toString());
+    }
+  }
+  registerAuthIpc();
+  registerDataIpc();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
