@@ -1,30 +1,69 @@
 ﻿const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 
 const dataDir = process.env.DATABASE_DIR || path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = process.env.DATABASE_PATH || path.join(dataDir, 'rims.db');
-const db = new Database(dbPath);
+const db = new sqlite3.Database(dbPath);
+
+// Make db.run, db.get, db.all return promises
+db.runAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.run(sql, params, function(err) {
+    if (err) reject(err);
+    else resolve(this);
+  });
+});
+
+db.getAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.get(sql, params, (err, row) => {
+    if (err) reject(err);
+    else resolve(row);
+  });
+});
+
+db.allAsync = (sql, params = []) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows);
+  });
+});
 
 function tableExists(tableName) {
-  const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
-  return !!row;
+  return db.getAsync("SELECT name FROM sqlite_master WHERE type='table' AND name=?", [tableName]);
 }
 
-function initializeIfNeeded() {
-  if (tableExists('users')) return; // already initialized
+async function initializeIfNeeded() {
+  const exists = await tableExists('users');
+  if (exists) return; // already initialized
+  
   const schemaPath = path.join(__dirname, '..', 'database', 'schema.sql');
   const seedPath = path.join(__dirname, '..', 'database', 'seed.sql');
   const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-  db.exec(schemaSql);
-  if (fs.existsSync(seedPath)) {
-    const seedSql = fs.readFileSync(seedPath, 'utf-8');
-    db.exec(seedSql);
-  }
+  const seedSql = fs.readFileSync(seedPath, 'utf-8');
+  
+  await new Promise((resolve, reject) => {
+    db.exec(schemaSql, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+  
+  await new Promise((resolve, reject) => {
+    db.exec(seedSql, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
 }
-initializeIfNeeded();
 
+// Initialize database when module is loaded
+initializeIfNeeded().catch(console.error);
+
+// Export the database and helper functions
 module.exports = {
   getDb: () => db,
+  runAsync: (sql, params) => db.runAsync(sql, params),
+  getAsync: (sql, params) => db.getAsync(sql, params),
+  allAsync: (sql, params) => db.allAsync(sql, params)
 };

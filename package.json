@@ -5,22 +5,27 @@
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
-    "dev": "vite",
+    "dev": "concurrently -k \"vite --host\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "^39.1.1",
+    "electron-rebuild": "^3.2.9",
     "vite": "^5.0.0",
-    "vue": "^3.3.8"
+    "vue": "^3.3.8",
+    "wait-on": "^9.0.1"
   },
   "dependencies": {
+    "sqlite3": "^5.1.7",
     "vue-router": "^4.6.3"
   }
 }

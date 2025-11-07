@@ -24,14 +24,19 @@ function verifyPassword(inputPassword, storedHash) {
 }
 
 function registerAuthIpc() {
+  const { getDb, getAsync, runAsync } = require('./database');
   const db = getDb();
 
-  ipcMain.handle('auth:login', (event, { username, password }) => {
-    const stmt = db.prepare('SELECT id, username, full_name, email, role, is_active, password_hash FROM users WHERE username = ? LIMIT 1');
-    const user = stmt.get(username);
+  ipcMain.handle('auth:login', async (event, { username, password }) => {
+    const user = await getAsync(
+      'SELECT id, username, full_name, email, role, is_active, password_hash FROM users WHERE username = ? LIMIT 1',
+      [username]
+    );
+    
     if (!user || !user.is_active) throw new Error('User tidak ditemukan atau non-aktif');
     if (!verifyPassword(password, user.password_hash)) throw new Error('Username atau password salah');
-    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+    
+    await runAsync('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
     currentUser = { id: user.id, username: user.username, full_name: user.full_name, email: user.email, role: user.role };
     return currentUser;
   });
