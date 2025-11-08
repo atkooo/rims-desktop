@@ -104,10 +104,10 @@
 
 <script>
 import { ref, computed, watch } from "vue";
-import { useItemStore } from "../store/items";
-import { ITEM_TYPE } from "../../shared/constants";
-import AppDialog from "./AppDialog.vue";
-import FormInput from "./FormInput.vue";
+import { useItemStore } from "@/store/items";
+import { ITEM_TYPE } from "@shared/constants";
+import AppDialog from "@/components/ui/AppDialog.vue";
+import FormInput from "@/components/ui/FormInput.vue";
 
 export default {
   name: "ItemForm",

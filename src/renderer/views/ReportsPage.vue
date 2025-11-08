@@ -131,9 +131,9 @@
 import { ref, computed } from "vue";
 import { useTransactionStore } from "../store/transactions";
 import { useItemStore } from "../store/items";
-import AppButton from "../components/AppButton.vue";
-import DataTable from "../components/DataTable.vue";
-import FormInput from "../components/FormInput.vue";
+import AppButton from "../components/ui/AppButton.vue";
+import DataTable from "../components/ui/DataTable.vue";
+import FormInput from "../components/ui/FormInput.vue";
 
 export default {
   name: "ReportsPage",
@@ -479,3 +479,4 @@ export default {
   padding: 3rem;
 }
 </style>
+

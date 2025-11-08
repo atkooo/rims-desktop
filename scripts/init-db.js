@@ -2,85 +2,105 @@ const fs = require("fs");
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
 
-// Helper function: Execute SQL content
+function collectSqlFiles(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectSqlFiles(entryPath));
+    } else if (entry.isFile() && entry.name.endsWith(".sql")) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
 async function execSql(db, sql, label) {
   return new Promise((resolve, reject) => {
     db.exec(sql, (err) => {
       if (err) {
-        console.error(`❌ Error executing ${label}:`, err.message);
+        console.error(`Error executing ${label}:`, err.message);
         reject(err);
       } else {
-        console.log(`✅ Executed ${label}`);
+        console.log(`[done] Executed ${label}`);
         resolve();
       }
     });
   });
 }
 
-// Main function
 async function main() {
   try {
-    // Setup paths
     const dataDir =
       process.env.DATABASE_DIR || path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-    // Create / reset database
     const dbPath = path.join(dataDir, "rims.db");
     if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
     const db = new sqlite3.Database(dbPath);
-    console.log(`🆕 Created new database at: ${dbPath}`);
+    console.log(`Created new database at: ${dbPath}`);
 
-    // === Apply Migrations ===
     const migrationsDir = path.join(
       __dirname,
       "..",
       "src",
       "database",
-      "migrations"
+      "migrations",
     );
     if (fs.existsSync(migrationsDir)) {
-      console.log("\n📦 Applying migrations...");
-      const migrationFiles = fs
-        .readdirSync(migrationsDir)
-        .filter((f) => f.endsWith(".sql"))
-        .sort();
+      console.log("\nApplying migrations...");
+      const migrationFiles = collectSqlFiles(migrationsDir)
+        .map((fullPath) => ({
+          name: path.basename(fullPath),
+          fullPath,
+          displayName: path.relative(migrationsDir, fullPath),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       for (const file of migrationFiles) {
-        const sql = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
-        await execSql(db, sql, `migration ${file}`);
+        const sql = fs.readFileSync(file.fullPath, "utf-8");
+        await execSql(db, sql, `migration ${file.displayName}`);
       }
-      console.log("✅ All migrations applied successfully.");
+      console.log("All migrations applied successfully.");
     } else {
-      console.warn("⚠️ No migrations folder found.");
+      console.warn("No migrations folder found.");
     }
 
-    // === Apply Seeders ===
-    const seedersDir = path.join(__dirname, "..", "src", "database", "seeders");
+    const seedersDir = path.join(
+      __dirname,
+      "..",
+      "src",
+      "database",
+      "seeders",
+    );
     if (fs.existsSync(seedersDir)) {
-      console.log("\n🌱 Seeding initial data...");
-      const seederFiles = fs
-        .readdirSync(seedersDir)
-        .filter((f) => f.endsWith(".sql"))
-        .sort();
+      console.log("\nSeeding initial data...");
+      const seederFiles = collectSqlFiles(seedersDir)
+        .map((fullPath) => ({
+          name: path.basename(fullPath),
+          fullPath,
+          displayName: path.relative(seedersDir, fullPath),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       for (const file of seederFiles) {
-        const sql = fs.readFileSync(path.join(seedersDir, file), "utf-8");
-        await execSql(db, sql, `seeder ${file}`);
+        const sql = fs.readFileSync(file.fullPath, "utf-8");
+        await execSql(db, sql, `seeder ${file.displayName}`);
       }
-      console.log("✅ All seeders executed successfully.");
+      console.log("All seeders executed successfully.");
     } else {
-      console.warn("⚠️ No seeders folder found.");
+      console.warn("No seeders folder found.");
     }
 
-    // Close database
     db.close();
-    console.log(`\n🎉 Database successfully initialized at: ${dbPath}`);
+    console.log(`\nDatabase successfully initialized at: ${dbPath}`);
   } catch (error) {
-    console.error("💥 Error initializing database:", error.message);
+    console.error("Error initializing database:", error.message);
     process.exit(1);
   }
 }
 
-// Run script
 main();

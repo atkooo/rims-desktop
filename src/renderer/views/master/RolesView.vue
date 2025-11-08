@@ -27,8 +27,8 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import AppButton from "@/components/AppButton.vue";
-import DataTable from "@/components/DataTable.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import DataTable from "@/components/ui/DataTable.vue";
 import { fetchRoles } from "@/services/masterData";
 
 export default {
@@ -68,3 +68,4 @@ export default {
   },
 };
 </script>
+

@@ -68,9 +68,9 @@
 
 <script>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import Icon from "@/components/Icon.vue";
-import AppButton from "@/components/AppButton.vue";
-import DataTable from "@/components/DataTable.vue";
+import Icon from "@/components/ui/Icon.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import DataTable from "@/components/ui/DataTable.vue";
 import { fetchSalesTransactions } from "@/services/transactions";
 import { eventBus } from "@/utils/eventBus";
 
@@ -309,3 +309,4 @@ export default {
   color: #475569;
 }
 </style>
+

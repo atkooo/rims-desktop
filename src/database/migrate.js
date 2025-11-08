@@ -73,6 +73,22 @@ async function getCurrentBatch() {
   }
 }
 
+function collectSqlFiles(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectSqlFiles(entryPath));
+    } else if (entry.isFile() && entry.name.endsWith(".sql")) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
 async function runMigrations() {
   const migrationsPath = path.join(__dirname, "migrations");
 
@@ -84,12 +100,15 @@ async function runMigrations() {
     const executedMigrations = await getExecutedMigrations();
     const executedFiles = new Set(executedMigrations.map((m) => m.migration));
 
-    // Get all migration files that haven't been executed
-    const pendingFiles = fs
-      .readdirSync(migrationsPath)
-      .filter((file) => file.endsWith(".sql"))
-      .filter((file) => !executedFiles.has(file))
-      .sort();
+    // Get all migration files that haven't been executed (nested folders supported)
+    const pendingFiles = collectSqlFiles(migrationsPath)
+      .map((fullPath) => ({
+        name: path.basename(fullPath),
+        fullPath,
+        displayName: path.relative(migrationsPath, fullPath),
+      }))
+      .filter((file) => !executedFiles.has(file.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     if (pendingFiles.length === 0) {
       console.log("No pending migrations.");
@@ -104,9 +123,8 @@ async function runMigrations() {
     await runAsync("BEGIN TRANSACTION");
 
     for (const file of pendingFiles) {
-      console.log(`Running migration: ${file}`);
-      const filePath = path.join(migrationsPath, file);
-      const migration = fs.readFileSync(filePath, "utf8");
+      console.log(`Running migration: ${file.displayName}`);
+      const migration = fs.readFileSync(file.fullPath, "utf8");
 
       // Split the migration file into individual statements
       const statements = migration
@@ -122,10 +140,10 @@ async function runMigrations() {
       // Record the migration
       await runAsync(
         "INSERT INTO migrations (migration, batch) VALUES (?, ?)",
-        [file, newBatch],
+        [file.name, newBatch],
       );
 
-      console.log(`Completed migration: ${file}`);
+      console.log(`Completed migration: ${file.displayName}`);
     }
 
     // Commit transaction

@@ -56,10 +56,10 @@
 
 <script>
 import { ref, computed, watch } from "vue";
-import { useTransactionStore } from "../store/transactions";
-import AppDialog from "./AppDialog.vue";
-import FormInput from "./FormInput.vue";
-import ItemSelector from "./ItemSelector.vue";
+import { useTransactionStore } from "@/store/transactions";
+import AppDialog from "@/components/ui/AppDialog.vue";
+import FormInput from "@/components/ui/FormInput.vue";
+import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 
 export default {
   name: "TransactionForm",

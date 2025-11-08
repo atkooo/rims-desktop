@@ -67,8 +67,8 @@
 
 <script>
 import { ref, computed } from "vue";
-import { useItemStore } from "../store/items";
-import AppButton from "./AppButton.vue";
+import { useItemStore } from "@/store/items";
+import AppButton from "@/components/ui/AppButton.vue";
 
 export default {
   name: "ItemSelector",

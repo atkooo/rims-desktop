@@ -41,8 +41,8 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
-import AppButton from "@/components/AppButton.vue";
-import DataTable from "@/components/DataTable.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import DataTable from "@/components/ui/DataTable.vue";
 import { fetchTopCustomers } from "@/services/reports";
 
 export default {
@@ -175,3 +175,4 @@ export default {
   color: #991b1b;
 }
 </style>
+

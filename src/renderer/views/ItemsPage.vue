@@ -94,11 +94,11 @@
 import { ref, computed, onMounted } from "vue";
 import { useItemStore } from "../store/items";
 import { ITEM_TYPE } from "../../shared/constants";
-import AppButton from "../components/AppButton.vue";
-import AppDialog from "../components/AppDialog.vue";
-import DataTable from "../components/DataTable.vue";
-import FormInput from "../components/FormInput.vue";
-import ItemForm from "../components/ItemForm.vue";
+import AppButton from "../components/ui/AppButton.vue";
+import AppDialog from "../components/ui/AppDialog.vue";
+import DataTable from "../components/ui/DataTable.vue";
+import FormInput from "../components/ui/FormInput.vue";
+import ItemForm from "../components/modules/items/ItemForm.vue";
 
 export default {
   name: "ItemsPage",
@@ -344,3 +344,4 @@ export default {
   color: #92400e;
 }
 </style>
+

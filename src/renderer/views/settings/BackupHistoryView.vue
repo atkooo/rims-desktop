@@ -39,8 +39,8 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
-import AppButton from "@/components/AppButton.vue";
-import DataTable from "@/components/DataTable.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import DataTable from "@/components/ui/DataTable.vue";
 import { fetchBackupHistory } from "@/services/settings";
 
 export default {
@@ -121,3 +121,4 @@ export default {
   },
 };
 </script>
+

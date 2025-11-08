@@ -112,7 +112,7 @@
     >
       <div class="restore-dialog">
         <p class="warning-text">
-          ⚠️ Restore akan mengganti data saat ini dengan data dari backup.
+          âš ï¸ Restore akan mengganti data saat ini dengan data dari backup.
           Pastikan Anda telah membuat backup terlebih dahulu.
         </p>
         <div class="select-group">
@@ -131,9 +131,9 @@
 <script>
 import { ref, onMounted } from "vue";
 import { ipcRenderer } from "@/services/ipc";
-import AppButton from "../components/AppButton.vue";
-import AppDialog from "../components/AppDialog.vue";
-import FormInput from "../components/FormInput.vue";
+import AppButton from "../components/ui/AppButton.vue";
+import AppDialog from "../components/ui/AppDialog.vue";
+import FormInput from "../components/ui/FormInput.vue";
 
 export default {
   name: "SettingsPage",
@@ -385,3 +385,4 @@ export default {
   margin: 0;
 }
 </style>
+

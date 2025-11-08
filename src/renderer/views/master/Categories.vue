@@ -116,9 +116,9 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import Dialog from "@/components/Dialog.vue";
-import AppTable from "@/components/AppTable.vue";
-import AppButton from "@/components/AppButton.vue";
+import Dialog from "@/components/ui/Dialog.vue";
+import AppTable from "@/components/ui/AppTable.vue";
+import AppButton from "@/components/ui/AppButton.vue";
 
 export default {
   components: { Dialog, AppTable, AppButton },
@@ -417,3 +417,4 @@ export default {
   color: #374151;
 }
 </style>
+

@@ -18,6 +18,22 @@ function runAsync(sql, params = []) {
   });
 }
 
+function collectSqlFiles(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectSqlFiles(entryPath));
+    } else if (entry.isFile() && entry.name.endsWith(".sql")) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
 async function runSeeders() {
   const seedersPath = path.join(__dirname, "seeders");
 
@@ -25,16 +41,18 @@ async function runSeeders() {
     // Begin transaction
     await runAsync("BEGIN TRANSACTION");
 
-    // Get all seeder files
-    const files = fs
-      .readdirSync(seedersPath)
-      .filter((file) => file.endsWith(".sql"))
-      .sort();
+    // Get all seeder files (nested structure supported)
+    const files = collectSqlFiles(seedersPath)
+      .map((fullPath) => ({
+        name: path.basename(fullPath),
+        fullPath,
+        displayName: path.relative(seedersPath, fullPath),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     for (const file of files) {
-      console.log(`Running seeder: ${file}`);
-      const filePath = path.join(seedersPath, file);
-      const seeder = fs.readFileSync(filePath, "utf8");
+      console.log(`Running seeder: ${file.displayName}`);
+      const seeder = fs.readFileSync(file.fullPath, "utf8");
 
       // Split the seeder file into individual statements
       const statements = seeder
@@ -47,7 +65,7 @@ async function runSeeders() {
         await runAsync(statement);
       }
 
-      console.log(`Completed seeder: ${file}`);
+      console.log(`Completed seeder: ${file.displayName}`);
     }
 
     // Commit transaction

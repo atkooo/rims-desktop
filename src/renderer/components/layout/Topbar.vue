@@ -1,13 +1,8 @@
 <template>
   <header class="topbar">
     <div class="topbar__left">
-      <button
-        class="icon-btn"
-        type="button"
-        :aria-pressed="collapsed"
-        aria-label="Toggle sidebar"
-        @click="emit('toggle-sidebar')"
-      >
+      <button class="icon-btn" type="button" :aria-pressed="collapsed" aria-label="Toggle sidebar"
+        @click="emit('toggle-sidebar')">
         <Icon name="menu" size="20" />
       </button>
       <div class="topbar__brand">
@@ -16,23 +11,14 @@
       </div>
       <form class="topbar__search" @submit.prevent="handleSearch">
         <Icon name="search" size="16" class="search-icon" />
-        <input
-          v-model="searchQuery"
-          type="search"
-          placeholder="Cari transaksi, pelanggan, atau kode invoice"
-        />
+        <input v-model="searchQuery" type="search" placeholder="Cari transaksi, pelanggan, atau kode invoice" />
         <button type="submit" :disabled="searchBusy">
           {{ searchBusy ? "Mencari..." : "Cari" }}
         </button>
       </form>
     </div>
     <div class="topbar__right">
-      <button
-        class="icon-btn"
-        type="button"
-        aria-label="Refresh notifikasi"
-        @click="refreshTransactions"
-      >
+      <button class="icon-btn" type="button" aria-label="Refresh notifikasi" @click="refreshTransactions">
         <Icon name="bell" size="20" />
         <span v-if="pendingTransactions" class="icon-badge">
           {{ pendingTransactions }}
@@ -45,12 +31,8 @@
         </span>
       </button>
       <div class="profile-shell" ref="profileMenuRef">
-        <button
-          type="button"
-          class="profile-card"
-          @click="toggleProfileMenu"
-          :aria-expanded="profileMenuOpen"
-        >
+        <button type="button" class="profile-card" @click="toggleProfileMenu" :aria-expanded="profileMenuOpen"
+          ref="profileButtonRef">
           <div class="profile-info">
             <span class="role">{{ roleLabel }}</span>
             <strong>{{ currentUser?.full_name || "Pengguna" }}</strong>
@@ -58,35 +40,47 @@
           <div class="avatar">{{ initials }}</div>
           <Icon name="chevron-down" size="16" class="chevron" />
         </button>
-        <transition name="fade-scale">
-          <div v-if="profileMenuOpen" class="profile-menu">
-            <button type="button" @click="goToProfile">
-              <Icon name="user" size="16" />
-              <span>Profil Saya</span>
-            </button>
-            <button type="button" class="logout" @click="logout">
-              <Icon name="log-out" size="16" />
-              <span>Keluar</span>
-            </button>
-          </div>
-        </transition>
+        <Teleport to="body">
+          <transition name="fade-scale">
+            <div v-if="profileMenuOpen" class="profile-menu" ref="profileMenuDropdownRef" :style="{
+              top: profileMenuPosition.top + 'px',
+              left: profileMenuPosition.left + 'px'
+            }">
+              <button type="button" @click="goToProfile">
+                <Icon name="user" size="16" />
+                <span>Profil Saya</span>
+              </button>
+              <button type="button" class="logout" @click="logout">
+                <Icon name="log-out" size="16" />
+                <span>Keluar</span>
+              </button>
+            </div>
+          </transition>
+        </Teleport>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  watch,
+} from "vue";
 import { useRouter } from "vue-router";
-import Icon from "./Icon.vue";
+import Icon from "../ui/Icon.vue";
 import {
   getStoredUser,
   getCurrentUser,
   logout as authLogout,
-} from "../services/auth.js";
+} from "@/services/auth.js";
 import { useTransactionStore } from "@/store/transactions";
 import { eventBus } from "@/utils/eventBus";
-import { TRANSACTION_STATUS } from "../../shared/constants";
+import { TRANSACTION_STATUS } from "@shared/constants";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -104,6 +98,10 @@ let storageListener = null;
 let searchTimeout = null;
 const profileMenuOpen = ref(false);
 const profileMenuRef = ref(null);
+const profileMenuDropdownRef = ref(null);
+const profileButtonRef = ref(null);
+const profileMenuPosition = ref({ top: 0, left: 0 });
+let dropdownListenersAttached = false;
 
 const pendingTransactions = computed(() => {
   return (transactionStore.transactions || []).filter(
@@ -142,8 +140,36 @@ const handleSearch = () => {
 
 const refreshTransactions = () => {
   if (!transactionStore.loading) {
-    transactionStore.fetchTransactions().catch(() => {});
+    transactionStore.fetchTransactions().catch(() => { });
   }
+};
+
+const updateProfileMenuPosition = () => {
+  const anchor = profileButtonRef.value;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const dropdownWidth =
+    profileMenuDropdownRef.value?.offsetWidth || Math.max(rect.width, 220);
+  const padding = 16;
+  const desiredLeft = rect.right - dropdownWidth;
+  const maxLeft = window.innerWidth - dropdownWidth - padding;
+  const left = Math.max(padding, Math.min(desiredLeft, maxLeft));
+  const top = rect.bottom + 8;
+  profileMenuPosition.value = { top, left };
+};
+
+const attachDropdownListeners = () => {
+  if (dropdownListenersAttached) return;
+  dropdownListenersAttached = true;
+  window.addEventListener("resize", updateProfileMenuPosition);
+  window.addEventListener("scroll", updateProfileMenuPosition, true);
+};
+
+const detachDropdownListeners = () => {
+  if (!dropdownListenersAttached) return;
+  dropdownListenersAttached = false;
+  window.removeEventListener("resize", updateProfileMenuPosition);
+  window.removeEventListener("scroll", updateProfileMenuPosition, true);
 };
 
 const toggleProfileMenu = () => {
@@ -198,10 +224,13 @@ const handleStorage = (event) => {
 };
 
 const handleClickOutside = (event) => {
-  if (!profileMenuRef.value) return;
-  if (!profileMenuRef.value.contains(event.target)) {
-    profileMenuOpen.value = false;
-  }
+  const clickedTrigger =
+    profileMenuRef.value && profileMenuRef.value.contains(event.target);
+  const clickedDropdown =
+    profileMenuDropdownRef.value &&
+    profileMenuDropdownRef.value.contains(event.target);
+  if (clickedTrigger || clickedDropdown) return;
+  profileMenuOpen.value = false;
 };
 
 onMounted(() => {
@@ -222,6 +251,17 @@ onBeforeUnmount(() => {
     clearTimeout(searchTimeout);
   }
   document.removeEventListener("click", handleClickOutside);
+  detachDropdownListeners();
+});
+
+watch(profileMenuOpen, async (isOpen) => {
+  if (isOpen) {
+    await nextTick();
+    updateProfileMenuPosition();
+    attachDropdownListeners();
+  } else {
+    detachDropdownListeners();
+  }
 });
 </script>
 
@@ -282,7 +322,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: #f8fafc;
   flex: 1 1 320px;
-  min-width: 200px;
+  min-width: 220px;
   max-width: 480px;
 }
 
@@ -420,10 +460,10 @@ onBeforeUnmount(() => {
 }
 
 .profile-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 180px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 200px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #fff;
@@ -434,7 +474,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  z-index: 20;
+  z-index: 1200;
 }
 
 .profile-menu button {

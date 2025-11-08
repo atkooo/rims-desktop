@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="$route.path === '/login'" class="auth">
     <router-view :key="$route.fullPath" />
   </div>
@@ -15,9 +15,9 @@
 </template>
 
 <script>
-import Sidebar from "./components/Sidebar.vue";
-import Topbar from "./components/Topbar.vue";
-import Breadcrumbs from "./components/Breadcrumbs.vue";
+import Sidebar from "./components/layout/Sidebar.vue";
+import Topbar from "./components/layout/Topbar.vue";
+import Breadcrumbs from "./components/layout/Breadcrumbs.vue";
 export default {
   components: { Sidebar, Topbar, Breadcrumbs },
   data() {
@@ -63,3 +63,4 @@ export default {
   padding: 18px;
 }
 </style>
+
