@@ -7,6 +7,7 @@
     "start": "node scripts/run-electron.js --node-env=production",
     "dev": "concurrently -k \"vite --host\" \"wait-on http://localhost:5173 && node scripts/run-electron.js --node-env=development\"",
     "build": "vite build",
+    "dist": "npm run build && electron-builder",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
     "rebuild": "npm rebuild sqlite3 --build-from-source",
@@ -27,6 +28,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^39.1.1",
+    "electron-builder": "^26.0.12",
     "electron-devtools-installer": "^4.0.0",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
@@ -39,5 +41,40 @@
     "sqlite3": "^5.0.2",
     "vue-router": "^4.6.3",
     "winston": "^3.18.3"
+  },
+  "build": {
+    "appId": "com.rims.desktop",
+    "productName": "RIMS Desktop",
+    "directories": {
+      "output": "dist/electron",
+      "buildResources": "public"
+    },
+    "files": [
+      "dist/renderer/**/*",
+      "src/main/**/*",
+      "src/shared/**/*",
+      "src/database/**/*",
+      "scripts/run-electron.js",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/main/index.js"
+    },
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

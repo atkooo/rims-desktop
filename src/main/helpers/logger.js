@@ -1,5 +1,21 @@
 const winston = require("winston");
 const path = require("path");
+const fs = require("fs");
+const { app } = require("electron");
+
+function resolveLogDir() {
+  try {
+    if (app && typeof app.getPath === "function") {
+      return path.join(app.getPath("userData"), "logs");
+    }
+  } catch (error) {
+    // Ignore and fall back to project data folder
+  }
+  return path.join(__dirname, "../../../data/logs");
+}
+
+const logDir = resolveLogDir();
+fs.mkdirSync(logDir, { recursive: true });
 
 // Konfigurasi logger
 const logger = winston.createLogger({
@@ -11,12 +27,12 @@ const logger = winston.createLogger({
   transports: [
     // Log error ke file
     new winston.transports.File({
-      filename: path.join(__dirname, "../../../data/logs/error.log"),
+      filename: path.join(logDir, "error.log"),
       level: "error",
     }),
     // Log info ke file
     new winston.transports.File({
-      filename: path.join(__dirname, "../../../data/logs/combined.log"),
+      filename: path.join(logDir, "combined.log"),
     }),
   ],
 });

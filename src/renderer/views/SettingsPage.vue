@@ -131,9 +131,9 @@
 <script>
 import { ref, onMounted } from "vue";
 import { ipcRenderer } from "@/services/ipc";
-import AppButton from "../components/ui/AppButton.vue";
-import AppDialog from "../components/ui/AppDialog.vue";
-import FormInput from "../components/ui/FormInput.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
+import FormInput from "@/components/ui/FormInput.vue";
 
 export default {
   name: "SettingsPage",
@@ -385,4 +385,3 @@ export default {
   margin: 0;
 }
 </style>
-

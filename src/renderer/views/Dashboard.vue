@@ -56,10 +56,10 @@
 
 <script>
 import { onMounted } from "vue";
-import { useTransactionStore } from "../store/transactions";
-import { useItemStore } from "../store/items";
-import AppButton from "../components/ui/AppButton.vue";
-import DataTable from "../components/ui/DataTable.vue";
+import { useTransactionStore } from "@/store/transactions";
+import { useItemStore } from "@/store/items";
+import AppButton from "@/components/ui/AppButton.vue";
+import DataTable from "@/components/ui/DataTable.vue";
 
 export default {
   name: "Dashboard",
@@ -184,4 +184,3 @@ export default {
   color: #111827;
 }
 </style>
-

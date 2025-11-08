@@ -105,13 +105,13 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
-import { useTransactionStore } from "../store/transactions";
-import { TRANSACTION_STATUS } from "../../shared/constants";
-import AppButton from "../components/ui/AppButton.vue";
-import AppDialog from "../components/ui/AppDialog.vue";
-import DataTable from "../components/ui/DataTable.vue";
-import FormInput from "../components/ui/FormInput.vue";
-import TransactionForm from "../components/modules/transactions/TransactionForm.vue";
+import { useTransactionStore } from "@/store/transactions";
+import { TRANSACTION_STATUS } from "@shared/constants";
+import AppButton from "@/components/ui/AppButton.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
+import DataTable from "@/components/ui/DataTable.vue";
+import FormInput from "@/components/ui/FormInput.vue";
+import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 
 export default {
   name: "TransactionsPage",
@@ -367,4 +367,3 @@ export default {
   font-size: 0.875rem !important;
 }
 </style>
-
