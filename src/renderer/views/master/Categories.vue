@@ -9,36 +9,42 @@
 
     <!-- Tabel Kategori -->
     <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Deskripsi</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="category in categories" :key="category.id">
-            <td>{{ category.name }}</td>
-            <td>{{ category.description }}</td>
-            <td>
-              <button class="btn icon" @click="editCategory(category)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn icon" @click="confirmDelete(category)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <AppTable
+        :columns="columns"
+        :rows="categories"
+        :loading="loading"
+        :searchable-keys="['name','description']"
+        :show-index="true"
+      >
+        <template #cell-is_active="{ row }">
+          <span :class="['badge', row.is_active ? 'badge-success' : 'badge-muted']">
+            {{ row.is_active ? 'Aktif' : 'Nonaktif' }}
+          </span>
+        </template>
+        <template #cell-created_at="{ row }">
+          {{ formatDate(row.created_at) }}
+        </template>
+        <template #cell-updated_at="{ row }">
+          {{ formatDate(row.updated_at) }}
+        </template>
+        <template #actions="{ row }">
+          <AppButton variant="secondary" @click="editCategory(row)" title="Edit">
+            <i class="fas fa-edit"></i>
+            <span>Edit</span>
+          </AppButton>
+          <AppButton variant="danger" @click="confirmDelete(row)" title="Hapus">
+            <i class="fas fa-trash"></i>
+            <span>Hapus</span>
+          </AppButton>
+        </template>
+      </AppTable>
     </div>
 
     <!-- Dialog Form -->
     <Dialog
-      v-if="showDialog"
+      v-model="showDialog"
       :title="isEdit ? 'Edit Kategori' : 'Tambah Kategori'"
-      @close="closeDialog"
+      @update:modelValue="(v) => { if (!v) closeDialog(); }"
     >
       <form @submit.prevent="saveCategory">
         <div class="form-group">
@@ -51,20 +57,20 @@
           <textarea v-model="form.description" rows="3"></textarea>
         </div>
 
-        <div class="dialog-footer">
-          <button type="button" class="btn" @click="closeDialog">Batal</button>
-          <button type="submit" class="btn primary">
-            {{ isEdit ? "Simpan" : "Tambah" }}
-          </button>
-        </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" @click="closeDialog">Batal</button>
+        <button type="submit" class="btn primary">
+          {{ isEdit ? "Simpan" : "Tambah" }}
+        </button>
+      </div>
       </form>
     </Dialog>
 
     <!-- Dialog Konfirmasi Hapus -->
     <Dialog
-      v-if="showDeleteDialog"
+      v-model="showDeleteDialog"
       title="Hapus Kategori"
-      @close="closeDeleteDialog"
+      @update:modelValue="(v) => { if (!v) closeDeleteDialog(); }"
     >
       <p>Yakin ingin menghapus kategori ini?</p>
       <div class="dialog-footer">
@@ -78,12 +84,22 @@
 <script>
 import { ref, onMounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
+import AppTable from "@/components/AppTable.vue";
+import AppButton from "@/components/AppButton.vue";
 
 export default {
-  components: { Dialog },
+  components: { Dialog, AppTable, AppButton },
 
   setup() {
     const categories = ref([]);
+    const loading = ref(false);
+    const columns = ref([
+      { key: 'name', label: 'Nama', sortable: true },
+      { key: 'description', label: 'Deskripsi' },
+      { key: 'is_active', label: 'Status', sortable: true, align: 'center' },
+      { key: 'created_at', label: 'Dibuat' },
+      { key: 'updated_at', label: 'Diupdate' },
+    ]);
     const showDialog = ref(false);
     const showDeleteDialog = ref(false);
     const selectedCategory = ref(null);
@@ -92,15 +108,19 @@ export default {
     const form = ref({
       name: "",
       description: "",
+      is_active: true,
     });
 
     // Load data
     async function loadCategories() {
       try {
+        loading.value = true;
         categories.value = await window.api.invoke("categories:getAll");
       } catch (error) {
         alert("Gagal memuat data kategori");
         console.error(error);
+      } finally {
+        loading.value = false;
       }
     }
 
@@ -113,14 +133,14 @@ export default {
 
     function editCategory(category) {
       selectedCategory.value = category;
-      form.value = { ...category };
+      form.value = { name: category?.name || "", description: category?.description || "", is_active: Boolean(category?.is_active) };
       isEdit.value = true;
       showDialog.value = true;
     }
 
     function closeDialog() {
       showDialog.value = false;
-      form.value = { name: "", description: "" };
+      form.value = { name: "", description: "", is_active: true };
       selectedCategory.value = null;
     }
 
@@ -137,13 +157,19 @@ export default {
     // CRUD operations
     async function saveCategory() {
       try {
+        const payload = {
+          name: String(form.value?.name || "").trim(),
+          description: String(form.value?.description || "").trim(),
+          is_active: form.value?.is_active ? 1 : 0,
+        };
+
         if (isEdit.value) {
           await window.api.invoke("categories:update", {
-            id: selectedCategory.value.id,
-            ...form.value,
+            id: Number(selectedCategory.value?.id),
+            ...payload,
           });
         } else {
-          await window.api.invoke("categories:create", form.value);
+          await window.api.invoke("categories:create", payload);
         }
 
         closeDialog();
@@ -167,9 +193,17 @@ export default {
 
     onMounted(loadCategories);
 
+    function formatDate(val) {
+      if (!val) return "-";
+      const d = new Date(val);
+      return isNaN(d) ? String(val) : d.toLocaleString();
+    }
+
     return {
       // Data
       categories,
+      columns,
+      loading,
       form,
       showDialog,
       showDeleteDialog,
@@ -183,6 +217,7 @@ export default {
       closeDeleteDialog,
       saveCategory,
       deleteCategory,
+      formatDate,
     };
   },
 };
@@ -262,13 +297,26 @@ export default {
   color: white;
 }
 
+/* Ensure icon buttons are visible */
 .btn.icon {
   padding: 6px;
   margin: 0 4px;
-  background: none;
+  background: transparent;
+  color: #334155; /* slate-700 */
 }
+
+.btn.icon i { color: inherit; }
 
 .btn.icon:hover {
   color: #007bff;
 }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+}
+.badge-success { background: #dcfce7; color: #166534; }
+.badge-muted { background: #e5e7eb; color: #374151; }
 </style>

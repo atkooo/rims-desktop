@@ -64,6 +64,8 @@ export const useTransactionStore = defineStore("transactions", {
             t.created_at ||
             null;
           const totalAmount = Number(t.totalAmount ?? t.total_amount ?? 0) || 0;
+          const customerName =
+            t.customerName || t.customer_name || t.customer || null;
 
           // Map backend status to UI constants
           let status = t.status;
@@ -89,6 +91,7 @@ export const useTransactionStore = defineStore("transactions", {
             transactionType,
             transactionDate,
             totalAmount,
+            customerName,
             status,
           };
         });

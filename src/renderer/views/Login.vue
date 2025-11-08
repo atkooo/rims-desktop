@@ -37,7 +37,7 @@
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     <small
-      >Default admin: <code>admin / admin123</code> (ubah via modul
+      >Default admin: <code>admin / Admin123!</code> (ubah via modul
       pengguna).</small
     >
   </div>

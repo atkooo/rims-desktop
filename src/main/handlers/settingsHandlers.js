@@ -146,14 +146,31 @@ function setupSettingsHandlers() {
       // Ensure backup directory exists
       await fs.mkdir(BACKUPS_DIR, { recursive: true });
 
-      // Close current database connection
-      database.close();
+      // Close current database connection and wait for it to fully close
+      await database.close();
 
       // Copy database file
       await fs.copyFile(DATABASE_FILE, backupFile);
 
       // Reconnect to database
       await database.connect();
+
+      // Record backup history (manual)
+      try {
+        const stat = await fs.stat(backupFile);
+        await database.execute(
+          `INSERT INTO backup_history (backup_file, backup_path, file_size, backup_type, status, user_id)
+           VALUES (?, ?, ?, 'manual', 'success', NULL)`,
+          [path.basename(backupFile), backupFile, stat.size],
+        );
+        await database.execute(
+          `INSERT INTO activity_logs (user_id, action, module, description, ip_address)
+           VALUES (NULL, 'BACKUP_CREATE', 'backup', ?, NULL)`,
+          [`Manual backup created: ${path.basename(backupFile)}`],
+        );
+      } catch (logErr) {
+        logger.warn("Failed to record backup history/activity log:", logErr);
+      }
 
       logger.info("Backup created successfully:", backupFile);
       return true;
@@ -171,14 +188,25 @@ function setupSettingsHandlers() {
       // Verify backup file exists
       await fs.access(backupPath);
 
-      // Close current database connection
-      database.close();
+      // Close current database connection and wait for it to fully close
+      await database.close();
 
       // Copy backup file to database location
       await fs.copyFile(backupPath, DATABASE_FILE);
 
       // Reconnect to database
       await database.connect();
+
+      // Log activity for restore
+      try {
+        await database.execute(
+          `INSERT INTO activity_logs (user_id, action, module, description, ip_address)
+           VALUES (NULL, 'BACKUP_RESTORE', 'backup', ?, NULL)`,
+          [`Restore from: ${backupFile}`],
+        );
+      } catch (logErr) {
+        logger.warn("Failed to record restore activity:", logErr);
+      }
 
       logger.info("Backup restored successfully from:", backupFile);
       return true;

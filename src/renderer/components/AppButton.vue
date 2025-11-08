@@ -106,6 +106,11 @@ export default {
   animation: spin 0.75s linear infinite;
 }
 
+/* spacing between optional icon and text */
+.button i + span {
+  margin-left: 0.5rem;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

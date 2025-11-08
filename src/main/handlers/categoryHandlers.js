@@ -12,6 +12,7 @@ function setupCategoryHandlers() {
                     id,
                     name,
                     description,
+                    is_active,
                     created_at,
                     updated_at
                 FROM categories 
@@ -33,6 +34,7 @@ function setupCategoryHandlers() {
                     id,
                     name,
                     description,
+                    is_active,
                     created_at,
                     updated_at
                 FROM categories 
@@ -49,24 +51,26 @@ function setupCategoryHandlers() {
   // Create new category
   ipcMain.handle("categories:create", async (event, categoryData) => {
     try {
-      const { name, description } = categoryData;
+      const { name, description, is_active } = categoryData;
       const now = new Date().toISOString();
 
       const sql = `
                 INSERT INTO categories (
                     name, 
                     description, 
+                    is_active,
                     created_at, 
                     updated_at
-                ) VALUES (?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?)
             `;
 
-      const result = await database.execute(sql, [name, description, now, now]);
+      const result = await database.execute(sql, [name, description, is_active ?? 1, now, now]);
 
       return {
         id: result.id,
         name,
         description,
+        is_active: is_active ?? 1,
         created_at: now,
         updated_at: now,
       };
@@ -79,7 +83,7 @@ function setupCategoryHandlers() {
   // Update category
   ipcMain.handle("categories:update", async (event, categoryData) => {
     try {
-      const { id, name, description } = categoryData;
+      const { id, name, description, is_active } = categoryData;
       const now = new Date().toISOString();
 
       const sql = `
@@ -87,11 +91,12 @@ function setupCategoryHandlers() {
                 SET 
                     name = ?,
                     description = ?,
+                    is_active = ?,
                     updated_at = ?
                 WHERE id = ?
             `;
 
-      await database.execute(sql, [name, description, now, id]);
+      await database.execute(sql, [name, description, is_active ?? 1, now, id]);
 
       return {
         id,

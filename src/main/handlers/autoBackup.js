@@ -51,8 +51,8 @@ async function createBackup() {
     // Ensure backup directory exists
     await fs.mkdir(BACKUPS_DIR, { recursive: true });
 
-    // Close current database connection
-    database.close();
+    // Close current database connection and wait for it to fully close
+    await database.close();
 
     // Copy database file
     await fs.copyFile(DATABASE_FILE, backupFile);
@@ -62,6 +62,23 @@ async function createBackup() {
 
     // Clean up old backups
     await cleanOldBackups();
+
+    // Record backup history (auto) and activity log
+    try {
+      const stat = await fs.stat(backupFile);
+      await database.execute(
+        `INSERT INTO backup_history (backup_file, backup_path, file_size, backup_type, status, user_id)
+         VALUES (?, ?, ?, 'auto', 'success', NULL)`,
+        [path.basename(backupFile), backupFile, stat.size],
+      );
+      await database.execute(
+        `INSERT INTO activity_logs (user_id, action, module, description, ip_address)
+         VALUES (NULL, 'AUTO_BACKUP_CREATE', 'backup', ?, NULL)`,
+        [`Auto backup created: ${path.basename(backupFile)}`],
+      );
+    } catch (logErr) {
+      logger.warn("Failed to record auto-backup history/activity log:", logErr);
+    }
 
     logger.info("Auto backup created successfully:", backupFile);
     return true;
@@ -73,6 +90,27 @@ async function createBackup() {
       await database.connect();
     } catch (connError) {
       logger.error("Error reconnecting to database:", connError);
+    }
+
+    // Log failed backup into backup_history
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const backupFile = path.join(
+        BACKUPS_DIR,
+        `auto-backup-${timestamp}.sqlite`,
+      );
+      await database.execute(
+        `INSERT INTO backup_history (backup_file, backup_path, file_size, backup_type, status, user_id)
+         VALUES (?, ?, ?, 'auto', 'failed', NULL)`,
+        [path.basename(backupFile), backupFile, 0],
+      );
+      await database.execute(
+        `INSERT INTO activity_logs (user_id, action, module, description, ip_address)
+         VALUES (NULL, 'AUTO_BACKUP_FAILED', 'backup', ?, NULL)`,
+        [String(error?.message || error)],
+      );
+    } catch (logErr) {
+      logger.warn("Failed to record failed auto-backup log:", logErr);
     }
 
     throw error;

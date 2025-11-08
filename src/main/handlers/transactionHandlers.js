@@ -24,10 +24,12 @@ function setupTransactionHandlers() {
       const rentalTransactions = await database.query(`
                 SELECT 
                     rt.*,
+                    c.name AS customer_name,
                     GROUP_CONCAT(rtd.item_id) as item_ids,
                     GROUP_CONCAT(rtd.quantity) as quantities,
                     'rental' as transaction_type
                 FROM rental_transactions rt
+                LEFT JOIN customers c ON rt.customer_id = c.id
                 LEFT JOIN rental_transaction_details rtd ON rt.id = rtd.rental_transaction_id
                 GROUP BY rt.id
             `);
@@ -36,10 +38,12 @@ function setupTransactionHandlers() {
       const salesTransactions = await database.query(`
                 SELECT 
                     st.*,
+                    c.name AS customer_name,
                     GROUP_CONCAT(std.item_id) as item_ids,
                     GROUP_CONCAT(std.quantity) as quantities,
                     'sale' as transaction_type
                 FROM sales_transactions st
+                LEFT JOIN customers c ON st.customer_id = c.id
                 LEFT JOIN sales_transaction_details std ON st.id = std.sales_transaction_id
                 GROUP BY st.id
             `);

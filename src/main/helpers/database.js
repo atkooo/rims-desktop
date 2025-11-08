@@ -9,6 +9,7 @@ class Database {
     this.db = null;
     this.initialized = false;
     this.connectingPromise = null;
+    this.closingPromise = null;
   }
 
   // Koneksi ke database
@@ -43,7 +44,10 @@ class Database {
   }
 
   // Query dengan Promise
-  query(sql, params = []) {
+  async query(sql, params = []) {
+    if (!this.db) {
+      await this.connect();
+    }
     return new Promise((resolve, reject) => {
       this.db.all(sql, params, (err, rows) => {
         if (err) {
@@ -57,7 +61,10 @@ class Database {
   }
 
   // Single result query
-  queryOne(sql, params = []) {
+  async queryOne(sql, params = []) {
+    if (!this.db) {
+      await this.connect();
+    }
     return new Promise((resolve, reject) => {
       this.db.get(sql, params, (err, row) => {
         if (err) {
@@ -71,7 +78,10 @@ class Database {
   }
 
   // Execute query (insert, update, delete)
-  execute(sql, params = []) {
+  async execute(sql, params = []) {
+    if (!this.db) {
+      await this.connect();
+    }
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
         if (err) {
@@ -85,17 +95,26 @@ class Database {
   }
 
   // Close connection
-  close() {
-    if (this.db) {
-      this.db.close((err) => {
+  async close() {
+    if (!this.db) return;
+    if (this.closingPromise) return this.closingPromise;
+
+    const dbToClose = this.db;
+    this.db = null;
+    this.initialized = false;
+
+    this.closingPromise = new Promise((resolve) => {
+      dbToClose.close((err) => {
         if (err) {
           logger.error("Error closing database:", err);
         }
         logger.info("Database connection closed");
+        this.closingPromise = null;
+        resolve();
       });
-      this.db = null;
-      this.initialized = false;
-    }
+    });
+
+    return this.closingPromise;
   }
 
   async ensureSchema() {
@@ -120,7 +139,10 @@ class Database {
     }
   }
 
-  tableExists(tableName) {
+  async tableExists(tableName) {
+    if (!this.db) {
+      await this.connect();
+    }
     return new Promise((resolve, reject) => {
       this.db.get(
         "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
@@ -136,7 +158,10 @@ class Database {
     });
   }
 
-  execSqlScript(sql, label) {
+  async execSqlScript(sql, label) {
+    if (!this.db) {
+      await this.connect();
+    }
     return new Promise((resolve, reject) => {
       this.db.exec(sql, (err) => {
         if (err) {

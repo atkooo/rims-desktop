@@ -1,6 +1,7 @@
 const { ipcMain } = require("electron");
 const crypto = require("crypto");
-const { getDb } = require("./database");
+const database = require("./helpers/database");
+const { logActivity } = require("./helpers/activity");
 
 let currentUser = null;
 
@@ -33,54 +34,86 @@ function verifyPassword(inputPassword, storedHash) {
 }
 
 function registerAuthIpc() {
-  const { getDb, getAsync, runAsync } = require("./database");
-  const db = getDb();
 
   ipcMain.handle("auth:login", async (event, { username, password }) => {
-    const user = await getAsync(
-      `SELECT u.id, u.username, u.full_name, u.email, u.role_id, u.is_active,
-              u.password_hash, r.name AS role_name
-       FROM users u
-       LEFT JOIN roles r ON r.id = u.role_id
-       WHERE u.username = ?
-       LIMIT 1`,
-      [username],
-    );
+    try {
+      const user = await database.queryOne(
+        `SELECT u.id, u.username, u.full_name, u.email, u.role_id, u.is_active,
+                u.password_hash, r.name AS role_name
+         FROM users u
+         LEFT JOIN roles r ON r.id = u.role_id
+         WHERE u.username = ?
+         LIMIT 1`,
+        [username],
+      );
 
-    if (!user || !user.is_active)
-      throw new Error("User tidak ditemukan atau non-aktif");
-    if (!verifyPassword(password, user.password_hash))
-      throw new Error("Username atau password salah");
+      if (!user || !user.is_active)
+        throw new Error("User tidak ditemukan atau non-aktif");
+      if (!verifyPassword(password, user.password_hash))
+        throw new Error("Username atau password salah");
 
-    await runAsync(
-      "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
-      [user.id],
-    );
-    currentUser = {
-      id: user.id,
-      role_id: user.role_id,
-      username: user.username,
-      full_name: user.full_name,
-      email: user.email,
-      role: user.role_name || null,
-    };
-    return currentUser;
+      await database.execute(
+        "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
+        [user.id],
+      );
+      currentUser = {
+        id: user.id,
+        role_id: user.role_id,
+        username: user.username,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role_name || null,
+      };
+
+      await logActivity({
+        userId: user.id,
+        action: "LOGIN",
+        module: "auth",
+        description: `User ${user.username} login`,
+      });
+
+      return currentUser;
+    } catch (error) {
+      await logActivity({
+        userId: null,
+        action: "LOGIN_FAILED",
+        module: "auth",
+        description: `User ${username} login failed`,
+      });
+      throw error;
+    }
   });
 
-  ipcMain.handle("auth:logout", () => {
-    currentUser = null;
+  ipcMain.handle("auth:logout", async () => {
+    try {
+      if (currentUser?.id) {
+        await logActivity({
+          userId: currentUser.id,
+          action: "LOGOUT",
+          module: "auth",
+          description: `User ${currentUser.username} logout`,
+        });
+      }
+    } finally {
+      currentUser = null;
+    }
     return true;
   });
   ipcMain.handle("auth:getCurrentUser", () => currentUser);
-  ipcMain.handle("auth:changePassword", (event, { userId, newPassword }) => {
+  ipcMain.handle("auth:changePassword", async (event, { userId, newPassword }) => {
     if (!newPassword || newPassword.length < 6)
       throw new Error("Password terlalu pendek");
     const hash = scryptHash(newPassword);
-    getDb()
-      .prepare(
-        "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      )
-      .run(hash, userId);
+    await database.execute(
+      "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [hash, userId],
+    );
+    await logActivity({
+      userId,
+      action: "PASSWORD_CHANGE",
+      module: "auth",
+      description: `User ${userId} changed password`,
+    });
     return true;
   });
 }
