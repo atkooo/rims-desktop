@@ -1,54 +1,87 @@
-﻿<template>
-  <aside class="sidebar">
-    <h3>RIMS</h3>
+<template>
+  <aside :class="['sidebar', { 'sidebar--collapsed': collapsed }]">
+    <div class="sidebar__brand">
+      <div class="sidebar__logo">R</div>
+      <div class="sidebar__brand-text" v-if="!collapsed">
+        <h3>RIMS Desktop</h3>
+        <span>Rental & Sales</span>
+      </div>
+    </div>
     <nav>
-      <router-link to="/" active-class="active">
-        <Icon name="dashboard" class="icon" /> Dashboard
+      <router-link
+        to="/"
+        active-class="active"
+        :title="collapsed ? 'Dashboard' : null"
+      >
+        <Icon name="dashboard" class="icon" />
+        <span v-if="!collapsed">Dashboard</span>
       </router-link>
       <div v-for="group in groups" :key="group.title" class="group">
-        <div class="group-title">{{ group.title }}</div>
-        <router-link v-for="item in group.items" :key="item.to" :to="item.to" active-class="active">
-          <Icon :name="item.icon" class="icon" /> {{ item.label }}
+        <div class="group-title" v-if="!collapsed">{{ group.title }}</div>
+        <router-link
+          v-for="item in group.items"
+          :key="item.to"
+          :to="item.to"
+          active-class="active"
+          :title="collapsed ? item.label : null"
+        >
+          <Icon :name="item.icon" class="icon" />
+          <span v-if="!collapsed">{{ item.label }}</span>
         </router-link>
       </div>
     </nav>
   </aside>
 </template>
+
 <script>
 import Icon from "./Icon.vue";
 
 const groups = [
-
   {
     title: "Transaksi",
     items: [
       { to: "/transactions/rentals", label: "Transaksi Sewa", icon: "key" },
+      {
+        to: "/transactions/sales",
+        label: "Transaksi Penjualan",
+        icon: "money",
+      },
+      { to: "/transactions/payments", label: "Pembayaran", icon: "money" },
+    ],
+  },
+  {
+    title: "Detail Transaksi",
+    items: [
       {
         to: "/transactions/rental-details",
         label: "Detail Sewa",
         icon: "clipboard",
       },
       {
-        to: "/transactions/sales",
-        label: "Transaksi Penjualan",
-        icon: "money",
-      },
-      {
         to: "/transactions/sales-details",
         label: "Detail Penjualan",
         icon: "file",
       },
+    ],
+  },
+  {
+    title: "Booking",
+    items: [
       {
         to: "/transactions/bookings",
         label: "Booking Barang",
         icon: "clipboard",
       },
+    ],
+  },
+  {
+    title: "Stok",
+    items: [
       {
         to: "/transactions/stock-movements",
         label: "Pergerakan Stok",
         icon: "chart-bar",
       },
-      { to: "/transactions/payments", label: "Pembayaran", icon: "money" },
     ],
   },
   {
@@ -114,6 +147,9 @@ const groups = [
 
 export default {
   components: { Icon },
+  props: {
+    collapsed: { type: Boolean, default: false },
+  },
   data() {
     return {
       groups,
@@ -121,20 +157,54 @@ export default {
   },
 };
 </script>
+
 <style>
 .sidebar {
   width: 240px;
+  flex: 0 0 240px;
+  flex-shrink: 0;
   background: #ffffff;
   color: #0f172a;
-  padding: 16px;
+  padding: 20px;
   border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition:
+    width 0.25s ease,
+    padding 0.25s ease;
 }
 
-.sidebar h3 {
-  margin: 0 0 10px;
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 12px;
+}
+
+.sidebar__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar__brand-text h3 {
+  margin: 0;
   font-size: 18px;
   letter-spacing: 0.5px;
   color: #111827;
+}
+
+.sidebar__brand-text span {
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .sidebar nav {
@@ -145,8 +215,10 @@ export default {
 
 .sidebar a {
   color: #334155;
-  display: block;
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 8px;
   text-decoration: none;
   transition:
@@ -166,12 +238,12 @@ export default {
 }
 
 .sidebar a .icon {
-  margin-right: 8px;
+  margin-right: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .group {
@@ -184,5 +256,39 @@ export default {
   margin: 10px 6px 6px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.sidebar--collapsed {
+  width: 76px;
+  flex: 0 0 76px;
+  padding: 20px 12px;
+}
+
+.sidebar--collapsed .sidebar__brand {
+  justify-content: center;
+}
+
+.sidebar--collapsed .sidebar__brand-text {
+  display: none;
+}
+
+.sidebar--collapsed nav {
+  gap: 0;
+}
+
+.sidebar--collapsed a {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sidebar--collapsed a span {
+  display: none;
+}
+
+.sidebar--collapsed .group-title {
+  height: 0;
+  margin: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>

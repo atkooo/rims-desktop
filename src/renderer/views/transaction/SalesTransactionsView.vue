@@ -59,13 +59,9 @@ export default {
     const columns = [
       { key: "transaction_code", label: "Kode" },
       { key: "customer_name", label: "Customer" },
-      { key: "user_name", label: "Petugas" },
       { key: "sale_date", label: "Tanggal", format: formatDate },
       { key: "total_amount", label: "Total", format: formatCurrency },
-      { key: "paid_amount", label: "Terbayar", format: formatCurrency },
       { key: "payment_status", label: "Status Pembayaran" },
-      { key: "payment_method", label: "Metode" },
-      { key: "notes", label: "Catatan" },
     ];
 
     const stats = computed(() => {

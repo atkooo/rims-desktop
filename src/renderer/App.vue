@@ -2,10 +2,13 @@
   <div v-if="$route.path === '/login'" class="auth">
     <router-view :key="$route.fullPath" />
   </div>
-  <div v-else class="app">
-    <Sidebar />
+  <div v-else :class="['app', { 'app--sidebar-collapsed': sidebarCollapsed }]">
+    <Sidebar :collapsed="sidebarCollapsed" />
     <main class="content">
-      <Topbar />
+      <Topbar
+        :collapsed="sidebarCollapsed"
+        @toggle-sidebar="toggleSidebar"
+      />
       <section class="content-wrapper">
         <Breadcrumbs />
         <router-view />
@@ -18,7 +21,19 @@
 import Sidebar from "./components/Sidebar.vue";
 import Topbar from "./components/Topbar.vue";
 import Breadcrumbs from "./components/Breadcrumbs.vue";
-export default { components: { Sidebar, Topbar, Breadcrumbs } };
+export default {
+  components: { Sidebar, Topbar, Breadcrumbs },
+  data() {
+    return {
+      sidebarCollapsed: false,
+    };
+  },
+  methods: {
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    },
+  },
+};
 </script>
 
 <style>
@@ -31,6 +46,8 @@ export default { components: { Sidebar, Topbar, Breadcrumbs } };
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  transition: margin-left 0.25s ease;
 }
 
 .content-wrapper {

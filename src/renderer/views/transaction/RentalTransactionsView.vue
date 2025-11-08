@@ -63,18 +63,13 @@ export default {
     const columns = [
       { key: "transaction_code", label: "Kode" },
       { key: "customer_name", label: "Customer" },
-      { key: "user_name", label: "Petugas" },
       { key: "rental_date", label: "Tanggal Sewa", format: formatDate },
       {
         key: "planned_return_date",
         label: "Rencana Kembali",
         format: formatDate,
       },
-      { key: "actual_return_date", label: "Realisasi", format: formatDate },
-      { key: "total_days", label: "Durasi (hari)" },
       { key: "total_amount", label: "Total", format: formatCurrency },
-      { key: "paid_amount", label: "Terbayar", format: formatCurrency },
-      { key: "payment_status", label: "Status Pembayaran" },
       { key: "status", label: "Status Sewa" },
     ];
 
