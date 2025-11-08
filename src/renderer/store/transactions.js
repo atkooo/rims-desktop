@@ -19,7 +19,10 @@ export const useTransactionStore = defineStore("transactions", {
     // Get transaksi berdasarkan rentang tanggal
     getTransactionsByDateRange: (state) => (startDate, endDate) => {
       return state.transactions.filter((t) => {
-        const transDate = new Date(t.transactionDate);
+        const dateStr =
+          t.transactionDate || t.rental_date || t.sale_date || t.created_at;
+        if (!dateStr) return false;
+        const transDate = new Date(dateStr);
         return (
           transDate >= new Date(startDate) && transDate <= new Date(endDate)
         );
@@ -30,12 +33,16 @@ export const useTransactionStore = defineStore("transactions", {
     getTodayIncome: (state) => {
       const today = new Date().toISOString().split("T")[0];
       return state.transactions
-        .filter(
-          (t) =>
-            t.transactionDate.startsWith(today) &&
-            t.status === TRANSACTION_STATUS.COMPLETED,
-        )
-        .reduce((sum, t) => sum + t.totalAmount, 0);
+        .filter((t) => {
+          const dateStr = (
+            t.transactionDate || t.rental_date || t.sale_date || t.created_at || ""
+          ).toString();
+          const status = t.status;
+          return (
+            dateStr.startsWith(today) && status === TRANSACTION_STATUS.COMPLETED
+          );
+        })
+        .reduce((sum, t) => sum + (Number(t.totalAmount ?? 0) || 0), 0);
     },
   },
 
@@ -45,7 +52,46 @@ export const useTransactionStore = defineStore("transactions", {
       this.loading = true;
       try {
         const transactions = await ipcRenderer.invoke("transactions:getAll");
-        this.transactions = transactions;
+        // Normalize to UI shape (camelCase fields, unified status/date)
+        this.transactions = transactions.map((t) => {
+          const isRental =
+            t.transaction_type === "rental" ||
+            t.transaction_type === "RENTAL" ||
+            !!t.rental_date;
+          const transactionDate =
+            t.transactionDate ||
+            (isRental ? t.rental_date : t.sale_date) ||
+            t.created_at ||
+            null;
+          const totalAmount = Number(t.totalAmount ?? t.total_amount ?? 0) || 0;
+
+          // Map backend status to UI constants
+          let status = t.status;
+          if (isRental) {
+            if (status === "active" || status === "overdue") {
+              status = TRANSACTION_STATUS.PENDING;
+            } else if (status === "returned") {
+              status = TRANSACTION_STATUS.COMPLETED;
+            } else if (status === "cancelled") {
+              status = TRANSACTION_STATUS.CANCELLED;
+            }
+          } else {
+            const pay = t.payment_status ?? status;
+            if (pay === "paid") status = TRANSACTION_STATUS.COMPLETED;
+            else if (pay === "partial" || pay === "unpaid")
+              status = TRANSACTION_STATUS.PENDING;
+          }
+
+          const transactionType = isRental ? "RENTAL" : "SALE";
+
+          return {
+            ...t,
+            transactionType,
+            transactionDate,
+            totalAmount,
+            status,
+          };
+        });
         this.error = null;
       } catch (err) {
         this.error = err.message;
@@ -77,8 +123,12 @@ export const useTransactionStore = defineStore("transactions", {
     async updateTransactionStatus(id, status) {
       this.loading = true;
       try {
-        await ipcRenderer.invoke("transactions:updateStatus", id, status);
         const transaction = this.transactions.find((t) => t.id === id);
+        const payload = {
+          transactionType: transaction?.transactionType || "RENTAL",
+          transactionId: id,
+        };
+        await ipcRenderer.invoke("transactions:updateStatus", payload, status);
         if (transaction) {
           transaction.status = status;
         }

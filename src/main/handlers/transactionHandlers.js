@@ -210,14 +210,21 @@ function setupTransactionHandlers() {
         const { transactionType, transactionId } = id;
 
         if (transactionType === "RENTAL") {
+          // Map UI status -> DB status
+          const statusMap = {
+            [TRANSACTION_STATUS.COMPLETED]: "returned",
+            [TRANSACTION_STATUS.CANCELLED]: "cancelled",
+            [TRANSACTION_STATUS.PENDING]: "active",
+          };
+          const dbStatus = statusMap[status] || "active";
           // Update rental transaction status
           await database.execute(
             "UPDATE rental_transactions SET status = ? WHERE id = ?",
-            [status, transactionId],
+            [dbStatus, transactionId],
           );
 
           // If returned, update item quantities and mark items as returned
-          if (status === "returned") {
+          if (dbStatus === "returned") {
             const rentalItems = await database.query(
               `SELECT rtd.item_id, rtd.quantity, rtd.id as detail_id
                FROM rental_transaction_details rtd
@@ -240,10 +247,17 @@ function setupTransactionHandlers() {
             }
           }
         } else {
+          // Map UI status -> sales payment status
+          const paymentMap = {
+            [TRANSACTION_STATUS.COMPLETED]: "paid",
+            [TRANSACTION_STATUS.PENDING]: "unpaid",
+            [TRANSACTION_STATUS.CANCELLED]: "unpaid",
+          };
+          const paymentStatus = paymentMap[status] || "unpaid";
           // Update sales transaction status
           await database.execute(
             "UPDATE sales_transactions SET payment_status = ? WHERE id = ?",
-            [status, transactionId],
+            [paymentStatus, transactionId],
           );
         }
 

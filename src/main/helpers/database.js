@@ -4,9 +4,6 @@ const sqlite3 = require("sqlite3");
 const logger = require("./logger");
 const dbConfig = require("../config/database");
 
-const SCHEMA_PATH = path.join(__dirname, "..", "..", "database", "schema.sql");
-const SEED_PATH = path.join(__dirname, "..", "..", "database", "seed.sql");
-
 class Database {
   constructor() {
     this.db = null;
@@ -104,25 +101,21 @@ class Database {
   async ensureSchema() {
     if (this.initialized) return;
 
-    const tableExists = await this.tableExists("users");
-    if (tableExists) {
-      this.initialized = true;
-      return;
-    }
-
     try {
-      const schemaSql = fs.readFileSync(SCHEMA_PATH, "utf-8");
-      await this.execSqlScript(schemaSql, "schema");
+      const { runMigrations } = require("../../database/migrate");
+      await runMigrations();
 
-      if (fs.existsSync(SEED_PATH)) {
-        const seedSql = fs.readFileSync(SEED_PATH, "utf-8");
-        await this.execSqlScript(seedSql, "seed");
+      // Seed only if database is empty (no users yet)
+      const row = await this.queryOne("SELECT COUNT(1) AS count FROM users");
+      if (!row || Number(row.count) === 0) {
+        const { runSeeders } = require("../../database/seed");
+        await runSeeders();
       }
 
       this.initialized = true;
-      logger.info("Database schema initialized");
+      logger.info("Database initialized (migrations + seeders)");
     } catch (error) {
-      logger.error("Error initializing database schema:", error);
+      logger.error("Error initializing database:", error);
       throw error;
     }
   }

@@ -1,12 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
+const dbConfig = require("../main/config/database");
 
-// Setup database connection
-const dataDir = process.env.DATABASE_DIR || path.join(process.cwd(), "data");
+// Setup database connection using shared config
+const dataDir = path.dirname(dbConfig.path);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-const dbPath = process.env.DATABASE_PATH || path.join(dataDir, "rims.db");
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbConfig.path);
 
 // Promisify database operations
 function runAsync(sql, params = []) {

@@ -1,11 +1,14 @@
-﻿const fs = require("fs");
+const fs = require("fs");
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
+const dbConfig = require("./config/database");
 
-const dataDir = process.env.DATABASE_DIR || path.join(process.cwd(), "data");
+// Ensure data directory exists
+const dataDir = path.dirname(dbConfig.path);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-const dbPath = process.env.DATABASE_PATH || path.join(dataDir, "rims.db");
-const db = new sqlite3.Database(dbPath);
+
+// Shared connection for modules that use this file
+const db = new sqlite3.Database(dbConfig.path);
 
 function runAsync(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -42,32 +45,22 @@ function tableExists(tableName) {
 }
 
 async function initializeIfNeeded() {
+  // Run incremental migrations (no-op if already up to date)
+  const { runMigrations } = require("../database/migrate");
+  await runMigrations();
+
+  // Seed only when database is empty (no users yet)
   const exists = await tableExists("users");
-  if (exists) return;
+  if (!exists) throw new Error("Users table missing after migrations");
 
-  const schemaPath = path.join(__dirname, "..", "database", "schema.sql");
-  const seedPath = path.join(__dirname, "..", "database", "seed.sql");
-  const schemaSql = fs.readFileSync(schemaPath, "utf-8");
-  const seedSql = fs.readFileSync(seedPath, "utf-8");
-
-  await new Promise((resolve, reject) => {
-    db.exec(schemaSql, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-
-  await new Promise((resolve, reject) => {
-    db.exec(seedSql, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+  const userCountRow = await getAsync("SELECT COUNT(1) AS count FROM users");
+  if (!userCountRow || Number(userCountRow.count) === 0) {
+    const { runSeeders } = require("../database/seed");
+    await runSeeders();
+  }
 }
 
-initializeIfNeeded().catch((error) => {
-  throw error;
-});
+// Note: migrations/seeders are orchestrated by helpers/database.connect()
 
 module.exports = {
   getDb: () => db,
