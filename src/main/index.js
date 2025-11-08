@@ -1,5 +1,6 @@
 ﻿const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const { globalShortcut } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 const setupItemHandlers = require("./handlers/itemHandlers");
@@ -19,6 +20,13 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    // Start fullscreen only; window is not resizable. Default/min stays.
+    minWidth: 1200,
+    minHeight: 800,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: true,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -43,7 +51,7 @@ function createWindow() {
     });
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, "..", "renderer", "dist", "index.html"),
+      path.join(__dirname, "..", "renderer", "dist", "index.html")
     );
   }
 
@@ -92,6 +100,22 @@ app.whenReady().then(async () => {
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();
   createWindow();
+
+  // Global shortcuts to toggle/exit fullscreen
+  try {
+    globalShortcut.register('F11', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      const isFS = mainWindow.isFullScreen();
+      mainWindow.setFullScreen(!isFS);
+    });
+    // Allow Esc to exit fullscreen
+    globalShortcut.register('Esc', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+    });
+  } catch (_) {
+    // ignore registration errors
+  }
 });
 
 app.on("window-all-closed", () => {
@@ -100,4 +124,8 @@ app.on("window-all-closed", () => {
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+app.on('will-quit', () => {
+  try { globalShortcut.unregisterAll(); } catch (_) {}
 });

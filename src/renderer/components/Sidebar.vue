@@ -7,12 +7,7 @@
       </router-link>
       <div v-for="group in groups" :key="group.title" class="group">
         <div class="group-title">{{ group.title }}</div>
-        <router-link
-          v-for="item in group.items"
-          :key="item.to"
-          :to="item.to"
-          active-class="active"
-        >
+        <router-link v-for="item in group.items" :key="item.to" :to="item.to" active-class="active">
           <Icon :name="item.icon" class="icon" /> {{ item.label }}
         </router-link>
       </div>
@@ -23,23 +18,7 @@
 import Icon from "./Icon.vue";
 
 const groups = [
-  {
-    title: "Master Data",
-    items: [
-      { to: "/master/categories", label: "Kategori", icon: "tag" },
-      { to: "/master/accessories", label: "Aksesoris", icon: "box" },
-      { to: "/master/items", label: "Barang", icon: "box" },
-      { to: "/master/bundles", label: "Paket", icon: "clipboard" },
-      {
-        to: "/master/bundle-details",
-        label: "Detail Paket",
-        icon: "clipboard",
-      },
-      { to: "/master/customers", label: "Pelanggan", icon: "users" },
-      { to: "/master/roles", label: "Peran", icon: "user" },
-      { to: "/master/users", label: "Pengguna", icon: "user" },
-    ],
-  },
+
   {
     title: "Transaksi",
     items: [
@@ -100,6 +79,23 @@ const groups = [
         label: "Pelanggan Teratas",
         icon: "users",
       },
+    ],
+  },
+  {
+    title: "Master Data",
+    items: [
+      { to: "/master/categories", label: "Kategori", icon: "tag" },
+      { to: "/master/accessories", label: "Aksesoris", icon: "box" },
+      { to: "/master/items", label: "Barang", icon: "box" },
+      { to: "/master/bundles", label: "Paket", icon: "clipboard" },
+      {
+        to: "/master/bundle-details",
+        label: "Detail Paket",
+        icon: "clipboard",
+      },
+      { to: "/master/customers", label: "Pelanggan", icon: "users" },
+      { to: "/master/roles", label: "Role", icon: "user" },
+      { to: "/master/users", label: "Users", icon: "user" },
     ],
   },
   {

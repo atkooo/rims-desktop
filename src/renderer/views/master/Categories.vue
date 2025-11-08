@@ -1,7 +1,10 @@
 <template>
   <div class="page">
     <header class="page-header">
-      <h1>Kategori</h1>
+      <div class="title-wrap">
+        <h1>Kategori</h1>
+        <p class="subtitle">Kelola daftar kategori. Gunakan Edit untuk ubah nama, deskripsi, dan status aktif.</p>
+      </div>
       <button class="btn primary" @click="openCreateDialog">
         <i class="fas fa-plus"></i> Tambah Kategori
       </button>
@@ -9,20 +12,12 @@
 
     <!-- Tabel Kategori -->
     <div class="card">
-      <AppTable
-        :columns="columns"
-        :rows="categories"
-        :loading="loading"
-        :searchable-keys="['name','description']"
-        :show-index="true"
-      >
+      <AppTable :columns="columns" :rows="categories" :loading="loading" :searchable-keys="['name', 'description']"
+        :show-index="true" :dense="true" :default-page-size="20">
         <template #cell-is_active="{ row }">
           <span :class="['badge', row.is_active ? 'badge-success' : 'badge-muted']">
             {{ row.is_active ? 'Aktif' : 'Nonaktif' }}
           </span>
-        </template>
-        <template #cell-created_at="{ row }">
-          {{ formatDate(row.created_at) }}
         </template>
         <template #cell-updated_at="{ row }">
           {{ formatDate(row.updated_at) }}
@@ -41,11 +36,8 @@
     </div>
 
     <!-- Dialog Form -->
-    <Dialog
-      v-model="showDialog"
-      :title="isEdit ? 'Edit Kategori' : 'Tambah Kategori'"
-      @update:modelValue="(v) => { if (!v) closeDialog(); }"
-    >
+    <Dialog v-model="showDialog" :title="isEdit ? 'Edit Kategori' : 'Tambah Kategori'"
+      @update:modelValue="(v) => { if (!v) closeDialog(); }">
       <form @submit.prevent="saveCategory">
         <div class="form-group">
           <label>Nama Kategori</label>
@@ -57,21 +49,26 @@
           <textarea v-model="form.description" rows="3"></textarea>
         </div>
 
-      <div class="dialog-footer">
-        <button type="button" class="btn" @click="closeDialog">Batal</button>
-        <button type="submit" class="btn primary">
-          {{ isEdit ? "Simpan" : "Tambah" }}
-        </button>
-      </div>
+        <div class="form-group inline">
+          <label for="category-active">Status</label>
+          <label class="check-inline">
+            <input id="category-active" type="checkbox" v-model="form.is_active" />
+            <span class="check-text">{{ form.is_active ? 'Aktif' : 'Nonaktif' }}</span>
+          </label>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn" @click="closeDialog">Batal</button>
+          <button type="submit" class="btn primary">
+            {{ isEdit ? "Simpan" : "Tambah" }}
+          </button>
+        </div>
       </form>
     </Dialog>
 
     <!-- Dialog Konfirmasi Hapus -->
-    <Dialog
-      v-model="showDeleteDialog"
-      title="Hapus Kategori"
-      @update:modelValue="(v) => { if (!v) closeDeleteDialog(); }"
-    >
+    <Dialog v-model="showDeleteDialog" title="Hapus Kategori"
+      @update:modelValue="(v) => { if (!v) closeDeleteDialog(); }">
       <p>Yakin ingin menghapus kategori ini?</p>
       <div class="dialog-footer">
         <button class="btn" @click="closeDeleteDialog">Batal</button>
@@ -93,11 +90,11 @@ export default {
   setup() {
     const categories = ref([]);
     const loading = ref(false);
+    // no per-row toggle; status diatur lewat dialog Edit
     const columns = ref([
       { key: 'name', label: 'Nama', sortable: true },
       { key: 'description', label: 'Deskripsi' },
       { key: 'is_active', label: 'Status', sortable: true, align: 'center' },
-      { key: 'created_at', label: 'Dibuat' },
       { key: 'updated_at', label: 'Diupdate' },
     ]);
     const showDialog = ref(false);
@@ -126,7 +123,7 @@ export default {
 
     // Dialog handlers
     function openCreateDialog() {
-      form.value = { name: "", description: "" };
+      form.value = { name: "", description: "", is_active: true };
       isEdit.value = false;
       showDialog.value = true;
     }
@@ -196,7 +193,12 @@ export default {
     function formatDate(val) {
       if (!val) return "-";
       const d = new Date(val);
-      return isNaN(d) ? String(val) : d.toLocaleString();
+      if (isNaN(d)) return String(val);
+      try {
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch (_) {
+        return d.toISOString().slice(0, 10);
+      }
     }
 
     return {
@@ -225,21 +227,35 @@ export default {
 
 <style scoped>
 .page {
-  padding: 20px;
+  padding: 16px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.title-wrap h1 {
+  margin: 0;
+}
+.subtitle {
+  margin: 0;
+  color: #6b7280; /* gray-500 */
+  font-size: 0.9rem;
 }
 
 .card {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  padding: 16px;
 }
 
 .table {
@@ -249,7 +265,7 @@ export default {
 
 .table th,
 .table td {
-  padding: 12px;
+  padding: 10px;
   text-align: left;
   border-bottom: 1px solid #eee;
 }
@@ -262,6 +278,32 @@ export default {
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
+}
+
+/* Align checkbox and text nicely */
+.form-group.inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.form-group.inline > label {
+  margin: 0;
+}
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.check-inline input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.check-text {
+  font-weight: 500;
+  color: #111827;
 }
 
 .form-group input,
@@ -302,10 +344,13 @@ export default {
   padding: 6px;
   margin: 0 4px;
   background: transparent;
-  color: #334155; /* slate-700 */
+  color: #334155;
+  /* slate-700 */
 }
 
-.btn.icon i { color: inherit; }
+.btn.icon i {
+  color: inherit;
+}
 
 .btn.icon:hover {
   color: #007bff;
@@ -317,6 +362,14 @@ export default {
   border-radius: 9999px;
   font-size: 12px;
 }
-.badge-success { background: #dcfce7; color: #166534; }
-.badge-muted { background: #e5e7eb; color: #374151; }
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-muted {
+  background: #e5e7eb;
+  color: #374151;
+}
 </style>

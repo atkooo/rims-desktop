@@ -1,5 +1,5 @@
 <template>
-  <div class="app-table">
+  <div class="app-table" :class="{ dense }">
     <div class="toolbar">
       <input
         v-if="showSearch"
@@ -119,6 +119,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    dense: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -217,6 +221,30 @@ export default {
   padding: 8px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
+}
+
+/* Dense mode for compact table appearance */
+.app-table.dense .toolbar {
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.app-table.dense .search-input {
+  width: 220px;
+  padding: 6px;
+}
+.app-table.dense th,
+.app-table.dense td {
+  padding: 8px;
+}
+.app-table.dense .page-size-select {
+  padding: 4px;
+}
+.app-table.dense .page-btn {
+  padding: 4px 8px;
+}
+.app-table.dense .pagination {
+  gap: 8px;
+  padding-top: 6px;
 }
 
 .page-size {
