@@ -35,7 +35,11 @@ export const useTransactionStore = defineStore("transactions", {
       return state.transactions
         .filter((t) => {
           const dateStr = (
-            t.transactionDate || t.rental_date || t.sale_date || t.created_at || ""
+            t.transactionDate ||
+            t.rental_date ||
+            t.sale_date ||
+            t.created_at ||
+            ""
           ).toString();
           const status = t.status;
           return (

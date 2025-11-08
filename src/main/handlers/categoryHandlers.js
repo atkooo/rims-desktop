@@ -64,7 +64,13 @@ function setupCategoryHandlers() {
                 ) VALUES (?, ?, ?, ?, ?)
             `;
 
-      const result = await database.execute(sql, [name, description, is_active ?? 1, now, now]);
+      const result = await database.execute(sql, [
+        name,
+        description,
+        is_active ?? 1,
+        now,
+        now,
+      ]);
 
       return {
         id: result.id,

@@ -26,7 +26,10 @@
             <th
               v-for="col in columns"
               :key="col.key"
-              :class="[{ sortable: col.sortable }, col.align ? `align-${col.align}` : '']"
+              :class="[
+                { sortable: col.sortable },
+                col.align ? `align-${col.align}` : '',
+              ]"
               @click="col.sortable ? toggleSort(col) : null"
             >
               {{ col.label }}
@@ -34,7 +37,7 @@
                 v-if="col.sortable && sortKey === col.key"
                 class="sort-indicator"
               >
-                {{ sortDir === 'asc' ? '▲' : '▼' }}
+                {{ sortDir === "asc" ? "▲" : "▼" }}
               </span>
             </th>
             <th v-if="$slots.actions" class="actions-header">Aksi</th>
@@ -42,13 +45,24 @@
         </thead>
         <tbody>
           <tr v-if="loading || pagedRows.length === 0">
-            <td :colspan="columns.length + ($slots.actions ? 1 : 0) + (showIndex ? 1 : 0)" class="empty">
+            <td
+              :colspan="
+                columns.length + ($slots.actions ? 1 : 0) + (showIndex ? 1 : 0)
+              "
+              class="empty"
+            >
               <span v-if="loading">Memuat...</span>
               <span v-else>Tidak ada data</span>
             </td>
           </tr>
-          <tr v-for="(row, i) in pagedRows" :key="row[rowKey] ?? JSON.stringify(row)" class="data-row">
-            <td v-if="showIndex" class="index-cell">{{ (page - 1) * pageSize + i + 1 }}</td>
+          <tr
+            v-for="(row, i) in pagedRows"
+            :key="row[rowKey] ?? JSON.stringify(row)"
+            class="data-row"
+          >
+            <td v-if="showIndex" class="index-cell">
+              {{ (page - 1) * pageSize + i + 1 }}
+            </td>
             <td
               v-for="col in columns"
               :key="col.key"
@@ -67,12 +81,19 @@
     </div>
 
     <div class="pagination" v-if="totalPages > 1">
-      <button class="page-btn" :disabled="page === 1" @click="prevPage">Sebelumnya</button>
+      <button class="page-btn" :disabled="page === 1" @click="prevPage">
+        Sebelumnya
+      </button>
       <span class="page-info">Halaman {{ page }} dari {{ totalPages }}</span>
-      <button class="page-btn" :disabled="page === totalPages" @click="nextPage">Berikutnya</button>
+      <button
+        class="page-btn"
+        :disabled="page === totalPages"
+        @click="nextPage"
+      >
+        Berikutnya
+      </button>
     </div>
   </div>
-  
 </template>
 
 <script>
@@ -141,7 +162,11 @@ export default {
         ? this.searchableKeys
         : this.columns.map((c) => c.key);
       return this.rows.filter((row) =>
-        keys.some((k) => String(row?.[k] ?? "").toLowerCase().includes(q)),
+        keys.some((k) =>
+          String(row?.[k] ?? "")
+            .toLowerCase()
+            .includes(q),
+        ),
       );
     },
     sortedRows() {
@@ -268,12 +293,14 @@ export default {
   border-collapse: collapse;
 }
 
-.index-header, .index-cell {
+.index-header,
+.index-cell {
   width: 64px;
   text-align: center;
 }
 
-th, td {
+th,
+td {
   padding: 12px;
   border-bottom: 1px solid #eee;
   text-align: left;
@@ -290,10 +317,15 @@ th.sortable {
   color: #6b7280;
 }
 
-.align-right { text-align: right; }
-.align-center { text-align: center; }
+.align-right {
+  text-align: right;
+}
+.align-center {
+  text-align: center;
+}
 
-.actions-header, .actions-cell {
+.actions-header,
+.actions-cell {
   white-space: nowrap;
 }
 

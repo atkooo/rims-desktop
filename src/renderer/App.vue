@@ -5,10 +5,7 @@
   <div v-else :class="['app', { 'app--sidebar-collapsed': sidebarCollapsed }]">
     <Sidebar :collapsed="sidebarCollapsed" />
     <main class="content">
-      <Topbar
-        :collapsed="sidebarCollapsed"
-        @toggle-sidebar="toggleSidebar"
-      />
+      <Topbar :collapsed="sidebarCollapsed" @toggle-sidebar="toggleSidebar" />
       <section class="content-wrapper">
         <Breadcrumbs />
         <router-view />

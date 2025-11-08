@@ -18,10 +18,10 @@ let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1440,
     height: 800,
     // Start fullscreen only; window is not resizable. Default/min stays.
-    minWidth: 1200,
+    minWidth: 1440,
     minHeight: 800,
     resizable: false,
     maximizable: false,
@@ -51,7 +51,7 @@ function createWindow() {
     });
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, "..", "renderer", "dist", "index.html")
+      path.join(__dirname, "..", "renderer", "dist", "index.html"),
     );
   }
 
@@ -103,13 +103,13 @@ app.whenReady().then(async () => {
 
   // Global shortcuts to toggle/exit fullscreen
   try {
-    globalShortcut.register('F11', () => {
+    globalShortcut.register("F11", () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       const isFS = mainWindow.isFullScreen();
       mainWindow.setFullScreen(!isFS);
     });
     // Allow Esc to exit fullscreen
-    globalShortcut.register('Esc', () => {
+    globalShortcut.register("Esc", () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
     });
@@ -126,6 +126,8 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.on('will-quit', () => {
-  try { globalShortcut.unregisterAll(); } catch (_) {}
+app.on("will-quit", () => {
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
 });

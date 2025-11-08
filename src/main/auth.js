@@ -34,7 +34,6 @@ function verifyPassword(inputPassword, storedHash) {
 }
 
 function registerAuthIpc() {
-
   ipcMain.handle("auth:login", async (event, { username, password }) => {
     try {
       const user = await database.queryOne(
@@ -100,22 +99,25 @@ function registerAuthIpc() {
     return true;
   });
   ipcMain.handle("auth:getCurrentUser", () => currentUser);
-  ipcMain.handle("auth:changePassword", async (event, { userId, newPassword }) => {
-    if (!newPassword || newPassword.length < 6)
-      throw new Error("Password terlalu pendek");
-    const hash = scryptHash(newPassword);
-    await database.execute(
-      "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [hash, userId],
-    );
-    await logActivity({
-      userId,
-      action: "PASSWORD_CHANGE",
-      module: "auth",
-      description: `User ${userId} changed password`,
-    });
-    return true;
-  });
+  ipcMain.handle(
+    "auth:changePassword",
+    async (event, { userId, newPassword }) => {
+      if (!newPassword || newPassword.length < 6)
+        throw new Error("Password terlalu pendek");
+      const hash = scryptHash(newPassword);
+      await database.execute(
+        "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [hash, userId],
+      );
+      await logActivity({
+        userId,
+        action: "PASSWORD_CHANGE",
+        module: "auth",
+        description: `User ${userId} changed password`,
+      });
+      return true;
+    },
+  );
 }
 
 module.exports = { registerAuthIpc };

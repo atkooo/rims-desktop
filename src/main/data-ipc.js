@@ -2,7 +2,6 @@ const { ipcMain } = require("electron");
 const database = require("./helpers/database");
 
 function registerDataIpc() {
-
   ipcMain.handle("db:getBundles", async () => {
     const sql = `
       SELECT id, code, name, bundle_type, price, rental_price_per_day, stock_quantity, available_quantity

@@ -3,7 +3,10 @@
     <header class="page-header">
       <div class="title-wrap">
         <h1>Kategori</h1>
-        <p class="subtitle">Kelola daftar kategori. Gunakan Edit untuk ubah nama, deskripsi, dan status aktif.</p>
+        <p class="subtitle">
+          Kelola daftar kategori. Gunakan Edit untuk ubah nama, deskripsi, dan
+          status aktif.
+        </p>
       </div>
       <button class="btn primary" @click="openCreateDialog">
         <i class="fas fa-plus"></i> Tambah Kategori
@@ -12,18 +15,31 @@
 
     <!-- Tabel Kategori -->
     <div class="card">
-      <AppTable :columns="columns" :rows="categories" :loading="loading" :searchable-keys="['name', 'description']"
-        :show-index="true" :dense="true" :default-page-size="20">
+      <AppTable
+        :columns="columns"
+        :rows="categories"
+        :loading="loading"
+        :searchable-keys="['name', 'description']"
+        :show-index="true"
+        :dense="true"
+        :default-page-size="20"
+      >
         <template #cell-is_active="{ row }">
-          <span :class="['badge', row.is_active ? 'badge-success' : 'badge-muted']">
-            {{ row.is_active ? 'Aktif' : 'Nonaktif' }}
+          <span
+            :class="['badge', row.is_active ? 'badge-success' : 'badge-muted']"
+          >
+            {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </span>
         </template>
         <template #cell-updated_at="{ row }">
           {{ formatDate(row.updated_at) }}
         </template>
         <template #actions="{ row }">
-          <AppButton variant="secondary" @click="editCategory(row)" title="Edit">
+          <AppButton
+            variant="secondary"
+            @click="editCategory(row)"
+            title="Edit"
+          >
             <i class="fas fa-edit"></i>
             <span>Edit</span>
           </AppButton>
@@ -36,8 +52,15 @@
     </div>
 
     <!-- Dialog Form -->
-    <Dialog v-model="showDialog" :title="isEdit ? 'Edit Kategori' : 'Tambah Kategori'"
-      @update:modelValue="(v) => { if (!v) closeDialog(); }">
+    <Dialog
+      v-model="showDialog"
+      :title="isEdit ? 'Edit Kategori' : 'Tambah Kategori'"
+      @update:modelValue="
+        (v) => {
+          if (!v) closeDialog();
+        }
+      "
+    >
       <form @submit.prevent="saveCategory">
         <div class="form-group">
           <label>Nama Kategori</label>
@@ -52,8 +75,14 @@
         <div class="form-group inline">
           <label for="category-active">Status</label>
           <label class="check-inline">
-            <input id="category-active" type="checkbox" v-model="form.is_active" />
-            <span class="check-text">{{ form.is_active ? 'Aktif' : 'Nonaktif' }}</span>
+            <input
+              id="category-active"
+              type="checkbox"
+              v-model="form.is_active"
+            />
+            <span class="check-text">{{
+              form.is_active ? "Aktif" : "Nonaktif"
+            }}</span>
           </label>
         </div>
 
@@ -67,8 +96,15 @@
     </Dialog>
 
     <!-- Dialog Konfirmasi Hapus -->
-    <Dialog v-model="showDeleteDialog" title="Hapus Kategori"
-      @update:modelValue="(v) => { if (!v) closeDeleteDialog(); }">
+    <Dialog
+      v-model="showDeleteDialog"
+      title="Hapus Kategori"
+      @update:modelValue="
+        (v) => {
+          if (!v) closeDeleteDialog();
+        }
+      "
+    >
       <p>Yakin ingin menghapus kategori ini?</p>
       <div class="dialog-footer">
         <button class="btn" @click="closeDeleteDialog">Batal</button>
@@ -92,10 +128,10 @@ export default {
     const loading = ref(false);
     // no per-row toggle; status diatur lewat dialog Edit
     const columns = ref([
-      { key: 'name', label: 'Nama', sortable: true },
-      { key: 'description', label: 'Deskripsi' },
-      { key: 'is_active', label: 'Status', sortable: true, align: 'center' },
-      { key: 'updated_at', label: 'Diupdate' },
+      { key: "name", label: "Nama", sortable: true },
+      { key: "description", label: "Deskripsi" },
+      { key: "is_active", label: "Status", sortable: true, align: "center" },
+      { key: "updated_at", label: "Diupdate" },
     ]);
     const showDialog = ref(false);
     const showDeleteDialog = ref(false);
@@ -130,7 +166,11 @@ export default {
 
     function editCategory(category) {
       selectedCategory.value = category;
-      form.value = { name: category?.name || "", description: category?.description || "", is_active: Boolean(category?.is_active) };
+      form.value = {
+        name: category?.name || "",
+        description: category?.description || "",
+        is_active: Boolean(category?.is_active),
+      };
       isEdit.value = true;
       showDialog.value = true;
     }
@@ -195,7 +235,11 @@ export default {
       const d = new Date(val);
       if (isNaN(d)) return String(val);
       try {
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return d.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
       } catch (_) {
         return d.toISOString().slice(0, 10);
       }
