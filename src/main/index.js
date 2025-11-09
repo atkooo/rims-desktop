@@ -4,6 +4,8 @@ const { globalShortcut } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 const setupItemHandlers = require("./handlers/itemHandlers");
+const setupAccessoryHandlers = require("./handlers/accessoryHandlers");
+const setupBundleHandlers = require("./handlers/bundleHandlers");
 const setupTransactionHandlers = require("./handlers/transactionHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
@@ -96,6 +98,8 @@ app.whenReady().then(async () => {
   setupCategoryHandlers();
   setupItemSizeHandlers();
   setupItemHandlers();
+  setupAccessoryHandlers();
+  setupBundleHandlers();
   setupTransactionHandlers();
   setupSettingsHandlers();
   setupReportHandlers();

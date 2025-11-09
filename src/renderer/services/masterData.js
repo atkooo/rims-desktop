@@ -4,12 +4,52 @@ export function fetchAccessories() {
   return ipcRenderer.invoke("master:getAccessories");
 }
 
+export function createAccessory(payload) {
+  return ipcRenderer.invoke("accessories:create", payload);
+}
+
+export function updateAccessory(id, payload) {
+  return ipcRenderer.invoke("accessories:update", id, payload);
+}
+
+export function deleteAccessory(id) {
+  return ipcRenderer.invoke("accessories:delete", id);
+}
+
 export function fetchBundles() {
   return ipcRenderer.invoke("master:getBundles");
 }
 
+export function createBundle(payload) {
+  return ipcRenderer.invoke("bundles:create", payload);
+}
+
+export function updateBundle(id, payload) {
+  return ipcRenderer.invoke("bundles:update", id, payload);
+}
+
+export function deleteBundle(id) {
+  return ipcRenderer.invoke("bundles:delete", id);
+}
+
 export function fetchBundleDetails() {
   return ipcRenderer.invoke("master:getBundleDetails");
+}
+
+export function fetchBundleDetailsByBundle(bundleId) {
+  return ipcRenderer.invoke("bundleDetails:getByBundle", bundleId);
+}
+
+export function createBundleDetail(payload) {
+  return ipcRenderer.invoke("bundleDetails:create", payload);
+}
+
+export function updateBundleDetail(id, payload) {
+  return ipcRenderer.invoke("bundleDetails:update", id, payload);
+}
+
+export function deleteBundleDetail(id) {
+  return ipcRenderer.invoke("bundleDetails:delete", id);
 }
 
 export function fetchCustomers() {

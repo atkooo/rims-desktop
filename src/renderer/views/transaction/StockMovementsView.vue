@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page transaction-page">
     <div class="page-header">
       <div>
         <h1>Pergerakan Stok</h1>
@@ -10,26 +10,30 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Record</span>
-        <strong>{{ movements.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Record</span>
+          <strong>{{ movements.length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Masuk</span>
+          <strong>{{ stats.inbound }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Keluar</span>
+          <strong>{{ stats.outbound }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Masuk</span>
-        <strong>{{ stats.inbound }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Keluar</span>
-        <strong>{{ stats.outbound }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="movements" :loading="loading" />
+      <DataTable :columns="columns" :items="movements" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -98,4 +102,3 @@ export default {
   },
 };
 </script>
-

@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page transaction-page">
     <div class="page-header">
       <div>
         <h1>Pembayaran</h1>
@@ -12,22 +12,26 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Pembayaran</span>
-        <strong>{{ payments.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Pembayaran</span>
+          <strong>{{ payments.length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total Nilai</span>
+          <strong>{{ formatCurrency(stats.totalAmount) }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Total Nilai</span>
-        <strong>{{ formatCurrency(stats.totalAmount) }}</strong>
+    </section>
+
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
       </div>
-    </div>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
-
-    <DataTable :columns="columns" :items="payments" :loading="loading" />
+      <DataTable :columns="columns" :items="payments" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -98,4 +102,3 @@ export default {
   },
 };
 </script>
-

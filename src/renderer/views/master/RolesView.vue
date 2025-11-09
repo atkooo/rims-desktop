@@ -10,18 +10,22 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Peran</span>
-        <strong>{{ roles.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Peran</span>
+          <strong>{{ roles.length }}</strong>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="roles" :loading="loading" />
+      <DataTable :columns="columns" :items="roles" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -68,4 +72,3 @@ export default {
   },
 };
 </script>
-

@@ -7,51 +7,97 @@
           Daftar aksesoris beserta stok dan status ketersediaan.
         </p>
       </div>
-      <AppButton variant="secondary" :loading="loading" @click="loadData">
-        Refresh Data
-      </AppButton>
-    </div>
-
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Aksesoris</span>
-        <strong>{{ stats.totalAccessories }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Total Stok</span>
-        <strong>{{ stats.totalStock }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Stok Tersedia</span>
-        <strong>{{ stats.availableStock }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Aksesoris Aktif</span>
-        <strong>{{ stats.activeAccessories }}</strong>
+      <div class="header-actions">
+        <AppButton variant="primary" @click="openCreate">
+          Tambah Aksesoris
+        </AppButton>
+        <AppButton variant="secondary" :loading="loading" @click="loadData">
+          Refresh Data
+        </AppButton>
       </div>
     </div>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Aksesoris</span>
+          <strong>{{ stats.totalAccessories }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total Stok</span>
+          <strong>{{ stats.totalStock }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Stok Tersedia</span>
+          <strong>{{ stats.availableStock }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Aksesoris Aktif</span>
+          <strong>{{ stats.activeAccessories }}</strong>
+        </div>
+      </div>
+    </section>
 
-    <DataTable :columns="columns" :items="accessories" :loading="loading" />
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
+
+      <DataTable
+        :columns="columns"
+        :items="accessories"
+        :loading="loading"
+        :actions="true"
+        @edit="handleEdit"
+        @delete="promptDelete"
+      />
+    </section>
+
+    <AccessoryForm
+      v-model="showForm"
+      :edit-data="editingAccessory"
+      @saved="handleFormSaved"
+    />
+
+    <AppDialog
+      v-model="showDeleteConfirm"
+      title="Hapus Aksesoris"
+      confirm-text="Hapus"
+      confirm-variant="danger"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+    >
+      <p>
+        Yakin ingin menghapus
+        <strong>{{ accessoryToDelete?.name }}</strong>?
+      </p>
+    </AppDialog>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import DataTable from "@/components/ui/DataTable.vue";
-import { fetchAccessories } from "@/services/masterData";
+import AccessoryForm from "@/components/modules/accessories/AccessoryForm.vue";
+import {
+  fetchAccessories,
+  deleteAccessory,
+} from "@/services/masterData";
 
 export default {
   name: "AccessoriesView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppDialog, DataTable, AccessoryForm },
   setup() {
     const accessories = ref([]);
     const loading = ref(false);
     const error = ref("");
+    const showForm = ref(false);
+    const editingAccessory = ref(null);
+    const showDeleteConfirm = ref(false);
+    const deleteLoading = ref(false);
+    const accessoryToDelete = ref(null);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -129,6 +175,46 @@ export default {
 
     onMounted(loadData);
 
+    const openCreate = () => {
+      editingAccessory.value = null;
+      showForm.value = true;
+    };
+
+    const handleEdit = (item) => {
+      editingAccessory.value = item;
+      showForm.value = true;
+    };
+
+    const handleFormSaved = () => {
+      editingAccessory.value = null;
+      loadData();
+    };
+
+    const promptDelete = (item) => {
+      accessoryToDelete.value = item;
+      showDeleteConfirm.value = true;
+    };
+
+    const confirmDelete = async () => {
+      if (!accessoryToDelete.value) return;
+      deleteLoading.value = true;
+      error.value = "";
+      try {
+        await deleteAccessory(accessoryToDelete.value.id);
+        showDeleteConfirm.value = false;
+        accessoryToDelete.value = null;
+        loadData();
+      } catch (err) {
+        error.value = err.message || "Gagal menghapus aksesoris.";
+      } finally {
+        deleteLoading.value = false;
+      }
+    };
+
+    watch(showForm, (value) => {
+      if (!value) editingAccessory.value = null;
+    });
+
     return {
       accessories,
       loading,
@@ -136,8 +222,26 @@ export default {
       columns,
       stats,
       loadData,
+      showForm,
+      editingAccessory,
+      showDeleteConfirm,
+      deleteLoading,
+      accessoryToDelete,
+      openCreate,
+      handleEdit,
+      handleFormSaved,
+      promptDelete,
+      confirmDelete,
     };
   },
 };
 </script>
 
+<style scoped>
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+</style>

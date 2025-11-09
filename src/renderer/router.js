@@ -15,14 +15,11 @@ import SettingsPage from "./views/SettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
 import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
-import ActiveRentalsView from "./views/reports/ActiveRentalsView.vue";
 import DailySalesView from "./views/reports/DailySalesView.vue";
 import StockAlertsView from "./views/reports/StockAlertsView.vue";
 import TopCustomersView from "./views/reports/TopCustomersView.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
-import RentalDetailsView from "./views/transaction/RentalDetailsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
-import SalesDetailsView from "./views/transaction/SalesDetailsView.vue";
 import BookingsView from "./views/transaction/BookingsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
 import PaymentsView from "./views/transaction/PaymentsView.vue";
@@ -60,19 +57,9 @@ const routes = [
     component: RentalTransactionsView,
   },
   {
-    path: "/transactions/rental-details",
-    name: "transactions-rental-details",
-    component: RentalDetailsView,
-  },
-  {
     path: "/transactions/sales",
     name: "transactions-sales",
     component: SalesTransactionsView,
-  },
-  {
-    path: "/transactions/sales-details",
-    name: "transactions-sales-details",
-    component: SalesDetailsView,
   },
   {
     path: "/transactions/bookings",
@@ -99,11 +86,6 @@ const routes = [
     path: "/reports/items-with-stock",
     name: "reports-items-stock",
     component: ItemsWithStockView,
-  },
-  {
-    path: "/reports/active-rentals",
-    name: "reports-active-rentals",
-    component: ActiveRentalsView,
   },
   {
     path: "/reports/daily-sales",

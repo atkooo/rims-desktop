@@ -10,30 +10,34 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Detail</span>
-        <strong>{{ stats.totalDetails }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Detail</span>
+          <strong>{{ stats.totalDetails }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Paket Unik</span>
+          <strong>{{ stats.uniqueBundles }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Item dalam Paket</span>
+          <strong>{{ stats.itemCount }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Aksesoris dalam Paket</span>
+          <strong>{{ stats.accessoryCount }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Paket Unik</span>
-        <strong>{{ stats.uniqueBundles }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Item dalam Paket</span>
-        <strong>{{ stats.itemCount }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Aksesoris dalam Paket</span>
-        <strong>{{ stats.accessoryCount }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="details" :loading="loading" />
+      <DataTable :columns="columns" :items="details" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -96,4 +100,3 @@ export default {
   },
 };
 </script>
-

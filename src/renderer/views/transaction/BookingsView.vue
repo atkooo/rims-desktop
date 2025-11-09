@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page transaction-page">
     <div class="page-header">
       <div>
         <h1>Booking Barang</h1>
@@ -10,26 +10,30 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Booking</span>
-        <strong>{{ stats.totalBookings }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Booking</span>
+          <strong>{{ stats.totalBookings }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Pending</span>
+          <strong>{{ stats.pending }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Confirmed</span>
+          <strong>{{ stats.confirmed }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Pending</span>
-        <strong>{{ stats.pending }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Confirmed</span>
-        <strong>{{ stats.confirmed }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="bookings" :loading="loading" />
+      <DataTable :columns="columns" :items="bookings" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -105,4 +109,3 @@ export default {
   },
 };
 </script>
-

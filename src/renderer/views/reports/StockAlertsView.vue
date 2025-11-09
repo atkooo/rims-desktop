@@ -12,30 +12,34 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Item Perlu Perhatian</span>
-        <strong>{{ alerts.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Item Perlu Perhatian</span>
+          <strong>{{ alerts.length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Stok Terendah</span>
+          <strong>{{ stats.lowestStock }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Rata-rata Kekurangan</span>
+          <strong>{{ stats.avgDeficit }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total Kekurangan</span>
+          <strong>{{ stats.totalDeficit }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Stok Terendah</span>
-        <strong>{{ stats.lowestStock }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Rata-rata Kekurangan</span>
-        <strong>{{ stats.avgDeficit }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Total Kekurangan</span>
-        <strong>{{ stats.totalDeficit }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="alerts" :loading="loading" />
+      <DataTable :columns="columns" :items="alerts" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -158,10 +162,11 @@ export default {
 }
 
 .summary-card {
-  background-color: white;
+  background-color: #f9fafb;
   padding: 1rem 1.25rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -180,4 +185,3 @@ export default {
   color: #991b1b;
 }
 </style>
-

@@ -103,13 +103,13 @@ export default {
 
 .dialog {
   background-color: white;
-  border-radius: 8px;
+  border-radius: 10px;
   width: 90%;
-  max-width: 500px;
+  max-width: 720px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.2);
 }
 
 .dialog-header {

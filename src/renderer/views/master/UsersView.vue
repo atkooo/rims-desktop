@@ -10,26 +10,30 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Pengguna</span>
-        <strong>{{ stats.totalUsers }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Pengguna</span>
+          <strong>{{ stats.totalUsers }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Aktif</span>
+          <strong>{{ stats.activeUsers }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Terakhir Login</span>
+          <strong>{{ stats.lastLogin }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Aktif</span>
-        <strong>{{ stats.activeUsers }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Terakhir Login</span>
-        <strong>{{ stats.lastLogin }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="users" :loading="loading" />
+      <DataTable :columns="columns" :items="users" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -103,4 +107,3 @@ export default {
   },
 };
 </script>
-

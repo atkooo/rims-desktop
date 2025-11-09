@@ -12,30 +12,34 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Pelanggan</span>
-        <strong>{{ stats.totalCustomers }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Pelanggan</span>
+          <strong>{{ stats.totalCustomers }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Pelanggan Aktif</span>
+          <strong>{{ stats.activeCustomers }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total Transaksi</span>
+          <strong>{{ stats.totalTransactions }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Rata-rata Transaksi</span>
+          <strong>{{ stats.avgTransactions }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Pelanggan Aktif</span>
-        <strong>{{ stats.activeCustomers }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Total Transaksi</span>
-        <strong>{{ stats.totalTransactions }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Rata-rata Transaksi</span>
-        <strong>{{ stats.avgTransactions }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
 
-    <DataTable :columns="columns" :items="customers" :loading="loading" />
+      <DataTable :columns="columns" :items="customers" :loading="loading" />
+    </section>
   </div>
 </template>
 
@@ -118,4 +122,3 @@ export default {
   },
 };
 </script>
-

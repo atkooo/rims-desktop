@@ -24,18 +24,14 @@ export const menuGroups = [
       { to: "/master/item-sizes", label: "Ukuran Item", icon: "layers" },
       { to: "/master/accessories", label: "Aksesoris & Add-on", icon: "layers" },
       { to: "/master/bundles", label: "Paket & Koleksi", icon: "clipboard" },
-      { to: "/master/bundle-details", label: "Rincian Paket", icon: "file" },
       { to: "/master/customers", label: "Pelanggan", icon: "users" },
     ],
   },
   {
     title: "Laporan & Insight",
     items: [
-      { to: "/reports/active-rentals", label: "Status Sewa Aktif", icon: "chart-line" },
       { to: "/reports/daily-sales", label: "Ringkasan Penjualan", icon: "chart-bar" },
       { to: "/reports/top-customers", label: "Pelanggan Teratas", icon: "users" },
-      { to: "/transactions/rental-details", label: "Rincian Transaksi Sewa", icon: "file" },
-      { to: "/transactions/sales-details", label: "Rincian Transaksi Penjualan", icon: "file" },
     ],
   },
   {

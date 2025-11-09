@@ -2,13 +2,19 @@
   <div class="items-page">
     <div class="page-header">
       <div class="header-content">
-        <h1>Manajemen Item</h1>
+        <div>
+          <h1>Manajemen Item</h1>
+          <p class="subtitle">
+            Kelola katalog barang dan pantau status stok secara terpusat.
+          </p>
+        </div>
         <AppButton variant="primary" @click="showForm = true">
           Tambah Item
         </AppButton>
       </div>
+    </div>
 
-      <!-- Filters -->
+    <section class="card-section">
       <div class="filters">
         <FormInput
           id="searchItem"
@@ -31,43 +37,47 @@
           <option value="MAINTENANCE">Maintenance</option>
         </select>
       </div>
-    </div>
+    </section>
 
     <!-- Items Summary -->
-    <div class="summary-cards">
-      <div class="summary-card">
-        <h3>Total Items</h3>
-        <p class="amount">{{ filteredItems.length }}</p>
+    <section class="card-section">
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Total Items</h3>
+          <p class="amount">{{ filteredItems.length }}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Items Available</h3>
+          <p class="amount">{{ itemsAvailable }}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Items Rented</h3>
+          <p class="amount">{{ itemsRented }}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Value</h3>
+          <p class="amount">{{ formatCurrency(totalValue) }}</p>
+        </div>
       </div>
-      <div class="summary-card">
-        <h3>Items Available</h3>
-        <p class="amount">{{ itemsAvailable }}</p>
-      </div>
-      <div class="summary-card">
-        <h3>Items Rented</h3>
-        <p class="amount">{{ itemsRented }}</p>
-      </div>
-      <div class="summary-card">
-        <h3>Total Value</h3>
-        <p class="amount">{{ formatCurrency(totalValue) }}</p>
-      </div>
-    </div>
+    </section>
 
     <!-- Items Table -->
-    <DataTable
-      :columns="columns"
-      :items="filteredItems"
-      :loading="loading"
-      actions
-      @edit="handleEdit"
-      @delete="handleDelete"
-    >
-      <template #status="{ value }">
-        <span class="status-badge" :class="value.toLowerCase()">
-          {{ value }}
-        </span>
-      </template>
-    </DataTable>
+    <section class="card-section">
+      <DataTable
+        :columns="columns"
+        :items="filteredItems"
+        :loading="loading"
+        actions
+        @edit="handleEdit"
+        @delete="handleDelete"
+      >
+        <template #status="{ value }">
+          <span class="status-badge" :class="value.toLowerCase()">
+            {{ value }}
+          </span>
+        </template>
+      </DataTable>
+    </section>
 
     <!-- Item Form Dialog -->
     <ItemForm
@@ -277,14 +287,26 @@ export default {
   color: #111827;
 }
 
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
 .filters {
   display: flex;
   gap: 1rem;
-  align-items: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
 }
 
-.search-input {
-  width: 300px;
+.filters :deep(.search-input) {
+  width: 280px;
+  margin: 0;
+}
+
+.filters :deep(.search-input .form-input) {
+  width: 100%;
 }
 
 .filter-select {
@@ -293,20 +315,22 @@ export default {
   border-radius: 4px;
   background-color: white;
   min-width: 150px;
+  height: 40px;
 }
 
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
 .summary-card {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
 }
 
 .summary-card h3 {
