@@ -43,22 +43,36 @@
         {{ error }}
       </div>
 
-      <DataTable :columns="columns" :items="bundles" :loading="loading" :actions="true" :show-edit="false"
-        :show-delete="false">
-        <template #actions="{ item }">
+      <AppTable
+        :columns="columns"
+        :rows="bundles"
+        :loading="loading"
+        :searchable-keys="['code', 'name', 'bundle_type']"
+        row-key="id"
+      >
+        <template #cell-price="{ row }">
+          {{ formatCurrency(row.price) }}
+        </template>
+        <template #cell-rental_price_per_day="{ row }">
+          {{ formatCurrency(row.rental_price_per_day) }}
+        </template>
+        <template #cell-is_active="{ row }">
+          {{ row.is_active ? "Aktif" : "Nonaktif" }}
+        </template>
+        <template #actions="{ row }">
           <div class="action-buttons">
-            <AppButton variant="secondary" @click="handleEdit(item)">
+            <AppButton variant="secondary" @click="handleEdit(row)">
               Edit
             </AppButton>
-            <AppButton variant="danger" @click="promptDelete(item)">
+            <AppButton variant="danger" @click="promptDelete(row)">
               Hapus
             </AppButton>
-            <AppButton variant="secondary" @click="openBundleDetail(item)">
+            <AppButton variant="secondary" @click="openBundleDetail(row)">
               Detail
             </AppButton>
           </div>
         </template>
-      </DataTable>
+      </AppTable>
     </section>
   </div>
 
@@ -137,13 +151,17 @@
     </div>
   </AppDialog>
 
-  <BundleDetailEditor v-model="detailEditorOpen" :bundle="editorBundle" @updated="handleDetailsUpdated" />
+  <BundleDetailEditor
+    v-model="detailEditorOpen"
+    :bundle="editorBundle"
+    @updated="handleDetailsUpdated"
+  />
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import BundleForm from "@/components/modules/bundles/BundleForm.vue";
 import BundleDetailEditor from "@/components/modules/bundles/BundleDetailEditor.vue";
@@ -155,7 +173,13 @@ import {
 
 export default {
   name: "BundlesView",
-  components: { AppButton, DataTable, AppDialog, BundleForm, BundleDetailEditor },
+  components: {
+    AppButton,
+    AppTable,
+    AppDialog,
+    BundleForm,
+    BundleDetailEditor,
+  },
   setup() {
     const bundles = ref([]);
     const bundleDetails = ref([]);
@@ -259,9 +283,18 @@ export default {
       }
     };
 
-    const openDetailEditor = () => {
-      if (!selectedBundle.value) return;
-      editorBundle.value = selectedBundle.value;
+    const openDetailEditor = async (payload) => {
+      const target =
+        payload && typeof payload === "object" && "id" in payload
+          ? payload
+          : selectedBundle.value;
+      if (!target) {
+        detailEditorOpen.value = false;
+        editorBundle.value = null;
+        return;
+      }
+      editorBundle.value = { ...target };
+      await nextTick();
       detailEditorOpen.value = true;
     };
 

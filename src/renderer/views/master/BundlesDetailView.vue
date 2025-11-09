@@ -36,7 +36,13 @@
         {{ error }}
       </div>
 
-      <DataTable :columns="columns" :items="details" :loading="loading" />
+      <AppTable
+        :columns="columns"
+        :rows="details"
+        :loading="loading"
+        :searchable-keys="['bundle_name', 'item_name', 'accessory_name', 'notes']"
+        row-key="id"
+      />
     </section>
   </div>
 </template>
@@ -44,12 +50,12 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import { fetchBundleDetails } from "@/services/masterData";
 
 export default {
   name: "BundlesDetailView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable },
   setup() {
     const details = ref([]);
     const loading = ref(false);

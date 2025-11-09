@@ -38,7 +38,20 @@
         {{ error }}
       </div>
 
-      <DataTable :columns="columns" :items="customers" :loading="loading" />
+      <AppTable
+        :columns="columns"
+        :rows="customers"
+        :loading="loading"
+        :searchable-keys="['code','name','phone','email']"
+        row-key="id"
+      >
+        <template #cell-is_active="{ row }">
+          {{ row.is_active ? "Aktif" : "Nonaktif" }}
+        </template>
+        <template #cell-created_at="{ row }">
+          {{ row.created_at ? new Date(row.created_at).toLocaleDateString("id-ID") : "-" }}
+        </template>
+      </AppTable>
     </section>
   </div>
 </template>
@@ -46,12 +59,12 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import { fetchCustomers } from "@/services/masterData";
 
 export default {
   name: "CustomersView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable },
   setup() {
     const customers = ref([]);
     const loading = ref(false);

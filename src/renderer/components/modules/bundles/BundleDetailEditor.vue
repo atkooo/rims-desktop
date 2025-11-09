@@ -140,6 +140,7 @@ export default {
   emits: ["update:modelValue", "updated"],
   setup(props, { emit }) {
     const itemStore = useItemStore();
+    const bundle = computed(() => props.bundle);
     const accessories = ref([]);
     const accessoriesLoading = ref(false);
     const accessoriesError = ref("");
@@ -187,14 +188,14 @@ export default {
     };
 
     const loadDetails = async () => {
-      if (!props.bundle?.id) {
+      if (!bundle.value?.id) {
         details.value = [];
         return;
       }
       detailsLoading.value = true;
       detailsError.value = "";
       try {
-        details.value = await fetchBundleDetailsByBundle(props.bundle.id);
+        details.value = await fetchBundleDetailsByBundle(bundle.value.id);
       } catch (error) {
         detailsError.value = error.message || "Gagal memuat detail paket.";
       } finally {
@@ -224,7 +225,7 @@ export default {
 
     const buildDetailPayload = () => {
       const payload = {
-        bundle_id: props.bundle.id,
+        bundle_id: bundle.value.id,
         quantity: Number(form.value.quantity),
         notes: form.value.notes?.trim() ?? "",
       };
@@ -239,7 +240,7 @@ export default {
     };
 
     const handleSubmit = async () => {
-      if (!props.bundle) return;
+      if (!bundle.value) return;
       if (!validateForm()) return;
       formSubmitting.value = true;
       formError.value = "";
@@ -294,9 +295,9 @@ export default {
     };
 
     watch(
-      () => showDialog.value,
-      async (visible) => {
-        if (visible && props.bundle) {
+      [() => showDialog.value, () => bundle.value?.id],
+      async ([visible, bundleId]) => {
+        if (visible && bundleId) {
           await ensureDependencies();
           await loadDetails();
           resetForm();
@@ -307,13 +308,12 @@ export default {
       },
     );
 
+
     watch(
-      () => props.bundle?.id,
-      async (bundleId) => {
-        if (showDialog.value && bundleId) {
-          await loadDetails();
-        } else {
-          details.value = [];
+      () => bundle.value,
+      (bundle) => {
+        if (!bundle && showDialog.value) {
+          showDialog.value = false;
         }
       },
     );
@@ -324,7 +324,7 @@ export default {
 
     return {
       showDialog,
-      bundle: props.bundle,
+      bundle,
       details,
       detailsLoading,
       detailsError,

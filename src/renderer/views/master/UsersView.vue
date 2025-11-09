@@ -32,7 +32,20 @@
         {{ error }}
       </div>
 
-      <DataTable :columns="columns" :items="users" :loading="loading" />
+      <AppTable
+        :columns="columns"
+        :rows="users"
+        :loading="loading"
+        :searchable-keys="['username','full_name','email','role_name']"
+        row-key="id"
+      >
+        <template #cell-is_active="{ row }">
+          {{ row.is_active ? "Aktif" : "Nonaktif" }}
+        </template>
+        <template #cell-last_login="{ row }">
+          {{ row.last_login ? new Date(row.last_login).toLocaleString("id-ID") : "-" }}
+        </template>
+      </AppTable>
     </section>
   </div>
 </template>
@@ -40,12 +53,12 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import { fetchUsers } from "@/services/masterData";
 
 export default {
   name: "UsersView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable },
   setup() {
     const users = ref([]);
     const loading = ref(false);

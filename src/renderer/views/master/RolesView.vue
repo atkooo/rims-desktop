@@ -24,7 +24,13 @@
         {{ error }}
       </div>
 
-      <DataTable :columns="columns" :items="roles" :loading="loading" />
+      <AppTable
+        :columns="columns"
+        :rows="roles"
+        :loading="loading"
+        :searchable-keys="['name', 'description']"
+        row-key="id"
+      />
     </section>
   </div>
 </template>
@@ -32,12 +38,12 @@
 <script>
 import { ref, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import { fetchRoles } from "@/services/masterData";
 
 export default {
   name: "RolesView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable },
   setup() {
     const roles = ref([]);
     const loading = ref(false);
