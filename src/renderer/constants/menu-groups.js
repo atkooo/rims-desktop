@@ -21,6 +21,7 @@ export const menuGroups = [
     items: [
       { to: "/master/categories", label: "Kategori Produk", icon: "tag" },
       { to: "/master/items", label: "Katalog Barang", icon: "box" },
+      { to: "/master/item-sizes", label: "Ukuran Item", icon: "layers" },
       { to: "/master/accessories", label: "Aksesoris & Add-on", icon: "layers" },
       { to: "/master/bundles", label: "Paket & Koleksi", icon: "clipboard" },
       { to: "/master/bundle-details", label: "Rincian Paket", icon: "file" },

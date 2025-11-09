@@ -4,7 +4,9 @@ import { ipcRenderer } from "@/services/ipc";
 export const useItemStore = defineStore("items", {
   state: () => ({
     items: [],
+    sizes: [],
     loading: false,
+    sizesLoading: false,
     error: null,
   }),
 
@@ -85,6 +87,18 @@ export const useItemStore = defineStore("items", {
         throw err;
       } finally {
         this.loading = false;
+      }
+    },
+    async fetchSizes(force = false) {
+      if (!force && this.sizes.length) return;
+      this.sizesLoading = true;
+      try {
+        const data = await ipcRenderer.invoke("itemSizes:getAll");
+        this.sizes = data;
+      } catch (err) {
+        console.error("Gagal memuat data ukuran:", err);
+      } finally {
+        this.sizesLoading = false;
       }
     },
   },

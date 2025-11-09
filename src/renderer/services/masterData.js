@@ -23,3 +23,7 @@ export function fetchRoles() {
 export function fetchUsers() {
   return ipcRenderer.invoke("master:getUsers");
 }
+
+export function fetchItemSizes() {
+  return ipcRenderer.invoke("itemSizes:getAll");
+}

@@ -4,6 +4,7 @@ import Login from "./views/Login.vue";
 import Categories from "./views/master/Categories.vue";
 import AccessoriesView from "./views/master/AccessoriesView.vue";
 import ItemsPage from "./views/ItemsPage.vue";
+import ItemSizesView from "./views/master/ItemSizesView.vue";
 import BundlesView from "./views/master/BundlesView.vue";
 import BundlesDetailView from "./views/master/BundlesDetailView.vue";
 import CustomersView from "./views/master/CustomersView.vue";
@@ -38,6 +39,11 @@ const routes = [
     component: AccessoriesView,
   },
   { path: "/master/items", name: "items", component: ItemsPage },
+  {
+    path: "/master/item-sizes",
+    name: "item-sizes",
+    component: ItemSizesView,
+  },
   { path: "/master/bundles", name: "bundles", component: BundlesView },
   {
     path: "/master/bundle-details",

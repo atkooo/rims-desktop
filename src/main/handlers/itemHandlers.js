@@ -8,9 +8,15 @@ function setupItemHandlers() {
   // Get all items
   ipcMain.handle("items:getAll", async () => {
     try {
-      const items = await database.query(
-        "SELECT * FROM items ORDER BY id DESC",
-      );
+      const items = await database.query(`
+        SELECT
+          i.*,
+          s.name AS size_name,
+          s.code AS size_code
+        FROM items i
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        ORDER BY i.id DESC
+      `);
       return items;
     } catch (error) {
       logger.error("Error fetching items:", error);

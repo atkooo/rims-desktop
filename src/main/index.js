@@ -7,6 +7,7 @@ const setupItemHandlers = require("./handlers/itemHandlers");
 const setupTransactionHandlers = require("./handlers/transactionHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
+const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");
 const setupReportHandlers = require("./handlers/reportHandlers");
 const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers");
 const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
@@ -93,6 +94,7 @@ app.whenReady().then(async () => {
   registerDataIpc();
   setupAutoBackup();
   setupCategoryHandlers();
+  setupItemSizeHandlers();
   setupItemHandlers();
   setupTransactionHandlers();
   setupSettingsHandlers();
