@@ -270,6 +270,10 @@ export default {
   padding: 1.5rem;
 }
 
+.items-page .card-section + .card-section {
+  margin-top: 1rem;
+}
+
 .page-header {
   margin-bottom: 2rem;
 }
