@@ -10,7 +10,6 @@ INSERT INTO customers (
     address,
     id_card_number,
     notes,
-    total_transactions,
     is_active
 )
 VALUES
@@ -19,19 +18,19 @@ VALUES
         'Jl. Melati No. 12, Bandung',
         '3201011501900001',
         'Prefers weekend pickup schedule',
-        2, 1
+        1
     ),
     ('CUS-002', 'Bima Hadiwijaya', '0812-000-222',
         'bima.hadi@example.com',
         'Jl. Kenanga No. 5, Bandung',
         '3201020402880002',
         'Needs express fitting notifications',
-        1, 1
+        1
     ),
     ('CUS-003', 'Clara Sembiring', '0812-000-333',
         'clara.sembiring@example.com',
         'Jl. Anggrek No. 9, Bandung',
         '3201032304920003',
         'Often purchases kids collection',
-        1, 1
+        1
     );

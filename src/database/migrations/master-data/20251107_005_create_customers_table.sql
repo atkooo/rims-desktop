@@ -10,7 +10,6 @@ CREATE TABLE customers (
     address TEXT,
     id_card_number VARCHAR(50),
     notes TEXT,
-    total_transactions INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

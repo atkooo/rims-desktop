@@ -81,17 +81,29 @@ function setupMasterDataViewHandlers() {
   register(
     "master:getCustomers",
     () => `
+      WITH rental_counts AS (
+        SELECT customer_id, COUNT(*) AS total_rentals
+        FROM rental_transactions
+        GROUP BY customer_id
+      ),
+      sales_counts AS (
+        SELECT customer_id, COUNT(*) AS total_sales
+        FROM sales_transactions
+        GROUP BY customer_id
+      )
       SELECT
-        id,
-        code,
-        name,
-        phone,
-        email,
-        total_transactions,
-        is_active,
-        created_at
-      FROM customers
-      ORDER BY name ASC
+        c.id,
+        c.code,
+        c.name,
+        c.phone,
+        c.email,
+        COALESCE(rc.total_rentals, 0) + COALESCE(sc.total_sales, 0) AS total_transactions,
+        c.is_active,
+        c.created_at
+      FROM customers c
+      LEFT JOIN rental_counts rc ON rc.customer_id = c.id
+      LEFT JOIN sales_counts sc ON sc.customer_id = c.id
+      ORDER BY c.name ASC
     `,
     "customers",
   );
