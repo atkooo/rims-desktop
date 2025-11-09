@@ -1,8 +1,13 @@
 <template>
   <header class="topbar">
     <div class="topbar__left">
-      <button class="icon-btn" type="button" :aria-pressed="collapsed" aria-label="Toggle sidebar"
-        @click="emit('toggle-sidebar')">
+      <button
+        class="icon-btn"
+        type="button"
+        :aria-pressed="collapsed"
+        aria-label="Toggle sidebar"
+        @click="emit('toggle-sidebar')"
+      >
         <Icon name="menu" size="20" />
       </button>
       <div class="topbar__brand">
@@ -11,14 +16,23 @@
       </div>
       <form class="topbar__search" @submit.prevent="handleSearch">
         <Icon name="search" size="16" class="search-icon" />
-        <input v-model="searchQuery" type="search" placeholder="Cari transaksi, pelanggan, atau kode invoice" />
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Cari transaksi, pelanggan, atau kode invoice"
+        />
         <button type="submit" :disabled="searchBusy">
           {{ searchBusy ? "Mencari..." : "Cari" }}
         </button>
       </form>
     </div>
     <div class="topbar__right">
-      <button class="icon-btn" type="button" aria-label="Refresh notifikasi" @click="refreshTransactions">
+      <button
+        class="icon-btn"
+        type="button"
+        aria-label="Refresh notifikasi"
+        @click="refreshTransactions"
+      >
         <Icon name="bell" size="20" />
         <span v-if="pendingTransactions" class="icon-badge">
           {{ pendingTransactions }}
@@ -31,8 +45,13 @@
         </span>
       </button>
       <div class="profile-shell" ref="profileMenuRef">
-        <button type="button" class="profile-card" @click="toggleProfileMenu" :aria-expanded="profileMenuOpen"
-          ref="profileButtonRef">
+        <button
+          type="button"
+          class="profile-card"
+          @click="toggleProfileMenu"
+          :aria-expanded="profileMenuOpen"
+          ref="profileButtonRef"
+        >
           <div class="profile-info">
             <span class="role">{{ roleLabel }}</span>
             <strong>{{ currentUser?.full_name || "Pengguna" }}</strong>
@@ -42,10 +61,15 @@
         </button>
         <Teleport to="body">
           <transition name="fade-scale">
-            <div v-if="profileMenuOpen" class="profile-menu" ref="profileMenuDropdownRef" :style="{
-              top: profileMenuPosition.top + 'px',
-              left: profileMenuPosition.left + 'px'
-            }">
+            <div
+              v-if="profileMenuOpen"
+              class="profile-menu"
+              ref="profileMenuDropdownRef"
+              :style="{
+                top: profileMenuPosition.top + 'px',
+                left: profileMenuPosition.left + 'px',
+              }"
+            >
               <button type="button" @click="goToProfile">
                 <Icon name="user" size="16" />
                 <span>Profil Saya</span>
@@ -140,7 +164,7 @@ const handleSearch = () => {
 
 const refreshTransactions = () => {
   if (!transactionStore.loading) {
-    transactionStore.fetchTransactions().catch(() => { });
+    transactionStore.fetchTransactions().catch(() => {});
   }
 };
 

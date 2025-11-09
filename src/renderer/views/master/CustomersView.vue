@@ -42,14 +42,18 @@
         :columns="columns"
         :rows="customers"
         :loading="loading"
-        :searchable-keys="['code','name','phone','email']"
+        :searchable-keys="['code', 'name', 'phone', 'email']"
         row-key="id"
       >
         <template #cell-is_active="{ row }">
           {{ row.is_active ? "Aktif" : "Nonaktif" }}
         </template>
         <template #cell-created_at="{ row }">
-          {{ row.created_at ? new Date(row.created_at).toLocaleDateString("id-ID") : "-" }}
+          {{
+            row.created_at
+              ? new Date(row.created_at).toLocaleDateString("id-ID")
+              : "-"
+          }}
         </template>
       </AppTable>
     </section>

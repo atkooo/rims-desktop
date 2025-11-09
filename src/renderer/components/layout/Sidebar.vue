@@ -8,14 +8,23 @@
       </div>
     </div>
     <nav>
-      <router-link to="/" active-class="active" :title="collapsed ? 'Dashboard' : null">
+      <router-link
+        to="/"
+        active-class="active"
+        :title="collapsed ? 'Dashboard' : null"
+      >
         <Icon name="dashboard" class="icon" />
         <span v-if="!collapsed">Dashboard</span>
       </router-link>
       <div v-for="group in groups" :key="group.title" class="group">
         <div class="group-title" v-if="!collapsed">{{ group.title }}</div>
-        <router-link v-for="item in group.items" :key="item.to" :to="item.to" active-class="active"
-          :title="collapsed ? item.label : null">
+        <router-link
+          v-for="item in group.items"
+          :key="item.to"
+          :to="item.to"
+          active-class="active"
+          :title="collapsed ? item.label : null"
+        >
           <Icon :name="item.icon" class="icon" />
           <span v-if="!collapsed">{{ item.label }}</span>
         </router-link>

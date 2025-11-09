@@ -40,7 +40,12 @@
         :columns="columns"
         :rows="details"
         :loading="loading"
-        :searchable-keys="['bundle_name', 'item_name', 'accessory_name', 'notes']"
+        :searchable-keys="[
+          'bundle_name',
+          'item_name',
+          'accessory_name',
+          'notes',
+        ]"
         row-key="id"
       />
     </section>

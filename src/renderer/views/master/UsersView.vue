@@ -36,14 +36,18 @@
         :columns="columns"
         :rows="users"
         :loading="loading"
-        :searchable-keys="['username','full_name','email','role_name']"
+        :searchable-keys="['username', 'full_name', 'email', 'role_name']"
         row-key="id"
       >
         <template #cell-is_active="{ row }">
           {{ row.is_active ? "Aktif" : "Nonaktif" }}
         </template>
         <template #cell-last_login="{ row }">
-          {{ row.last_login ? new Date(row.last_login).toLocaleString("id-ID") : "-" }}
+          {{
+            row.last_login
+              ? new Date(row.last_login).toLocaleString("id-ID")
+              : "-"
+          }}
         </template>
       </AppTable>
     </section>

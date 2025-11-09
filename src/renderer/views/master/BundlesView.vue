@@ -4,7 +4,8 @@
       <div>
         <h1>Data Paket</h1>
         <p class="subtitle">
-          Kelola paket barang atau aksesoris untuk kebutuhan rental maupun penjualan.
+          Kelola paket barang atau aksesoris untuk kebutuhan rental maupun
+          penjualan.
         </p>
       </div>
       <div class="header-actions">
@@ -76,18 +77,34 @@
     </section>
   </div>
 
-  <BundleForm v-model="showForm" :edit-data="editingBundle" @saved="handleFormSaved" />
+  <BundleForm
+    v-model="showForm"
+    :edit-data="editingBundle"
+    @saved="handleFormSaved"
+  />
 
-  <AppDialog v-model="showDeleteConfirm" title="Hapus Paket" confirm-text="Hapus" confirm-variant="danger"
-    :loading="deleteLoading" @confirm="confirmDelete">
+  <AppDialog
+    v-model="showDeleteConfirm"
+    title="Hapus Paket"
+    confirm-text="Hapus"
+    confirm-variant="danger"
+    :loading="deleteLoading"
+    @confirm="confirmDelete"
+  >
     <p>
       Yakin ingin menghapus
-      <strong>{{ bundleToDelete?.name }}</strong>?
+      <strong>{{ bundleToDelete?.name }}</strong
+      >?
     </p>
   </AppDialog>
 
-  <AppDialog v-model="detailDialogOpen"
-    :title="selectedBundle ? `Detail Paket - ${selectedBundle.name}` : 'Detail Paket'" :show-footer="false">
+  <AppDialog
+    v-model="detailDialogOpen"
+    :title="
+      selectedBundle ? `Detail Paket - ${selectedBundle.name}` : 'Detail Paket'
+    "
+    :show-footer="false"
+  >
     <div class="detail-dialog">
       <div v-if="selectedBundle" class="bundle-meta">
         <div class="meta-item">
@@ -108,7 +125,9 @@
         </div>
         <div class="meta-item">
           <span>Harga Rental/Hari</span>
-          <strong>{{ formatCurrency(selectedBundle.rental_price_per_day) }}</strong>
+          <strong>{{
+            formatCurrency(selectedBundle.rental_price_per_day)
+          }}</strong>
         </div>
       </div>
 
@@ -123,7 +142,11 @@
       </div>
       <div v-else-if="detailError" class="error-banner">
         {{ detailError }}
-        <AppButton class="retry-button" variant="secondary" @click="loadBundleDetails">
+        <AppButton
+          class="retry-button"
+          variant="secondary"
+          @click="loadBundleDetails"
+        >
           Coba Lagi
         </AppButton>
       </div>

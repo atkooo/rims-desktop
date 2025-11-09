@@ -23,7 +23,10 @@
         :dense="true"
       >
         <template #cell-is_active="{ row }">
-          <span class="badge" :class="row.is_active ? 'badge-success' : 'badge-muted'">
+          <span
+            class="badge"
+            :class="row.is_active ? 'badge-success' : 'badge-muted'"
+          >
             {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </span>
         </template>
@@ -34,11 +37,7 @@
           <AppButton variant="secondary" @click="editSize(row)">
             Edit
           </AppButton>
-          <AppButton
-            variant="danger"
-            @click="confirmDelete(row)"
-            title="Hapus"
-          >
+          <AppButton variant="danger" @click="confirmDelete(row)" title="Hapus">
             Hapus
           </AppButton>
         </template>
@@ -48,9 +47,11 @@
     <Dialog
       v-model="showDialog"
       :title="isEdit ? 'Edit Ukuran' : 'Tambah Ukuran'"
-      @update:modelValue="(val) => {
-        if (!val) closeDialog();
-      }"
+      @update:modelValue="
+        (val) => {
+          if (!val) closeDialog();
+        }
+      "
     >
       <form class="form" @submit.prevent="saveSize">
         <div class="form-group">
@@ -59,7 +60,12 @@
         </div>
         <div class="form-group">
           <label>Nama Ukuran</label>
-          <input v-model="form.name" type="text" required placeholder="Misal: Medium" />
+          <input
+            v-model="form.name"
+            type="text"
+            required
+            placeholder="Misal: Medium"
+          />
         </div>
         <div class="form-group">
           <label>Deskripsi</label>
@@ -92,11 +98,15 @@
     <Dialog
       v-model="showDeleteDialog"
       title="Hapus Ukuran"
-      @update:modelValue="(val) => {
-        if (!val) closeDeleteDialog();
-      }"
+      @update:modelValue="
+        (val) => {
+          if (!val) closeDeleteDialog();
+        }
+      "
     >
-      <p>Ukuran <strong>{{ selectedSize?.name }}</strong> akan dihapus.</p>
+      <p>
+        Ukuran <strong>{{ selectedSize?.name }}</strong> akan dihapus.
+      </p>
       <div class="dialog-footer">
         <button class="btn" @click="closeDeleteDialog">Batal</button>
         <button class="btn danger" @click="deleteSize">Hapus</button>

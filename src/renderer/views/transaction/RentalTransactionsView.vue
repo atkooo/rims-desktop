@@ -5,7 +5,11 @@
         <h1>Transaksi Sewa</h1>
         <p class="subtitle">Ringkasan transaksi sewa langsung dari database.</p>
       </div>
-      <AppButton variant="secondary" :loading="currentLoading" @click="handleRefresh">
+      <AppButton
+        variant="secondary"
+        :loading="currentLoading"
+        @click="handleRefresh"
+      >
         Refresh Data
       </AppButton>
     </div>
@@ -126,7 +130,11 @@
       </div>
       <div v-else-if="detailError" class="error-banner">
         {{ detailError }}
-        <AppButton class="retry-button" variant="secondary" @click="loadRentalDetails(true)">
+        <AppButton
+          class="retry-button"
+          variant="secondary"
+          @click="loadRentalDetails(true)"
+        >
           Coba Lagi
         </AppButton>
       </div>

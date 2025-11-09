@@ -44,7 +44,7 @@ function setupAccessoryHandlers() {
       const stockQuantity = Math.max(0, toInteger(payload.stock_quantity));
       const availableQuantity = sanitizeAvailable(
         stockQuantity,
-        payload.available_quantity ?? stockQuantity
+        payload.available_quantity ?? stockQuantity,
       );
 
       const now = new Date().toISOString();
@@ -87,7 +87,7 @@ function setupAccessoryHandlers() {
 
       const created = await database.queryOne(
         "SELECT * FROM accessories WHERE id = ?",
-        [result.id]
+        [result.id],
       );
 
       return created;
@@ -150,32 +150,32 @@ function setupAccessoryHandlers() {
         if (currentStock === undefined) {
           const row = await database.queryOne(
             "SELECT stock_quantity FROM accessories WHERE id = ?",
-            [id]
+            [id],
           );
           currentStock = row?.stock_quantity ?? 0;
         }
 
         updates.available_quantity = sanitizeAvailable(
           currentStock,
-          payload.available_quantity
+          payload.available_quantity,
         );
       } else if (updates.stock_quantity !== undefined) {
         // Clamp existing available quantity to new stock value
         const row = await database.queryOne(
           "SELECT available_quantity FROM accessories WHERE id = ?",
-          [id]
+          [id],
         );
         const currentAvailable = row?.available_quantity ?? 0;
         updates.available_quantity = sanitizeAvailable(
           updates.stock_quantity,
-          currentAvailable
+          currentAvailable,
         );
       }
 
       if (payload.min_stock_alert !== undefined) {
         updates.min_stock_alert = Math.max(
           0,
-          toInteger(payload.min_stock_alert)
+          toInteger(payload.min_stock_alert),
         );
       }
 
@@ -207,7 +207,7 @@ function setupAccessoryHandlers() {
 
       const updated = await database.queryOne(
         "SELECT * FROM accessories WHERE id = ?",
-        [id]
+        [id],
       );
       return updated;
     } catch (error) {
@@ -224,12 +224,12 @@ function setupAccessoryHandlers() {
 
       const usage = await database.queryOne(
         "SELECT COUNT(*) AS count FROM bundle_details WHERE accessory_id = ?",
-        [id]
+        [id],
       );
 
       if ((usage?.count ?? 0) > 0) {
         throw new Error(
-          "Tidak dapat menghapus aksesoris yang sudah digunakan pada paket."
+          "Tidak dapat menghapus aksesoris yang sudah digunakan pada paket.",
         );
       }
 

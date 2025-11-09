@@ -137,7 +137,9 @@ function setupItemSizeHandlers() {
       );
 
       if ((usage?.total || 0) > 0) {
-        throw new Error("Ukuran masih digunakan oleh item dan tidak bisa dihapus");
+        throw new Error(
+          "Ukuran masih digunakan oleh item dan tidak bisa dihapus",
+        );
       }
 
       await database.execute("DELETE FROM item_sizes WHERE id = ?", [id]);

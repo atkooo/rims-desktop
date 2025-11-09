@@ -1,25 +1,47 @@
 <template>
-  <AppDialog v-model="showDialog" :title="isEdit ? 'Edit Item' : 'Item Baru'"
-    :confirm-text="isEdit ? 'Update' : 'Simpan'" :loading="loading" @confirm="handleSubmit">
+  <AppDialog
+    v-model="showDialog"
+    :title="isEdit ? 'Edit Item' : 'Item Baru'"
+    :confirm-text="isEdit ? 'Update' : 'Simpan'"
+    :loading="loading"
+    @confirm="handleSubmit"
+  >
     <form class="item-form" @submit.prevent="handleSubmit">
       <div class="form-grid">
         <!-- Nama & Deskripsi -->
         <div class="form-group grid-span-2">
           <label for="name" class="form-label">Nama Item</label>
-          <input id="name" type="text" v-model="form.name" class="form-input" :class="{ 'is-invalid': !!errors.name }"
-            required />
+          <input
+            id="name"
+            type="text"
+            v-model="form.name"
+            class="form-input"
+            :class="{ 'is-invalid': !!errors.name }"
+            required
+          />
           <div v-if="errors.name" class="error-message">{{ errors.name }}</div>
         </div>
 
         <div class="form-group grid-span-2">
           <label for="description" class="form-label">Deskripsi</label>
-          <textarea id="description" v-model="form.description" class="form-textarea" rows="3"></textarea>
+          <textarea
+            id="description"
+            v-model="form.description"
+            class="form-textarea"
+            rows="3"
+          ></textarea>
         </div>
 
         <!-- Harga & Status -->
         <div class="form-pair">
-          <FormInput id="price" label="Harga" type="number" v-model.number="form.price" :error="errors.price"
-            required />
+          <FormInput
+            id="price"
+            label="Harga"
+            type="number"
+            v-model.number="form.price"
+            :error="errors.price"
+            required
+          />
 
           <div class="form-group">
             <label class="form-label">Status</label>
@@ -40,10 +62,17 @@
                 {{ type }}
               </option>
             </select>
-            <div v-if="errors.type" class="error-message">{{ errors.type }}</div>
+            <div v-if="errors.type" class="error-message">
+              {{ errors.type }}
+            </div>
           </div>
 
-          <FormInput id="code" label="Kode Item" v-model="form.code" :error="errors.code" />
+          <FormInput
+            id="code"
+            label="Kode Item"
+            v-model="form.code"
+            :error="errors.code"
+          />
         </div>
 
         <!-- Ukuran -->
@@ -55,7 +84,9 @@
               {{ size.name }}
             </option>
           </select>
-          <div v-if="errors.size_id" class="error-message">{{ errors.size_id }}</div>
+          <div v-if="errors.size_id" class="error-message">
+            {{ errors.size_id }}
+          </div>
         </div>
       </div>
 
@@ -63,11 +94,27 @@
       <div v-if="form.type === 'RENTAL'" class="form-section">
         <h3>Informasi Rental</h3>
         <div class="form-grid-rental">
-          <FormInput id="dailyRate" label="Harga per Hari" type="number" v-model.number="form.dailyRate"
-            :error="errors.dailyRate" />
-          <FormInput id="weeklyRate" label="Harga per Minggu" type="number" v-model.number="form.weeklyRate"
-            :error="errors.weeklyRate" />
-          <FormInput id="deposit" label="Deposit" type="number" v-model.number="form.deposit" :error="errors.deposit" />
+          <FormInput
+            id="dailyRate"
+            label="Harga per Hari"
+            type="number"
+            v-model.number="form.dailyRate"
+            :error="errors.dailyRate"
+          />
+          <FormInput
+            id="weeklyRate"
+            label="Harga per Minggu"
+            type="number"
+            v-model.number="form.weeklyRate"
+            :error="errors.weeklyRate"
+          />
+          <FormInput
+            id="deposit"
+            label="Deposit"
+            type="number"
+            v-model.number="form.deposit"
+            :error="errors.deposit"
+          />
         </div>
       </div>
     </form>
@@ -118,14 +165,14 @@ export default {
     const resetForm = () => {
       form.value = props.editData
         ? {
-          ...defaultForm(),
-          ...props.editData,
-          size_id:
-            props.editData.size_id ??
-            props.editData.sizeId ??
-            props.editData.size ??
-            null,
-        }
+            ...defaultForm(),
+            ...props.editData,
+            size_id:
+              props.editData.size_id ??
+              props.editData.sizeId ??
+              props.editData.size ??
+              null,
+          }
         : defaultForm();
       errors.value = {};
     };
@@ -133,7 +180,8 @@ export default {
     const validateForm = () => {
       const e = {};
       if (!form.value.name.trim()) e.name = "Nama item harus diisi";
-      if (!form.value.price || form.value.price <= 0) e.price = "Harga harus > 0";
+      if (!form.value.price || form.value.price <= 0)
+        e.price = "Harga harus > 0";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       if (form.value.type === "RENTAL") {
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
@@ -161,10 +209,22 @@ export default {
       }
     };
 
-    watch(() => props.modelValue, (val) => val && resetForm());
-    onMounted(() => itemStore.fetchSizes().catch(() => { }));
+    watch(
+      () => props.modelValue,
+      (val) => val && resetForm(),
+    );
+    onMounted(() => itemStore.fetchSizes().catch(() => {}));
 
-    return { form, errors, loading, isEdit, showDialog, ITEM_TYPE, handleSubmit, sizeOptions };
+    return {
+      form,
+      errors,
+      loading,
+      isEdit,
+      showDialog,
+      ITEM_TYPE,
+      handleSubmit,
+      sizeOptions,
+    };
   },
 };
 </script>
@@ -225,7 +285,9 @@ export default {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.95rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   box-sizing: border-box;
 }
 

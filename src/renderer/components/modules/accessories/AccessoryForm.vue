@@ -103,10 +103,7 @@
 import { ref, computed, watch } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import {
-  createAccessory,
-  updateAccessory,
-} from "@/services/masterData";
+import { createAccessory, updateAccessory } from "@/services/masterData";
 
 const defaultForm = () => ({
   code: "",
@@ -172,8 +169,7 @@ export default {
             props.editData.is_available_for_sale === 1 ||
             props.editData.is_available_for_sale === true,
           is_active:
-            props.editData.is_active === 1 ||
-            props.editData.is_active === true,
+            props.editData.is_active === 1 || props.editData.is_active === true,
         };
       } else {
         form.value = defaultForm();

@@ -57,13 +57,13 @@
           {{ formatCurrency(row.sale_price) }}
         </template>
         <template #cell-is_available_for_rent="{ row }">
-          {{ row.is_available_for_rent ? 'Ya' : 'Tidak' }}
+          {{ row.is_available_for_rent ? "Ya" : "Tidak" }}
         </template>
         <template #cell-is_available_for_sale="{ row }">
-          {{ row.is_available_for_sale ? 'Ya' : 'Tidak' }}
+          {{ row.is_available_for_sale ? "Ya" : "Tidak" }}
         </template>
         <template #cell-is_active="{ row }">
-          {{ row.is_active ? 'Aktif' : 'Nonaktif' }}
+          {{ row.is_active ? "Aktif" : "Nonaktif" }}
         </template>
         <template #actions="{ row }">
           <div class="action-buttons">
@@ -94,7 +94,8 @@
     >
       <p>
         Yakin ingin menghapus
-        <strong>{{ accessoryToDelete?.name }}</strong>?
+        <strong>{{ accessoryToDelete?.name }}</strong
+        >?
       </p>
     </AppDialog>
   </div>
@@ -106,10 +107,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AccessoryForm from "@/components/modules/accessories/AccessoryForm.vue";
-import {
-  fetchAccessories,
-  deleteAccessory,
-} from "@/services/masterData";
+import { fetchAccessories, deleteAccessory } from "@/services/masterData";
 
 export default {
   name: "AccessoriesView",

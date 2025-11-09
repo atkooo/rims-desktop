@@ -103,18 +103,24 @@ const normalizeDetailPayload = (raw = {}, fallback = {}) => {
 
   let itemId =
     raw.item_id !== undefined
-      ? (raw.item_id ? toInteger(raw.item_id) : null)
-      : fallback.item_id ?? null;
+      ? raw.item_id
+        ? toInteger(raw.item_id)
+        : null
+      : (fallback.item_id ?? null);
   let accessoryId =
     raw.accessory_id !== undefined
-      ? (raw.accessory_id ? toInteger(raw.accessory_id) : null)
-      : fallback.accessory_id ?? null;
+      ? raw.accessory_id
+        ? toInteger(raw.accessory_id)
+        : null
+      : (fallback.accessory_id ?? null);
 
   if (!itemId && !accessoryId) {
     throw new Error("Pilih item atau aksesoris untuk detail paket");
   }
   if (itemId && accessoryId) {
-    throw new Error("Detail paket hanya boleh berisi item atau aksesoris, bukan keduanya");
+    throw new Error(
+      "Detail paket hanya boleh berisi item atau aksesoris, bukan keduanya",
+    );
   }
 
   const quantity =
@@ -135,8 +141,7 @@ const normalizeDetailPayload = (raw = {}, fallback = {}) => {
   };
 };
 
-const fetchDetailRow = (id) =>
-  database.queryOne(detailSelectSql, [id]);
+const fetchDetailRow = (id) => database.queryOne(detailSelectSql, [id]);
 
 function setupBundleHandlers() {
   ipcMain.handle("bundles:create", async (_event, rawPayload = {}) => {
@@ -241,21 +246,15 @@ function setupBundleHandlers() {
     }
   });
 
-  ipcMain.handle(
-    "bundleDetails:getByBundle",
-    async (_event, bundleId) => {
-      try {
-        if (!bundleId) throw new Error("Bundle tidak valid");
-        return database.query(detailListSql, [bundleId]);
-      } catch (error) {
-        logger.error(
-          `Error fetching bundle details for ${bundleId}:`,
-          error,
-        );
-        throw error;
-      }
-    },
-  );
+  ipcMain.handle("bundleDetails:getByBundle", async (_event, bundleId) => {
+    try {
+      if (!bundleId) throw new Error("Bundle tidak valid");
+      return database.query(detailListSql, [bundleId]);
+    } catch (error) {
+      logger.error(`Error fetching bundle details for ${bundleId}:`, error);
+      throw error;
+    }
+  });
 
   ipcMain.handle("bundleDetails:create", async (_event, rawPayload = {}) => {
     try {

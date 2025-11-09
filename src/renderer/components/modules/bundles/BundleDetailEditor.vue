@@ -9,7 +9,11 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Jenis</label>
-            <select v-model="form.type" class="form-select" @change="handleTypeChange">
+            <select
+              v-model="form.type"
+              class="form-select"
+              @change="handleTypeChange"
+            >
               <option value="item">Item</option>
               <option value="accessory">Aksesoris</option>
             </select>
@@ -49,7 +53,12 @@
           ></textarea>
         </div>
         <div class="form-actions">
-          <AppButton type="button" variant="secondary" @click="resetForm" v-if="editingDetail">
+          <AppButton
+            type="button"
+            variant="secondary"
+            @click="resetForm"
+            v-if="editingDetail"
+          >
             Batalkan Edit
           </AppButton>
           <AppButton type="submit" :loading="formSubmitting">
@@ -94,9 +103,7 @@
             </tr>
           </tbody>
         </table>
-        <p v-else class="detail-state">
-          Belum ada komposisi untuk paket ini.
-        </p>
+        <p v-else class="detail-state">Belum ada komposisi untuk paket ini.</p>
       </div>
     </div>
     <p v-else class="detail-state">Pilih paket terlebih dahulu.</p>
@@ -307,7 +314,6 @@ export default {
         }
       },
     );
-
 
     watch(
       () => bundle.value,

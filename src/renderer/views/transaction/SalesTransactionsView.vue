@@ -66,7 +66,11 @@
 
   <AppDialog
     v-model="detailDialogOpen"
-    :title="selectedSale ? `Detail Penjualan ${selectedSale.transaction_code}` : 'Detail Penjualan'"
+    :title="
+      selectedSale
+        ? `Detail Penjualan ${selectedSale.transaction_code}`
+        : 'Detail Penjualan'
+    "
     :show-footer="false"
   >
     <div class="detail-dialog">
@@ -97,10 +101,16 @@
         </div>
       </div>
 
-      <div v-if="detailsLoading" class="detail-state">Memuat detail penjualan...</div>
+      <div v-if="detailsLoading" class="detail-state">
+        Memuat detail penjualan...
+      </div>
       <div v-else-if="detailError" class="error-banner">
         {{ detailError }}
-        <AppButton class="retry-button" variant="secondary" @click="loadSalesDetails(true)">
+        <AppButton
+          class="retry-button"
+          variant="secondary"
+          @click="loadSalesDetails(true)"
+        >
           Coba Lagi
         </AppButton>
       </div>
