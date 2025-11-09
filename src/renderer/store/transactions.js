@@ -126,6 +126,32 @@ export const useTransactionStore = defineStore("transactions", {
       }
     },
 
+    // Update transaksi
+    async updateTransaction(id, transactionData) {
+      this.loading = true;
+      try {
+        const updatedTransaction = await ipcRenderer.invoke(
+          "transactions:update",
+          id,
+          transactionData,
+        );
+        const index = this.transactions.findIndex((t) => t.id === id);
+        if (index !== -1) {
+          this.transactions[index] = {
+            ...this.transactions[index],
+            ...updatedTransaction,
+          };
+        }
+        this.error = null;
+        return updatedTransaction;
+      } catch (err) {
+        this.error = err.message;
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     // Update status transaksi
     async updateTransactionStatus(id, status) {
       this.loading = true;
@@ -139,6 +165,21 @@ export const useTransactionStore = defineStore("transactions", {
         if (transaction) {
           transaction.status = status;
         }
+        this.error = null;
+      } catch (err) {
+        this.error = err.message;
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // Delete transaksi
+    async deleteTransaction(id) {
+      this.loading = true;
+      try {
+        await ipcRenderer.invoke("transactions:delete", id);
+        this.transactions = this.transactions.filter((t) => t.id !== id);
         this.error = null;
       } catch (err) {
         this.error = err.message;

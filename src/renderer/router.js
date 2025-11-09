@@ -3,21 +3,22 @@ import Dashboard from "./views/Dashboard.vue";
 import Login from "./views/Login.vue";
 import Categories from "./views/master/Categories.vue";
 import AccessoriesView from "./views/master/AccessoriesView.vue";
-import ItemsPage from "./views/ItemsPage.vue";
+import ItemsPage from "./views/master/ItemsPage.vue";
 import ItemSizesView from "./views/master/ItemSizesView.vue";
 import BundlesView from "./views/master/BundlesView.vue";
 import BundlesDetailView from "./views/master/BundlesDetailView.vue";
 import CustomersView from "./views/master/CustomersView.vue";
 import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
-import ReportsPage from "./views/ReportsPage.vue";
-import SettingsPage from "./views/SettingsPage.vue";
+import ReportsPage from "./views/reports/ReportsPage.vue";
+import SettingsPage from "./views/settings/SettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
 import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
 import DailySalesView from "./views/reports/DailySalesView.vue";
 import StockAlertsView from "./views/reports/StockAlertsView.vue";
 import TopCustomersView from "./views/reports/TopCustomersView.vue";
+import TransactionsPage from "./views/transaction/TransactionsPage.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
 import BookingsView from "./views/transaction/BookingsView.vue";
@@ -50,6 +51,12 @@ const routes = [
   { path: "/master/customers", name: "customers", component: CustomersView },
   { path: "/master/roles", name: "roles", component: RolesView },
   { path: "/master/users", name: "users", component: UsersView },
+  // Transactions CRUD
+  {
+    path: "/transactions",
+    name: "transactions",
+    component: TransactionsPage,
+  },
   // Transactions (read-only views)
   {
     path: "/transactions/rentals",

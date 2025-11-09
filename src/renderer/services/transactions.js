@@ -27,3 +27,38 @@ export function fetchStockMovements() {
 export function fetchPayments() {
   return ipcRenderer.invoke("transactions:getPaymentsView");
 }
+
+// Bookings CRUD
+export function createBooking(bookingData) {
+  return ipcRenderer.invoke("bookings:create", bookingData);
+}
+
+export function updateBooking(id, bookingData) {
+  return ipcRenderer.invoke("bookings:update", id, bookingData);
+}
+
+export function deleteBooking(id) {
+  return ipcRenderer.invoke("bookings:delete", id);
+}
+
+// Payments CRUD
+export function createPayment(paymentData) {
+  return ipcRenderer.invoke("payments:create", paymentData);
+}
+
+export function updatePayment(id, paymentData) {
+  return ipcRenderer.invoke("payments:update", id, paymentData);
+}
+
+export function deletePayment(id) {
+  return ipcRenderer.invoke("payments:delete", id);
+}
+
+// Stock Movements CRUD
+export function createStockMovement(movementData) {
+  return ipcRenderer.invoke("stockMovements:create", movementData);
+}
+
+export function deleteStockMovement(id) {
+  return ipcRenderer.invoke("stockMovements:delete", id);
+}

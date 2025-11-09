@@ -14,13 +14,32 @@ export default {
   computed: {
     crumbs() {
       const path = this.$route.path.split("/").filter(Boolean);
+      
+      // Handle root path (dashboard)
+      if (path.length === 0) {
+        return [{ label: "Dashboard", to: "/" }];
+      }
+      
       const acc = [];
       return path.map((segment, i) => {
         acc.push("/" + segment);
-        const label = segment
+        let label = segment
           .split("-")
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(" ");
+        
+        // Map specific route names to better labels
+        const routeLabels = {
+          "master": "Master Data",
+          "transactions": "Transaksi",
+          "reports": "Laporan",
+          "settings": "Pengaturan",
+        };
+        
+        if (routeLabels[segment]) {
+          label = routeLabels[segment];
+        }
+        
         return { label, to: acc.join("") };
       });
     },

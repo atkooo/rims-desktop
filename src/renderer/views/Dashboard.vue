@@ -1,5 +1,15 @@
 <template>
   <div class="dashboard">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="subtitle">
+          Ringkasan aktivitas dan statistik bisnis Anda hari ini.
+        </p>
+      </div>
+    </div>
+
     <!-- Summary Cards -->
     <div class="summary-cards">
       <div class="card">
@@ -133,7 +143,23 @@ export default {
 
 <style scoped>
 .dashboard {
-  padding: 1.5rem;
+  padding: 0;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #111827;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
 .summary-cards {

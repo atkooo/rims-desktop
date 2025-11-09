@@ -276,6 +276,553 @@ function setupTransactionHandlers() {
       throw error;
     }
   });
+
+  // Update transaction
+  ipcMain.handle("transactions:update", async (event, id, transactionData) => {
+    try {
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        // Determine transaction type from existing transaction
+        const rentalCheck = await database.queryOne(
+          "SELECT id FROM rental_transactions WHERE id = ?",
+          [id],
+        );
+        const isRental = !!rentalCheck;
+
+        if (isRental) {
+          // Update rental transaction
+          const updateFields = [];
+          const updateValues = [];
+
+          if (transactionData.customerId !== undefined) {
+            updateFields.push("customer_id = ?");
+            updateValues.push(transactionData.customerId);
+          }
+          if (transactionData.rentalDate !== undefined) {
+            updateFields.push("rental_date = ?");
+            updateValues.push(transactionData.rentalDate);
+          }
+          if (transactionData.plannedReturnDate !== undefined) {
+            updateFields.push("planned_return_date = ?");
+            updateValues.push(transactionData.plannedReturnDate);
+          }
+          if (transactionData.totalAmount !== undefined) {
+            updateFields.push("total_amount = ?");
+            updateValues.push(transactionData.totalAmount);
+          }
+          if (transactionData.notes !== undefined) {
+            updateFields.push("notes = ?");
+            updateValues.push(transactionData.notes);
+          }
+
+          if (updateFields.length > 0) {
+            updateValues.push(id);
+            await database.execute(
+              `UPDATE rental_transactions SET ${updateFields.join(", ")} WHERE id = ?`,
+              updateValues,
+            );
+          }
+        } else {
+          // Update sales transaction
+          const updateFields = [];
+          const updateValues = [];
+
+          if (transactionData.customerId !== undefined) {
+            updateFields.push("customer_id = ?");
+            updateValues.push(transactionData.customerId);
+          }
+          if (transactionData.saleDate !== undefined) {
+            updateFields.push("sale_date = ?");
+            updateValues.push(transactionData.saleDate);
+          }
+          if (transactionData.totalAmount !== undefined) {
+            updateFields.push("total_amount = ?");
+            updateValues.push(transactionData.totalAmount);
+          }
+          if (transactionData.notes !== undefined) {
+            updateFields.push("notes = ?");
+            updateValues.push(transactionData.notes);
+          }
+
+          if (updateFields.length > 0) {
+            updateValues.push(id);
+            await database.execute(
+              `UPDATE sales_transactions SET ${updateFields.join(", ")} WHERE id = ?`,
+              updateValues,
+            );
+          }
+        }
+
+        await database.execute("COMMIT");
+
+        // Return updated transaction
+        const updatedTransaction = await database.queryOne(
+          isRental
+            ? "SELECT * FROM rental_transactions WHERE id = ?"
+            : "SELECT * FROM sales_transactions WHERE id = ?",
+          [id],
+        );
+        return updatedTransaction;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error updating transaction:", error);
+      throw error;
+    }
+  });
+
+  // Delete transaction
+  ipcMain.handle("transactions:delete", async (event, id) => {
+    try {
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        // Check if it's a rental or sales transaction
+        const rentalCheck = await database.queryOne(
+          "SELECT id FROM rental_transactions WHERE id = ?",
+          [id],
+        );
+        const isRental = !!rentalCheck;
+
+        if (isRental) {
+          // Delete rental transaction details first
+          await database.execute(
+            "DELETE FROM rental_transaction_details WHERE rental_transaction_id = ?",
+            [id],
+          );
+          // Delete rental transaction
+          await database.execute(
+            "DELETE FROM rental_transactions WHERE id = ?",
+            [id],
+          );
+        } else {
+          // Delete sales transaction details first
+          await database.execute(
+            "DELETE FROM sales_transaction_details WHERE sales_transaction_id = ?",
+            [id],
+          );
+          // Delete sales transaction
+          await database.execute(
+            "DELETE FROM sales_transactions WHERE id = ?",
+            [id],
+          );
+        }
+
+        await database.execute("COMMIT");
+        return true;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error deleting transaction:", error);
+      throw error;
+    }
+  });
 }
 
-module.exports = setupTransactionHandlers;
+// Bookings CRUD Handlers
+function setupBookingHandlers() {
+  // Generate booking code
+  function generateBookingCode() {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const random = Math.floor(Math.random() * 9999)
+      .toString()
+      .padStart(4, "0");
+    return `BKG${year}${month}${day}${random}`;
+  }
+
+  // Create booking
+  ipcMain.handle("bookings:create", async (event, bookingData) => {
+    try {
+      if (!validator.isValidDate(bookingData.bookingDate)) {
+        throw new Error("Tanggal booking tidak valid");
+      }
+      if (!validator.isValidDate(bookingData.plannedStartDate)) {
+        throw new Error("Tanggal mulai tidak valid");
+      }
+      if (!validator.isValidDate(bookingData.plannedEndDate)) {
+        throw new Error("Tanggal selesai tidak valid");
+      }
+      if (!validator.isPositiveNumber(bookingData.quantity)) {
+        throw new Error("Jumlah harus berupa angka positif");
+      }
+
+      const bookingCode = generateBookingCode();
+      const result = await database.execute(
+        `INSERT INTO bookings (
+          booking_code, customer_id, user_id, item_id, quantity,
+          booking_date, planned_start_date, planned_end_date,
+          estimated_price, deposit, status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          bookingCode,
+          bookingData.customerId,
+          bookingData.userId,
+          bookingData.itemId,
+          bookingData.quantity,
+          bookingData.bookingDate,
+          bookingData.plannedStartDate,
+          bookingData.plannedEndDate,
+          bookingData.estimatedPrice || 0,
+          bookingData.deposit || 0,
+          bookingData.status || "pending",
+          bookingData.notes || null,
+        ],
+      );
+
+      const newBooking = await database.queryOne(
+        `SELECT b.*, c.name AS customer_name, u.full_name AS user_name, i.name AS item_name
+         FROM bookings b
+         LEFT JOIN customers c ON b.customer_id = c.id
+         LEFT JOIN users u ON b.user_id = u.id
+         LEFT JOIN items i ON b.item_id = i.id
+         WHERE b.id = ?`,
+        [result.id],
+      );
+
+      return newBooking;
+    } catch (error) {
+      logger.error("Error creating booking:", error);
+      throw error;
+    }
+  });
+
+  // Update booking
+  ipcMain.handle("bookings:update", async (event, id, bookingData) => {
+    try {
+      const updateFields = [];
+      const updateValues = [];
+
+      if (bookingData.customerId !== undefined) {
+        updateFields.push("customer_id = ?");
+        updateValues.push(bookingData.customerId);
+      }
+      if (bookingData.itemId !== undefined) {
+        updateFields.push("item_id = ?");
+        updateValues.push(bookingData.itemId);
+      }
+      if (bookingData.quantity !== undefined) {
+        updateFields.push("quantity = ?");
+        updateValues.push(bookingData.quantity);
+      }
+      if (bookingData.bookingDate !== undefined) {
+        updateFields.push("booking_date = ?");
+        updateValues.push(bookingData.bookingDate);
+      }
+      if (bookingData.plannedStartDate !== undefined) {
+        updateFields.push("planned_start_date = ?");
+        updateValues.push(bookingData.plannedStartDate);
+      }
+      if (bookingData.plannedEndDate !== undefined) {
+        updateFields.push("planned_end_date = ?");
+        updateValues.push(bookingData.plannedEndDate);
+      }
+      if (bookingData.estimatedPrice !== undefined) {
+        updateFields.push("estimated_price = ?");
+        updateValues.push(bookingData.estimatedPrice);
+      }
+      if (bookingData.deposit !== undefined) {
+        updateFields.push("deposit = ?");
+        updateValues.push(bookingData.deposit);
+      }
+      if (bookingData.status !== undefined) {
+        updateFields.push("status = ?");
+        updateValues.push(bookingData.status);
+      }
+      if (bookingData.notes !== undefined) {
+        updateFields.push("notes = ?");
+        updateValues.push(bookingData.notes);
+      }
+
+      if (updateFields.length > 0) {
+        updateFields.push("updated_at = CURRENT_TIMESTAMP");
+        updateValues.push(id);
+        await database.execute(
+          `UPDATE bookings SET ${updateFields.join(", ")} WHERE id = ?`,
+          updateValues,
+        );
+      }
+
+      const updatedBooking = await database.queryOne(
+        `SELECT b.*, c.name AS customer_name, u.full_name AS user_name, i.name AS item_name
+         FROM bookings b
+         LEFT JOIN customers c ON b.customer_id = c.id
+         LEFT JOIN users u ON b.user_id = u.id
+         LEFT JOIN items i ON b.item_id = i.id
+         WHERE b.id = ?`,
+        [id],
+      );
+
+      return updatedBooking;
+    } catch (error) {
+      logger.error("Error updating booking:", error);
+      throw error;
+    }
+  });
+
+  // Delete booking
+  ipcMain.handle("bookings:delete", async (event, id) => {
+    try {
+      await database.execute("DELETE FROM bookings WHERE id = ?", [id]);
+      return true;
+    } catch (error) {
+      logger.error("Error deleting booking:", error);
+      throw error;
+    }
+  });
+}
+
+// Payments CRUD Handlers
+function setupPaymentHandlers() {
+  // Create payment
+  ipcMain.handle("payments:create", async (event, paymentData) => {
+    try {
+      if (!validator.isPositiveNumber(paymentData.amount)) {
+        throw new Error("Jumlah pembayaran harus berupa angka positif");
+      }
+      if (!paymentData.transactionType || !paymentData.transactionId) {
+        throw new Error("Transaksi referensi harus diisi");
+      }
+
+      const result = await database.execute(
+        `INSERT INTO payments (
+          transaction_type, transaction_id, payment_date, amount,
+          payment_method, reference_number, user_id, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          paymentData.transactionType,
+          paymentData.transactionId,
+          paymentData.paymentDate || new Date().toISOString(),
+          paymentData.amount,
+          paymentData.paymentMethod || "cash",
+          paymentData.referenceNumber || null,
+          paymentData.userId,
+          paymentData.notes || null,
+        ],
+      );
+
+      const newPayment = await database.queryOne(
+        `SELECT p.*, u.full_name AS user_name
+         FROM payments p
+         LEFT JOIN users u ON p.user_id = u.id
+         WHERE p.id = ?`,
+        [result.id],
+      );
+
+      return newPayment;
+    } catch (error) {
+      logger.error("Error creating payment:", error);
+      throw error;
+    }
+  });
+
+  // Update payment
+  ipcMain.handle("payments:update", async (event, id, paymentData) => {
+    try {
+      const updateFields = [];
+      const updateValues = [];
+
+      if (paymentData.amount !== undefined) {
+        updateFields.push("amount = ?");
+        updateValues.push(paymentData.amount);
+      }
+      if (paymentData.paymentMethod !== undefined) {
+        updateFields.push("payment_method = ?");
+        updateValues.push(paymentData.paymentMethod);
+      }
+      if (paymentData.referenceNumber !== undefined) {
+        updateFields.push("reference_number = ?");
+        updateValues.push(paymentData.referenceNumber);
+      }
+      if (paymentData.paymentDate !== undefined) {
+        updateFields.push("payment_date = ?");
+        updateValues.push(paymentData.paymentDate);
+      }
+      if (paymentData.notes !== undefined) {
+        updateFields.push("notes = ?");
+        updateValues.push(paymentData.notes);
+      }
+
+      if (updateFields.length > 0) {
+        updateValues.push(id);
+        await database.execute(
+          `UPDATE payments SET ${updateFields.join(", ")} WHERE id = ?`,
+          updateValues,
+        );
+      }
+
+      const updatedPayment = await database.queryOne(
+        `SELECT p.*, u.full_name AS user_name
+         FROM payments p
+         LEFT JOIN users u ON p.user_id = u.id
+         WHERE p.id = ?`,
+        [id],
+      );
+
+      return updatedPayment;
+    } catch (error) {
+      logger.error("Error updating payment:", error);
+      throw error;
+    }
+  });
+
+  // Delete payment
+  ipcMain.handle("payments:delete", async (event, id) => {
+    try {
+      await database.execute("DELETE FROM payments WHERE id = ?", [id]);
+      return true;
+    } catch (error) {
+      logger.error("Error deleting payment:", error);
+      throw error;
+    }
+  });
+}
+
+// Stock Movements CRUD Handlers
+function setupStockMovementHandlers() {
+  // Create stock movement
+  ipcMain.handle("stockMovements:create", async (event, movementData) => {
+    try {
+      if (!validator.isPositiveNumber(movementData.quantity)) {
+        throw new Error("Jumlah harus berupa angka positif");
+      }
+      if (!["IN", "OUT"].includes(movementData.movementType)) {
+        throw new Error("Jenis pergerakan harus IN atau OUT");
+      }
+
+      // Get current stock
+      const item = await database.queryOne(
+        "SELECT available_quantity FROM items WHERE id = ?",
+        [movementData.itemId],
+      );
+
+      if (!item) {
+        throw new Error("Item tidak ditemukan");
+      }
+
+      const stockBefore = item.available_quantity || 0;
+      const stockAfter =
+        movementData.movementType === "IN"
+          ? stockBefore + movementData.quantity
+          : stockBefore - movementData.quantity;
+
+      if (stockAfter < 0) {
+        throw new Error("Stok tidak mencukupi");
+      }
+
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        // Insert stock movement
+        const result = await database.execute(
+          `INSERT INTO stock_movements (
+            item_id, movement_type, reference_type, reference_id,
+            quantity, stock_before, stock_after, user_id, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            movementData.itemId,
+            movementData.movementType,
+            movementData.referenceType || null,
+            movementData.referenceId || null,
+            movementData.quantity,
+            stockBefore,
+            stockAfter,
+            movementData.userId,
+            movementData.notes || null,
+          ],
+        );
+
+        // Update item stock
+        await database.execute(
+          "UPDATE items SET available_quantity = ? WHERE id = ?",
+          [stockAfter, movementData.itemId],
+        );
+
+        await database.execute("COMMIT");
+
+        const newMovement = await database.queryOne(
+          `SELECT sm.*, i.name AS item_name, u.full_name AS user_name
+           FROM stock_movements sm
+           LEFT JOIN items i ON sm.item_id = i.id
+           LEFT JOIN users u ON sm.user_id = u.id
+           WHERE sm.id = ?`,
+          [result.id],
+        );
+
+        return newMovement;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error creating stock movement:", error);
+      throw error;
+    }
+  });
+
+  // Delete stock movement (with stock reversal)
+  ipcMain.handle("stockMovements:delete", async (event, id) => {
+    try {
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        // Get movement data
+        const movement = await database.queryOne(
+          "SELECT * FROM stock_movements WHERE id = ?",
+          [id],
+        );
+
+        if (!movement) {
+          throw new Error("Pergerakan stok tidak ditemukan");
+        }
+
+        // Reverse stock change
+        const item = await database.queryOne(
+          "SELECT available_quantity FROM items WHERE id = ?",
+          [movement.item_id],
+        );
+
+        const currentStock = item.available_quantity || 0;
+        const reversedStock =
+          movement.movement_type === "IN"
+            ? currentStock - movement.quantity
+            : currentStock + movement.quantity;
+
+        // Update item stock
+        await database.execute(
+          "UPDATE items SET available_quantity = ? WHERE id = ?",
+          [reversedStock, movement.item_id],
+        );
+
+        // Delete movement
+        await database.execute(
+          "DELETE FROM stock_movements WHERE id = ?",
+          [id],
+        );
+
+        await database.execute("COMMIT");
+        return true;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error deleting stock movement:", error);
+      throw error;
+    }
+  });
+}
+
+module.exports = {
+  setupTransactionHandlers,
+  setupBookingHandlers,
+  setupPaymentHandlers,
+  setupStockMovementHandlers,
+};
