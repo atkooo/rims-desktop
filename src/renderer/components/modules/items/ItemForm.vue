@@ -179,11 +179,9 @@ export default {
   width: 100%;
   padding: 0.75rem 0.75rem;
   box-sizing: border-box;
-
-  /* ✅ scroll hanya vertikal */
-  overflow-y: auto;
+  flex: 1 1 auto;
   overflow-x: hidden;
-  max-height: calc(70vh - 1rem);
+  min-height: 0;
 }
 
 /* Grid utama */

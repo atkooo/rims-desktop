@@ -106,6 +106,9 @@ export default {
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -134,6 +137,9 @@ export default {
 
 .dialog-content {
   padding: 1rem;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .dialog-footer {
@@ -142,6 +148,7 @@ export default {
   gap: 0.5rem;
   padding: 1rem;
   border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .fade-enter-active,
