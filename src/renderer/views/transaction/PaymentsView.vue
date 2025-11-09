@@ -1,17 +1,22 @@
 <template>
   <div class="data-page transaction-page">
     <div class="page-header">
-      <div class="header-content">
-        <div>
-          <h1>Pembayaran</h1>
-          <p class="subtitle">
-            Kelola riwayat pembayaran dari transaksi sewa maupun jual.
-          </p>
+        <div class="header-content">
+          <div>
+            <h1>Pembayaran</h1>
+            <p class="subtitle">
+              Kelola riwayat pembayaran dari transaksi sewa maupun jual.
+            </p>
+          </div>
+          <div class="header-actions">
+            <AppButton variant="secondary" :loading="loading" @click="loadData">
+              Refresh Data
+            </AppButton>
+            <AppButton variant="primary" @click="showForm = true">
+              Pembayaran Baru
+            </AppButton>
+          </div>
         </div>
-        <AppButton variant="primary" @click="showForm = true">
-          Pembayaran Baru
-        </AppButton>
-      </div>
     </div>
 
     <section class="card-section">
@@ -28,9 +33,9 @@
     </section>
 
     <section class="card-section">
-      <div v-if="error" class="error-banner">
-        {{ error }}
-      </div>
+        <div v-if="error" class="error-banner">
+          {{ error }}
+        </div>
 
       <DataTable
         :columns="columns"
@@ -39,7 +44,18 @@
         actions
         @edit="handleEdit"
         @delete="handleDelete"
-      />
+      >
+        <template #actions="{ item }">
+          <div class="table-actions">
+            <AppButton variant="primary" @click="handleEdit(item)">
+              Edit
+            </AppButton>
+            <AppButton variant="danger" @click="handleDelete(item)">
+              Hapus
+            </AppButton>
+          </div>
+        </template>
+      </DataTable>
     </section>
 
     <!-- Payment Form Dialog -->
@@ -214,37 +230,32 @@ export default {
 </script>
 
 <style scoped>
-.data-page {
-  padding: 0;
-}
-
 .page-header {
-  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  gap: 1rem;
 }
 
-.header-content h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #111827;
-}
-
-.subtitle {
-  margin: 0.25rem 0 0;
-  color: #6b7280;
-  font-size: 0.95rem;
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .card-section {
-  background-color: white;
+  background-color: #fff;
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   margin-bottom: 1.5rem;
 }
 
@@ -252,31 +263,35 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .summary-card {
-  background-color: #f9fafb;
-  padding: 1rem 1.25rem;
+  background-color: #f8fafc;
+  padding: 1rem;
   border-radius: 10px;
   border: 1px solid #e0e7ff;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  color: #4b5563;
+}
+
+.summary-card span {
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .summary-card strong {
+  display: block;
   font-size: 1.4rem;
   color: #111827;
 }
 
 .error-banner {
+  border-radius: 10px;
   padding: 0.75rem 1rem;
-  border-radius: 6px;
-  background-color: #fee2e2;
-  color: #991b1b;
   margin-bottom: 1rem;
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 </style>

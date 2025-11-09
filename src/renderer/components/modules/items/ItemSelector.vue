@@ -1,31 +1,14 @@
 <template>
   <div class="item-selector">
-    <div class="search-bar">
-      <input
-        type="text"
-        v-model="search"
-        placeholder="Cari item..."
-        class="search-input"
-      />
-      <div v-if="filteredItems.length" class="items-dropdown">
-        <div
-          v-for="item in filteredItems"
-          :key="item.id"
-          class="item-option"
-          :class="{ unavailable: item.status !== 'AVAILABLE' }"
-          @click="selectItem(item)"
-        >
-          <div>
-            <div class="item-name">{{ item.name }}</div>
-            <div class="item-detail">
-              {{ formatCurrency(item.price) }} - {{ item.type }}
-            </div>
-          </div>
-          <span class="item-status" :class="item.status.toLowerCase()">
-            {{ item.status }}
-          </span>
-        </div>
+    <div class="picker-header">
+      <div>
+        <div class="picker-label">Pilih Item</div>
+        <p class="picker-description">Buka katalog untuk memilih barang tersedia</p>
       </div>
+      <AppButton variant="secondary" class="picker-button" @click="openPicker">
+        <Icon name="search" :size="16" />
+        <span>Cari Item</span>
+      </AppButton>
     </div>
 
     <!-- Selected Items -->
@@ -62,6 +45,11 @@
         <span class="total-amount">{{ formatCurrency(total) }}</span>
       </div>
     </div>
+    <ItemPickerDialog
+      v-model="pickerOpen"
+      :excluded-ids="selectedItems.map((it) => it.id)"
+      @select="selectItem"
+    />
   </div>
 </template>
 
@@ -69,10 +57,12 @@
 import { ref, computed } from "vue";
 import { useItemStore } from "@/store/items";
 import AppButton from "@/components/ui/AppButton.vue";
+import Icon from "@/components/ui/Icon.vue";
+import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
 
 export default {
   name: "ItemSelector",
-  components: { AppButton },
+  components: { AppButton, Icon, ItemPickerDialog },
 
   props: {
     modelValue: {
@@ -85,35 +75,22 @@ export default {
 
   setup(props, { emit }) {
     const itemStore = useItemStore();
-    const search = ref("");
+    const pickerOpen = ref(false);
     const selectedItems = ref(props.modelValue);
 
-    // Filter items berdasarkan pencarian
-    const filteredItems = computed(() => {
-      if (!search.value) return [];
-      return itemStore.items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(search.value.toLowerCase()) &&
-          !selectedItems.value.some((selected) => selected.id === item.id),
-      );
-    });
-
-    // Hitung total
     const total = computed(() => {
       return selectedItems.value.reduce((sum, item) => {
-        return sum + item.price * item.quantity;
+        return sum + item.price * (item.quantity || 1);
       }, 0);
     });
 
-    // Format currency
     const formatCurrency = (value) => {
       return new Intl.NumberFormat("id-ID", {
         style: "currency",
         currency: "IDR",
-      }).format(value);
+      }).format(value || 0);
     };
 
-    // Pilih item
     const selectItem = (item) => {
       if (item.status !== "AVAILABLE") return;
 
@@ -121,34 +98,41 @@ export default {
         ...item,
         quantity: 1,
       });
-      search.value = "";
+      pickerOpen.value = false;
       emit("update:modelValue", selectedItems.value);
     };
 
-    // Update quantity
     const updateQuantity = (index, event) => {
       const value = parseInt(event.target.value);
-      if (value < 1) {
+      if (Number.isNaN(value) || value < 1) {
         selectedItems.value[index].quantity = 1;
+      } else {
+        selectedItems.value[index].quantity = value;
       }
       emit("update:modelValue", selectedItems.value);
     };
 
-    // Hapus item
     const removeItem = (index) => {
       selectedItems.value.splice(index, 1);
       emit("update:modelValue", selectedItems.value);
     };
 
+    const openPicker = () => {
+      pickerOpen.value = true;
+      if (!itemStore.items.length) {
+        itemStore.fetchItems();
+      }
+    };
+
     return {
-      search,
       selectedItems,
-      filteredItems,
       total,
       formatCurrency,
       selectItem,
       updateQuantity,
       removeItem,
+      openPicker,
+      pickerOpen,
     };
   },
 };
@@ -159,73 +143,29 @@ export default {
   width: 100%;
 }
 
-.search-bar {
-  position: relative;
-  margin-bottom: 1rem;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.items-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.item-option {
+.picker-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
-  cursor: pointer;
+  margin-bottom: 1rem;
 }
 
-.item-option:hover {
-  background-color: #f9fafb;
+.picker-label {
+  font-size: 0.95rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
 }
 
-.item-option.unavailable {
-  opacity: 0.6;
-  cursor: not-allowed;
+.picker-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
-.item-name {
-  font-weight: 500;
-}
-
-.item-detail {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.item-status {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-}
-
-.item-status.available {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.item-status.rented {
-  background-color: #fee2e2;
-  color: #991b1b;
+.picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .selected-items {

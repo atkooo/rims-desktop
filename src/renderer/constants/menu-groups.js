@@ -3,11 +3,6 @@ export const menuGroups = [
     title: "Transaksi",
     items: [
       {
-        to: "/transactions",
-        label: "Kelola Transaksi",
-        icon: "clipboard",
-      },
-      {
         to: "/transactions/rentals",
         label: "Sewa & Pengembalian",
         icon: "key",

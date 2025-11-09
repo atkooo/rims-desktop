@@ -8,9 +8,14 @@
             Kelola pergerakan stok masuk dan keluar untuk item.
           </p>
         </div>
-        <AppButton variant="primary" @click="showForm = true">
-          Pergerakan Baru
-        </AppButton>
+        <div class="header-actions">
+          <AppButton variant="secondary" :loading="loading" @click="loadData">
+            Refresh Data
+          </AppButton>
+          <AppButton variant="primary" @click="showForm = true">
+            Pergerakan Baru
+          </AppButton>
+        </div>
       </div>
     </div>
 
@@ -206,19 +211,30 @@ export default {
 }
 
 .page-header {
-  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  gap: 1rem;
 }
 
 .header-content h1 {
   margin: 0;
   font-size: 1.5rem;
   color: #111827;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .subtitle {

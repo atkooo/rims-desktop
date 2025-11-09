@@ -21,6 +21,7 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         rt.id,
+        rt.customer_id,
         rt.transaction_code,
         c.name AS customer_name,
         u.full_name AS user_name,
@@ -67,6 +68,7 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         st.id,
+        st.customer_id,
         st.transaction_code,
         c.name AS customer_name,
         u.full_name AS user_name,

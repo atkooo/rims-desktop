@@ -1,24 +1,31 @@
 <template>
   <div class="data-page transaction-page">
     <div class="page-header">
-      <div>
-        <h1>Transaksi Sewa</h1>
-        <p class="subtitle">Ringkasan transaksi sewa langsung dari database.</p>
+      <div class="header-content">
+        <div>
+          <h1>Transaksi Sewa</h1>
+          <p class="subtitle">Ringkasan transaksi sewa langsung dari database.</p>
+        </div>
+        <div class="header-actions">
+          <AppButton variant="primary" @click="openCreateRental">
+            Transaksi Sewa Baru
+          </AppButton>
+          <AppButton
+            variant="secondary"
+            :loading="currentLoading"
+            @click="handleRefresh"
+          >
+            Refresh Data
+          </AppButton>
+        </div>
       </div>
-      <AppButton
-        variant="secondary"
-        :loading="currentLoading"
-        @click="handleRefresh"
-      >
-        Refresh Data
-      </AppButton>
     </div>
 
-    <div class="tab-group">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        class="tab-button"
+      <div class="tab-group">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="tab-button"
         :class="{ active: currentTab === tab.id }"
         @click="switchTab(tab.id)"
       >
@@ -80,9 +87,17 @@
         :show-delete="false"
       >
         <template #actions="{ item }">
-          <AppButton variant="secondary" @click="openRentalDetail(item)">
-            Detail
-          </AppButton>
+          <div class="table-actions">
+            <AppButton variant="secondary" @click="openRentalDetail(item)">
+              Detail
+            </AppButton>
+            <AppButton variant="primary" @click="handleEdit(item)">
+              Edit
+            </AppButton>
+            <AppButton variant="danger" @click="handleDelete(item)">
+              Hapus
+            </AppButton>
+          </div>
         </template>
       </DataTable>
     </section>
@@ -97,74 +112,89 @@
     "
     :show-footer="false"
   >
-    <div class="detail-dialog">
-      <div v-if="selectedRental" class="rental-meta">
-        <div class="meta-item">
-          <span>Customer</span>
-          <strong>{{ selectedRental.customer_name || "-" }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Tanggal Sewa</span>
-          <strong>{{ formatDate(selectedRental.rental_date) }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Rencana Kembali</span>
-          <strong>{{ formatDate(selectedRental.planned_return_date) }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Status</span>
-          <strong>{{ selectedRental.status || "-" }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Total Nilai</span>
-          <strong>{{ formatCurrency(selectedRental.total_amount) }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Dibayar</span>
-          <strong>{{ formatCurrency(selectedRental.paid_amount) }}</strong>
-        </div>
-      </div>
+      <div class="detail-dialog">
+        <div v-if="selectedRental" class="detail-grid">
+          <div class="detail-card">
+            <h4>Info Umum</h4>
+            <div class="detail-item">
+              <span>Customer</span>
+              <strong>{{ selectedRental.customer_name || "-" }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Tanggal Sewa</span>
+              <strong>{{ formatDate(selectedRental.rental_date) }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Rencana Kembali</span>
+              <strong>{{ formatDate(selectedRental.planned_return_date) }}</strong>
+            </div>
+          </div>
 
-      <div v-if="detailsLoading" class="detail-state">
-        Memuat detail transaksi...
+          <div class="detail-card">
+            <h4>Keuangan</h4>
+            <div class="detail-item">
+              <span>Status</span>
+              <strong>{{ selectedRental.status || "-" }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Total Nilai</span>
+              <strong>{{ formatCurrency(selectedRental.total_amount) }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Dibayar</span>
+              <strong>{{ formatCurrency(selectedRental.paid_amount) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="detailsLoading" class="detail-state">
+          Memuat detail transaksi...
+        </div>
+        <div v-else-if="detailError" class="error-banner">
+          {{ detailError }}
+          <AppButton
+            class="retry-button"
+            variant="secondary"
+            @click="loadRentalDetails(true)"
+          >
+            Coba Lagi
+          </AppButton>
+        </div>
+        <div v-else-if="!filteredDetails.length" class="detail-state">
+          Tidak ada item terkait transaksi ini.
+        </div>
+        <table v-else class="detail-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Jumlah</th>
+              <th>Harga Sewa</th>
+              <th>Subtotal</th>
+              <th>Dikembalikan</th>
+              <th>Catatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="detail in filteredDetails" :key="detail.id">
+              <td>{{ detail.item_name || "-" }}</td>
+              <td>{{ detail.quantity }}</td>
+              <td>{{ formatCurrency(detail.rental_price) }}</td>
+              <td>{{ formatCurrency(detail.subtotal) }}</td>
+              <td>{{ detail.is_returned ? "Ya" : "Belum" }}</td>
+              <td>{{ detail.notes || "-" }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div v-else-if="detailError" class="error-banner">
-        {{ detailError }}
-        <AppButton
-          class="retry-button"
-          variant="secondary"
-          @click="loadRentalDetails(true)"
-        >
-          Coba Lagi
-        </AppButton>
-      </div>
-      <div v-else-if="!filteredDetails.length" class="detail-state">
-        Tidak ada item terkait transaksi ini.
-      </div>
-      <table v-else class="detail-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Jumlah</th>
-            <th>Harga Sewa</th>
-            <th>Subtotal</th>
-            <th>Dikembalikan</th>
-            <th>Catatan</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="detail in filteredDetails" :key="detail.id">
-            <td>{{ detail.item_name || "-" }}</td>
-            <td>{{ detail.quantity }}</td>
-            <td>{{ formatCurrency(detail.rental_price) }}</td>
-            <td>{{ formatCurrency(detail.subtotal) }}</td>
-            <td>{{ detail.is_returned ? "Ya" : "Belum" }}</td>
-            <td>{{ detail.notes || "-" }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </AppDialog>
+
+  <TransactionForm
+    v-model="showForm"
+    :edit-data="editingRental"
+    :default-type="TRANSACTION_TYPE.RENTAL"
+    @saved="handleSaved"
+    fixed-type
+  />
 </template>
 
 <script>
@@ -172,15 +202,18 @@ import { ref, computed, onMounted, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import DataTable from "@/components/ui/DataTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
+import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import {
   fetchRentalTransactions,
   fetchRentalDetails,
 } from "@/services/transactions";
 import { fetchActiveRentals } from "@/services/reports";
+import { useTransactionStore } from "@/store/transactions";
+import { TRANSACTION_TYPE } from "@shared/constants";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, DataTable, AppDialog },
+  components: { AppButton, DataTable, AppDialog, TransactionForm },
   setup() {
     const rentals = ref([]);
     const activeRentals = ref([]);
@@ -194,6 +227,9 @@ export default {
     const detailDialogOpen = ref(false);
     const selectedRental = ref(null);
     const currentTab = ref("all");
+    const transactionStore = useTransactionStore();
+    const showForm = ref(false);
+    const editingRental = ref(null);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -349,6 +385,36 @@ export default {
       else loadActiveRentals();
     };
 
+    const openCreateRental = () => {
+      editingRental.value = null;
+      showForm.value = true;
+    };
+
+    const handleEdit = (rental) => {
+      editingRental.value = rental;
+      showForm.value = true;
+    };
+
+    const handleSaved = async () => {
+      showForm.value = false;
+      editingRental.value = null;
+      await loadData();
+    };
+
+    const handleDelete = async (rental) => {
+      const confirmed = window.confirm(
+        `Hapus transaksi ${rental.transaction_code}? Tindakan ini tidak dapat dibatalkan.`,
+      );
+      if (!confirmed) return;
+
+      try {
+        await transactionStore.deleteTransaction(rental.id);
+        await loadData();
+      } catch (error) {
+        console.error("Gagal menghapus transaksi:", error);
+      }
+    };
+
     watch(detailDialogOpen, (visible) => {
       if (!visible) selectedRental.value = null;
     });
@@ -386,6 +452,13 @@ export default {
       displayedColumns,
       currentLoading,
       currentError,
+      showForm,
+      editingRental,
+      openCreateRental,
+      handleEdit,
+      handleSaved,
+      handleDelete,
+      TRANSACTION_TYPE,
       handleRefresh,
     };
   },
@@ -393,32 +466,128 @@ export default {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.card-section {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.summary-card {
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.summary-card span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.4rem;
+  color: #111827;
+}
+
+.tab-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  padding: 0.45rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background-color: #fff;
+  color: #374151;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.tab-button.active {
+  background-color: #4338ca;
+  color: #fff;
+  border-color: #4338ca;
+  box-shadow: 0 6px 14px rgba(67, 56, 202, 0.25);
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
 .detail-dialog {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.rental-meta {
+.detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.75rem;
-  padding: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.detail-card {
+  padding: 0.95rem 1rem;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #f9fafb;
+  background-color: #f8fafc;
 }
 
-.meta-item span {
-  display: block;
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-bottom: 0.2rem;
-}
-
-.meta-item strong {
+.detail-card h4 {
+  margin: 0 0 0.5rem;
   font-size: 0.95rem;
-  color: #111827;
+  color: #4338ca;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #485263;
+}
+
+.detail-item span {
+  color: #6b7280;
 }
 
 .detail-state {
@@ -431,45 +600,30 @@ export default {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .detail-table th,
 .detail-table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
 }
 
 .detail-table thead {
-  background-color: #f3f4f6;
+  background-color: #eef2ff;
   font-weight: 600;
+  color: #1e1e1e;
 }
 
 .retry-button {
   margin-left: 0.75rem;
 }
 
-.tab-group {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.tab-button {
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background-color: #fff;
-  color: #374151;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tab-button.active {
-  background-color: #4338ca;
-  color: #fff;
-  border-color: #4338ca;
+.error-banner {
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
 }
 </style>

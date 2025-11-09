@@ -1,21 +1,28 @@
 <template>
   <div class="data-page transaction-page">
     <div class="page-header">
-      <div>
-        <h1>Transaksi Penjualan</h1>
-        <p class="subtitle">
-          Daftar transaksi penjualan tanpa aksi edit. Gunakan pencarian global
-          di navbar bila perlu.
-        </p>
+      <div class="header-content">
+        <div>
+          <h1>Transaksi Penjualan</h1>
+          <p class="subtitle">
+            Daftar transaksi penjualan tanpa aksi edit. Gunakan pencarian global
+            di navbar bila perlu.
+          </p>
+        </div>
+        <div class="header-actions">
+          <AppButton variant="primary" @click="openCreateSale">
+            Transaksi Penjualan Baru
+          </AppButton>
+          <AppButton variant="secondary" :loading="loading" @click="loadData">
+            Refresh Data
+          </AppButton>
+        </div>
       </div>
-      <AppButton variant="secondary" :loading="loading" @click="loadData">
-        Refresh Data
-      </AppButton>
     </div>
 
     <section class="card-section">
       <div v-if="searchTerm" class="search-state">
-        <Icon name="search" size="14" />
+        <Icon name="search" :size="14" />
         <span>Pencarian navbar: "{{ searchTerm }}"</span>
       </div>
 
@@ -56,9 +63,17 @@
         :show-delete="false"
       >
         <template #actions="{ item }">
-          <AppButton variant="secondary" @click="openSaleDetail(item)">
-            Detail
-          </AppButton>
+          <div class="table-actions">
+            <AppButton variant="secondary" @click="openSaleDetail(item)">
+              Detail
+            </AppButton>
+            <AppButton variant="primary" @click="handleEdit(item)">
+              Edit
+            </AppButton>
+            <AppButton variant="danger" @click="handleDelete(item)">
+              Hapus
+            </AppButton>
+          </div>
         </template>
       </DataTable>
     </section>
@@ -74,30 +89,36 @@
     :show-footer="false"
   >
     <div class="detail-dialog">
-      <div v-if="selectedSale" class="sale-meta">
-        <div class="meta-item">
-          <span>Customer</span>
-          <strong>{{ selectedSale.customer_name || "-" }}</strong>
+      <div v-if="selectedSale" class="detail-grid">
+        <div class="detail-card">
+          <h4>Info Transaksi</h4>
+          <div class="detail-item">
+            <span>Customer</span>
+            <strong>{{ selectedSale.customer_name || "-" }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Tanggal</span>
+            <strong>{{ formatDate(selectedSale.sale_date) }}</strong>
+          </div>
         </div>
-        <div class="meta-item">
-          <span>Tanggal</span>
-          <strong>{{ formatDate(selectedSale.sale_date) }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Status Pembayaran</span>
-          <strong>{{ selectedSale.payment_status || "-" }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Metode</span>
-          <strong>{{ selectedSale.payment_method || "-" }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Total</span>
-          <strong>{{ formatCurrency(selectedSale.total_amount) }}</strong>
-        </div>
-        <div class="meta-item">
-          <span>Dibayar</span>
-          <strong>{{ formatCurrency(selectedSale.paid_amount) }}</strong>
+        <div class="detail-card">
+          <h4>Pembayaran</h4>
+          <div class="detail-item">
+            <span>Status</span>
+            <strong>{{ selectedSale.payment_status || "-" }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Metode</span>
+            <strong>{{ selectedSale.payment_method || "-" }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Total</span>
+            <strong>{{ formatCurrency(selectedSale.total_amount) }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Dibayar</span>
+            <strong>{{ formatCurrency(selectedSale.paid_amount) }}</strong>
+          </div>
         </div>
       </div>
 
@@ -139,6 +160,14 @@
       </table>
     </div>
   </AppDialog>
+
+  <TransactionForm
+    v-model="showForm"
+    :edit-data="editingSale"
+    :default-type="TRANSACTION_TYPE.SALE"
+    @saved="handleSaved"
+    fixed-type
+  />
 </template>
 
 <script>
@@ -147,15 +176,18 @@ import Icon from "@/components/ui/Icon.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import DataTable from "@/components/ui/DataTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
+import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import {
   fetchSalesTransactions,
   fetchSalesDetails,
 } from "@/services/transactions";
 import { eventBus } from "@/utils/eventBus";
+import { useTransactionStore } from "@/store/transactions";
+import { TRANSACTION_TYPE } from "@shared/constants";
 
 export default {
   name: "SalesTransactionsView",
-  components: { AppButton, DataTable, Icon, AppDialog },
+  components: { AppButton, DataTable, Icon, AppDialog, TransactionForm },
   setup() {
     const sales = ref([]);
     const saleDetails = ref([]);
@@ -167,6 +199,9 @@ export default {
     const selectedSale = ref(null);
     let detachSearchListener;
     const detailError = ref("");
+    const transactionStore = useTransactionStore();
+    const showForm = ref(false);
+    const editingSale = ref(null);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -266,6 +301,36 @@ export default {
       await loadSalesDetails();
     };
 
+    const openCreateSale = () => {
+      editingSale.value = null;
+      showForm.value = true;
+    };
+
+    const handleEdit = (sale) => {
+      editingSale.value = sale;
+      showForm.value = true;
+    };
+
+    const handleSaved = async () => {
+      showForm.value = false;
+      editingSale.value = null;
+      await loadData();
+    };
+
+    const handleDelete = async (sale) => {
+      const confirmed = window.confirm(
+        `Hapus transaksi ${sale.transaction_code}? Tindakan ini tidak dapat dibatalkan.`,
+      );
+      if (!confirmed) return;
+
+      try {
+        await transactionStore.deleteTransaction(sale.id);
+        await loadData();
+      } catch (error) {
+        console.error("Gagal menghapus transaksi:", error);
+      }
+    };
+
     watch(detailDialogOpen, (visible) => {
       if (!visible) selectedSale.value = null;
     });
@@ -301,12 +366,72 @@ export default {
       detailError,
       loadSalesDetails,
       selectedSale,
+      showForm,
+      editingSale,
+      openCreateSale,
+      handleEdit,
+      handleSaved,
+      handleDelete,
+      TRANSACTION_TYPE,
     };
   },
 };
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.card-section {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.summary-card {
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+}
+
+.summary-card span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.4rem;
+  color: #111827;
+}
+
 .search-state {
   display: inline-flex;
   align-items: center;
@@ -318,9 +443,11 @@ export default {
   font-size: 0.85rem;
 }
 
-.summary-note {
-  font-size: 0.85rem;
-  color: #6b7280;
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
 }
 
 .detail-dialog {
@@ -329,26 +456,35 @@ export default {
   gap: 1rem;
 }
 
-.sale-meta {
+.detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.75rem;
-  padding: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.detail-card {
+  padding: 0.95rem 1rem;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
   background-color: #f8fafc;
 }
 
-.meta-item span {
-  display: block;
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-bottom: 0.2rem;
+.detail-card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: #4338ca;
 }
 
-.meta-item strong {
-  font-size: 0.95rem;
-  color: #111827;
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #485263;
+}
+
+.detail-item span {
+  color: #6b7280;
 }
 
 .detail-state {
@@ -361,21 +497,29 @@ export default {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .detail-table th,
 .detail-table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
 }
 
 .detail-table thead {
-  background-color: #f3f4f6;
+  background-color: #eef2ff;
   font-weight: 600;
 }
 
 .retry-button {
   margin-left: 0.75rem;
+}
+
+.error-banner {
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
 }
 </style>

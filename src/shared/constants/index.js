@@ -11,6 +11,12 @@ export const ITEM_TYPE = {
   SALE: "SALE",
 };
 
+// Constants untuk tipe transaksi
+export const TRANSACTION_TYPE = {
+  RENTAL: "RENTAL",
+  SALE: "SALE",
+};
+
 // Constants untuk durasi rental
 export const RENTAL_DURATION = {
   DAILY: "DAILY",

@@ -8,9 +8,14 @@
             Kelola booking barang dan jadwal pelaksanaannya.
           </p>
         </div>
-        <AppButton variant="primary" @click="showForm = true">
-          Booking Baru
-        </AppButton>
+        <div class="header-actions">
+          <AppButton variant="secondary" :loading="loading" @click="loadData">
+            Refresh Data
+          </AppButton>
+          <AppButton variant="primary" @click="showForm = true">
+            Booking Baru
+          </AppButton>
+        </div>
       </div>
     </div>
 
@@ -220,40 +225,35 @@ export default {
     };
   },
 };
-</script>
+ </script>
 
 <style scoped>
-.data-page {
-  padding: 0;
-}
-
 .page-header {
-  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  gap: 1rem;
 }
 
-.header-content h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #111827;
-}
-
-.subtitle {
-  margin: 0.25rem 0 0;
-  color: #6b7280;
-  font-size: 0.95rem;
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .card-section {
-  background-color: white;
+  background-color: #fff;
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   margin-bottom: 1.5rem;
 }
 
@@ -261,31 +261,35 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .summary-card {
-  background-color: #f9fafb;
-  padding: 1rem 1.25rem;
+  background-color: #f8fafc;
+  padding: 1rem;
   border-radius: 10px;
   border: 1px solid #e0e7ff;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  color: #4b5563;
+}
+
+.summary-card span {
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .summary-card strong {
+  display: block;
   font-size: 1.4rem;
   color: #111827;
 }
 
 .error-banner {
+  border-radius: 10px;
   padding: 0.75rem 1rem;
-  border-radius: 6px;
-  background-color: #fee2e2;
-  color: #991b1b;
   margin-bottom: 1rem;
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 </style>
