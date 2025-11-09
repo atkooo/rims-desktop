@@ -1,5 +1,5 @@
 <template>
-  <div class="items-page">
+  <div class="data-page master-page">
     <div class="page-header">
       <div class="header-content">
         <div>
@@ -266,37 +266,6 @@ export default {
 </script>
 
 <style scoped>
-.items-page {
-  padding: 1.5rem;
-}
-
-.items-page .card-section + .card-section {
-  margin-top: 1rem;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.header-content h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #111827;
-}
-
-.subtitle {
-  margin: 0.25rem 0 0;
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
 .filters {
   display: flex;
   gap: 1rem;

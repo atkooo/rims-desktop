@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page master-page">
     <div class="page-header">
       <div>
         <h1>Data Pelanggan</h1>

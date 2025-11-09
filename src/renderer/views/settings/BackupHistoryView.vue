@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page admin-page">
     <div class="page-header">
       <div>
         <h1>Riwayat Backup</h1>
@@ -10,30 +10,33 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Backup</span>
-        <strong>{{ history.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Backup</span>
+          <strong>{{ history.length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Backup Otomatis</span>
+          <strong>{{ stats.autoCount }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Backup Manual</span>
+          <strong>{{ stats.manualCount }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total Ukuran</span>
+          <strong>{{ stats.totalSize }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Backup Otomatis</span>
-        <strong>{{ stats.autoCount }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Backup Manual</span>
-        <strong>{{ stats.manualCount }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Total Ukuran</span>
-        <strong>{{ stats.totalSize }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
-
-    <DataTable :columns="columns" :items="history" :loading="loading" />
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
+      <DataTable :columns="columns" :items="history" :loading="loading" />
+    </section>
   </div>
 </template>
 

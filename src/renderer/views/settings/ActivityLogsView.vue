@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page">
+  <div class="data-page admin-page">
     <div class="page-header">
       <div>
         <h1>Log Aktivitas</h1>
@@ -10,26 +10,29 @@
       </AppButton>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Total Log</span>
-        <strong>{{ logs.length }}</strong>
+    <section class="card-section">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Total Log</span>
+          <strong>{{ logs.length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Modul Unik</span>
+          <strong>{{ stats.uniqueModules }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Pengguna Aktif</span>
+          <strong>{{ stats.uniqueUsers }}</strong>
+        </div>
       </div>
-      <div class="summary-card">
-        <span>Modul Unik</span>
-        <strong>{{ stats.uniqueModules }}</strong>
-      </div>
-      <div class="summary-card">
-        <span>Pengguna Aktif</span>
-        <strong>{{ stats.uniqueUsers }}</strong>
-      </div>
-    </div>
+    </section>
 
-    <div v-if="error" class="error-banner">
-      {{ error }}
-    </div>
-
-    <DataTable :columns="columns" :items="logs" :loading="loading" />
+    <section class="card-section">
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
+      <DataTable :columns="columns" :items="logs" :loading="loading" />
+    </section>
   </div>
 </template>
 

@@ -1,12 +1,12 @@
 <template>
-  <div class="settings-page">
+  <div class="data-page settings-page admin-page">
     <div class="page-header">
       <h1>Pengaturan Aplikasi</h1>
     </div>
 
     <div class="settings-container">
       <!-- Company Profile -->
-      <div class="settings-section">
+      <section class="settings-section card-section">
         <h2>Profil Toko</h2>
         <div class="form-group">
           <FormInput
@@ -35,10 +35,10 @@
         >
           Simpan Profil
         </AppButton>
-      </div>
+      </section>
 
       <!-- Backup Settings -->
-      <div class="settings-section">
+      <section class="settings-section card-section">
         <h2>Database Backup</h2>
         <div class="backup-info">
           <p>Last backup: {{ lastBackupDate || "Belum ada backup" }}</p>
@@ -59,10 +59,10 @@
             </AppButton>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Printer Settings -->
-      <div class="settings-section">
+      <section class="settings-section card-section">
         <h2>Pengaturan Printer</h2>
         <div class="form-group">
           <div class="form-row">
@@ -99,7 +99,7 @@
         >
           Simpan Pengaturan
         </AppButton>
-      </div>
+      </section>
     </div>
 
     <!-- Restore Backup Dialog -->
@@ -292,11 +292,11 @@ export default {
 
 <style scoped>
 .settings-page {
-  padding: 1.5rem;
+  width: 100%;
 }
 
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 0;
 }
 
 .page-header h1 {
@@ -308,14 +308,13 @@ export default {
 .settings-container {
   display: grid;
   gap: 2rem;
-  max-width: 800px;
+  max-width: 900px;
+  width: 100%;
 }
 
 .settings-section {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
 }
 
 .settings-section h2 {

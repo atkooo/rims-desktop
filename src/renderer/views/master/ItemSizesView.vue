@@ -1,7 +1,7 @@
 <template>
-  <div class="page">
-    <header class="page-header">
-      <div class="title-wrap">
+  <div class="data-page master-page">
+    <div class="page-header">
+      <div>
         <h1>Ukuran Item</h1>
         <p class="subtitle">
           Kelola daftar ukuran standar yang digunakan pada katalog item.
@@ -11,22 +11,12 @@
         <i class="fas fa-plus"></i>
         Tambah Ukuran
       </AppButton>
-    </header>
+    </div>
 
-    <div class="card">
-      <AppTable
-        :columns="columns"
-        :rows="sizes"
-        :loading="loading"
-        :show-index="true"
-        row-key="id"
-        :dense="true"
-      >
+    <section class="card-section">
+      <AppTable :columns="columns" :rows="sizes" :loading="loading" :show-index="true" row-key="id" :dense="true">
         <template #cell-is_active="{ row }">
-          <span
-            class="badge"
-            :class="row.is_active ? 'badge-success' : 'badge-muted'"
-          >
+          <span class="badge" :class="row.is_active ? 'badge-success' : 'badge-muted'">
             {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </span>
         </template>
@@ -42,17 +32,13 @@
           </AppButton>
         </template>
       </AppTable>
-    </div>
+    </section>
 
-    <Dialog
-      v-model="showDialog"
-      :title="isEdit ? 'Edit Ukuran' : 'Tambah Ukuran'"
-      @update:modelValue="
-        (val) => {
-          if (!val) closeDialog();
-        }
-      "
-    >
+    <Dialog v-model="showDialog" :title="isEdit ? 'Edit Ukuran' : 'Tambah Ukuran'" @update:modelValue="
+      (val) => {
+        if (!val) closeDialog();
+      }
+    ">
       <form class="form" @submit.prevent="saveSize">
         <div class="form-group">
           <label>Kode</label>
@@ -60,12 +46,7 @@
         </div>
         <div class="form-group">
           <label>Nama Ukuran</label>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            placeholder="Misal: Medium"
-          />
+          <input v-model="form.name" type="text" required placeholder="Misal: Medium" />
         </div>
         <div class="form-group">
           <label>Deskripsi</label>
@@ -95,15 +76,11 @@
       </form>
     </Dialog>
 
-    <Dialog
-      v-model="showDeleteDialog"
-      title="Hapus Ukuran"
-      @update:modelValue="
-        (val) => {
-          if (!val) closeDeleteDialog();
-        }
-      "
-    >
+    <Dialog v-model="showDeleteDialog" title="Hapus Ukuran" @update:modelValue="
+      (val) => {
+        if (!val) closeDeleteDialog();
+      }
+    ">
       <p>
         Ukuran <strong>{{ selectedSize?.name }}</strong> akan dihapus.
       </p>
@@ -234,10 +211,10 @@ export default {
       return Number.isNaN(d.getTime())
         ? value
         : d.toLocaleDateString("id-ID", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
     };
 
     onMounted(loadSizes);
@@ -263,23 +240,7 @@ export default {
   },
 };
 </script>
-
 <style scoped>
-.page {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
 .title-wrap {
   display: flex;
   flex-direction: column;
@@ -294,13 +255,6 @@ export default {
   margin: 0;
   color: #6b7280;
   font-size: 0.9rem;
-}
-
-.card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .form {

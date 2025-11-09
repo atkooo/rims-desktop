@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="data-page master-page">
     <header class="page-header">
       <div class="title-wrap">
         <h1>Kategori</h1>
@@ -8,13 +8,13 @@
           status aktif.
         </p>
       </div>
-      <button class="btn primary" @click="openCreateDialog">
-        <i class="fas fa-plus"></i> Tambah Kategori
-      </button>
-    </header>
+    <AppButton variant="primary" @click="openCreateDialog">
+      <i class="fas fa-plus"></i> Tambah Kategori
+    </AppButton>
+  </header>
 
     <!-- Tabel Kategori -->
-    <div class="card">
+    <section class="card-section">
       <AppTable
         :columns="columns"
         :rows="categories"
@@ -49,7 +49,7 @@
           </AppButton>
         </template>
       </AppTable>
-    </div>
+    </section>
 
     <!-- Dialog Form -->
     <Dialog
@@ -270,17 +270,6 @@ export default {
 </script>
 
 <style scoped>
-.page {
-  padding: 16px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
 .title-wrap {
   display: flex;
   flex-direction: column;
@@ -293,13 +282,6 @@ export default {
   margin: 0;
   color: #6b7280; /* gray-500 */
   font-size: 0.9rem;
-}
-
-.card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 16px;
 }
 
 .table {

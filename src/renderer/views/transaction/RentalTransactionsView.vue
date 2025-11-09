@@ -466,60 +466,6 @@ export default {
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 1rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.card-section {
-  background-color: #fff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.summary-card {
-  background-color: #f8fafc;
-  padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid #e0e7ff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.summary-card span {
-  color: #64748b;
-  font-size: 0.85rem;
-}
-
-.summary-card strong {
-  display: block;
-  font-size: 1.4rem;
-  color: #111827;
-}
-
 .tab-group {
   display: flex;
   gap: 0.5rem;
@@ -620,10 +566,5 @@ export default {
 
 .retry-button {
   margin-left: 0.75rem;
-}
-
-.error-banner {
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
 }
 </style>
