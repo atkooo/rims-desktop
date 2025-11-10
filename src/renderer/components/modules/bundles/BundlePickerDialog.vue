@@ -1,0 +1,249 @@
+<template>
+  <AppDialog
+    v-model="visible"
+    title="Cari Paket Penjualan"
+    :show-footer="false"
+    :max-width="600"
+  >
+    <div class="picker-dialog">
+      <div class="picker-controls">
+        <FormInput
+          id="bundleSearch"
+          label="Cari paket"
+          v-model="search"
+          placeholder="Masukkan nama atau kode..."
+        />
+        <select v-model="statusFilter" class="filter-dropdown">
+          <option value="">Semua Status Aktif</option>
+          <option value="open">Tersedia</option>
+          <option value="soldout">Habis</option>
+        </select>
+      </div>
+
+      <div class="picker-list">
+        <div v-if="!filteredBundles.length" class="empty-state">
+          Tidak ada paket yang cocok.
+        </div>
+        <div
+          v-for="bundle in filteredBundles"
+          :key="bundle.id"
+          class="picker-row"
+          :class="{ unavailable: bundle.available_quantity <= 0 }"
+        >
+          <div class="picker-meta">
+            <Icon name="box" :size="20" class="picker-icon" />
+            <div>
+              <div class="picker-name">{{ bundle.name }}</div>
+              <div class="picker-detail">
+                {{ bundle.code }} · {{ formatCurrency(bundle.price) }}
+              </div>
+            </div>
+          </div>
+          <div class="picker-actions">
+            <span
+              class="status-chip"
+              :class="bundle.available_quantity <= 0 ? 'soldout' : 'available'"
+            >
+              {{ bundle.available_quantity <= 0 ? "Habis" : "Tersedia" }}
+            </span>
+            <AppButton
+              variant="primary"
+              size="small"
+              :disabled="bundle.available_quantity <= 0"
+              @click="selectBundle(bundle)"
+            >
+              Pilih
+            </AppButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  </AppDialog>
+</template>
+
+<script>
+import { computed, ref, watch } from "vue";
+import { useBundleStore } from "@/store/bundles";
+import AppDialog from "@/components/ui/AppDialog.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import FormInput from "@/components/ui/FormInput.vue";
+import Icon from "@/components/ui/Icon.vue";
+
+export default {
+  name: "BundlePickerDialog",
+  components: {
+    AppDialog,
+    AppButton,
+    FormInput,
+    Icon,
+  },
+  props: {
+    modelValue: Boolean,
+    excludedIds: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  emits: ["update:modelValue", "select"],
+  setup(props, { emit }) {
+    const bundleStore = useBundleStore();
+    const search = ref("");
+    const statusFilter = ref("");
+
+    const visible = computed({
+      get: () => props.modelValue,
+      set: (value) => emit("update:modelValue", value),
+    });
+
+    const excludedSet = computed(() => new Set(props.excludedIds));
+
+    const filteredBundles = computed(() => {
+      const term = search.value.toLowerCase();
+      return bundleStore.saleBundles
+        .filter((bundle) => !excludedSet.value.has(bundle.id))
+        .filter((bundle) => {
+          if (!term) return true;
+          return (
+            bundle.name.toLowerCase().includes(term) ||
+            (bundle.code || "").toLowerCase().includes(term)
+          );
+        })
+        .filter((bundle) => {
+          if (!statusFilter.value) return true;
+          if (statusFilter.value === "open") {
+            return bundle.available_quantity > 0;
+          }
+          return bundle.available_quantity <= 0;
+        })
+        .slice(0, 80);
+    });
+
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(value || 0);
+    };
+
+    const selectBundle = (bundle) => {
+      emit("select", { ...bundle });
+      visible.value = false;
+    };
+
+    watch(
+      () => props.modelValue,
+      (value) => {
+        if (value && !bundleStore.bundles.length) {
+          bundleStore.fetchBundles().catch((error) => {
+            console.error("Gagal memuat paket:", error);
+          });
+        }
+      },
+    );
+
+    return {
+      search,
+      statusFilter,
+      visible,
+      filteredBundles,
+      formatCurrency,
+      selectBundle,
+    };
+  },
+};
+</script>
+
+<style scoped>
+.picker-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.picker-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.filter-dropdown {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.picker-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.picker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  gap: 1rem;
+}
+
+.picker-row.unavailable {
+  opacity: 0.6;
+}
+
+.picker-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.picker-icon {
+  color: #4338ca;
+}
+
+.picker-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.picker-detail {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-chip {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.status-chip.available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-chip.soldout {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.empty-state {
+  padding: 1rem;
+  color: #6b7280;
+  text-align: center;
+}
+</style>
