@@ -6,6 +6,7 @@ const logger = require("./helpers/logger");
 const setupItemHandlers = require("./handlers/itemHandlers");
 const setupAccessoryHandlers = require("./handlers/accessoryHandlers");
 const setupBundleHandlers = require("./handlers/bundleHandlers");
+const setupCustomerHandlers = require("./handlers/customerHandlers");
 const {
   setupTransactionHandlers,
   setupBookingHandlers,
@@ -105,6 +106,7 @@ app.whenReady().then(async () => {
   setupItemHandlers();
   setupAccessoryHandlers();
   setupBundleHandlers();
+  setupCustomerHandlers();
   setupTransactionHandlers();
   setupBookingHandlers();
   setupPaymentHandlers();

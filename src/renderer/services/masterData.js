@@ -56,6 +56,26 @@ export function fetchCustomers() {
   return ipcRenderer.invoke("master:getCustomers");
 }
 
+export function createCustomer(payload) {
+  return ipcRenderer.invoke("customers:create", payload);
+}
+
+export function updateCustomer(id, payload, options = {}) {
+  return ipcRenderer.invoke("customers:update", id, payload, options);
+}
+
+export function deleteCustomer(id) {
+  return ipcRenderer.invoke("customers:delete", id);
+}
+
+export function fetchCustomerById(id) {
+  return ipcRenderer.invoke("customers:getById", id);
+}
+
+export function fetchCustomerDocument(path) {
+  return ipcRenderer.invoke("customers:getDocument", path);
+}
+
 export function fetchRoles() {
   return ipcRenderer.invoke("master:getRoles");
 }

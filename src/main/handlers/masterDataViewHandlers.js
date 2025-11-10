@@ -97,9 +97,15 @@ function setupMasterDataViewHandlers() {
         c.name,
         c.phone,
         c.email,
+        c.address,
+        c.id_card_number,
+        c.photo_path,
+        c.id_card_image_path,
+        c.notes,
         COALESCE(rc.total_rentals, 0) + COALESCE(sc.total_sales, 0) AS total_transactions,
         c.is_active,
-        c.created_at
+        c.created_at,
+        c.updated_at
       FROM customers c
       LEFT JOIN rental_counts rc ON rc.customer_id = c.id
       LEFT JOIN sales_counts sc ON sc.customer_id = c.id
