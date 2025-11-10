@@ -64,7 +64,7 @@
       >
         <template #actions="{ item }">
           <div class="table-actions">
-            <AppButton variant="secondary" @click="openSaleDetail(item)">
+            <AppButton variant="secondary" @click="goToSaleDetail(item)">
               Detail
             </AppButton>
             <AppButton variant="primary" @click="handleEdit(item)">
@@ -79,88 +79,6 @@
     </section>
   </div>
 
-  <AppDialog
-    v-model="detailDialogOpen"
-    :title="
-      selectedSale
-        ? `Detail Penjualan ${selectedSale.transaction_code}`
-        : 'Detail Penjualan'
-    "
-    :show-footer="false"
-  >
-    <div class="detail-dialog">
-      <div v-if="selectedSale" class="detail-grid">
-        <div class="detail-card">
-          <h4>Info Transaksi</h4>
-          <div class="detail-item">
-            <span>Customer</span>
-            <strong>{{ selectedSale.customer_name || "-" }}</strong>
-          </div>
-          <div class="detail-item">
-            <span>Tanggal</span>
-            <strong>{{ formatDate(selectedSale.sale_date) }}</strong>
-          </div>
-        </div>
-        <div class="detail-card">
-          <h4>Pembayaran</h4>
-          <div class="detail-item">
-            <span>Status</span>
-            <strong>{{ selectedSale.payment_status || "-" }}</strong>
-          </div>
-          <div class="detail-item">
-            <span>Metode</span>
-            <strong>{{ selectedSale.payment_method || "-" }}</strong>
-          </div>
-          <div class="detail-item">
-            <span>Total</span>
-            <strong>{{ formatCurrency(selectedSale.total_amount) }}</strong>
-          </div>
-          <div class="detail-item">
-            <span>Dibayar</span>
-            <strong>{{ formatCurrency(selectedSale.paid_amount) }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="detailsLoading" class="detail-state">
-        Memuat detail penjualan...
-      </div>
-      <div v-else-if="detailError" class="error-banner">
-        {{ detailError }}
-        <AppButton
-          class="retry-button"
-          variant="secondary"
-          @click="loadSalesDetails(true)"
-        >
-          Coba Lagi
-        </AppButton>
-      </div>
-      <div v-else-if="!filteredDetails.length" class="detail-state">
-        Tidak ada detail item untuk transaksi ini.
-      </div>
-      <table v-else class="detail-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Jumlah</th>
-            <th>Harga</th>
-            <th>Subtotal</th>
-            <th>Dibuat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="detail in filteredDetails" :key="detail.id">
-            <td>{{ detail.item_name || "-" }}</td>
-            <td>{{ detail.quantity }}</td>
-            <td>{{ formatCurrency(detail.sale_price) }}</td>
-            <td>{{ formatCurrency(detail.subtotal) }}</td>
-            <td>{{ formatDateTime(detail.created_at) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </AppDialog>
-
   <TransactionForm
     v-model="showForm"
     :edit-data="editingSale"
@@ -171,37 +89,30 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { useRouter } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import DataTable from "@/components/ui/DataTable.vue";
-import AppDialog from "@/components/ui/AppDialog.vue";
 import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
-import {
-  fetchSalesTransactions,
-  fetchSalesDetails,
-} from "@/services/transactions";
+import { fetchSalesTransactions } from "@/services/transactions";
 import { eventBus } from "@/utils/eventBus";
 import { useTransactionStore } from "@/store/transactions";
 import { TRANSACTION_TYPE } from "@shared/constants";
 
 export default {
   name: "SalesTransactionsView",
-  components: { AppButton, DataTable, Icon, AppDialog, TransactionForm },
+  components: { AppButton, DataTable, Icon, TransactionForm },
   setup() {
     const sales = ref([]);
-    const saleDetails = ref([]);
     const loading = ref(false);
-    const detailsLoading = ref(false);
     const error = ref("");
     const searchTerm = ref("");
-    const detailDialogOpen = ref(false);
-    const selectedSale = ref(null);
     let detachSearchListener;
-    const detailError = ref("");
     const transactionStore = useTransactionStore();
     const showForm = ref(false);
     const editingSale = ref(null);
+    const router = useRouter();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -211,9 +122,6 @@ export default {
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
-    const formatDateTime = (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-";
-
     const columns = [
       { key: "transaction_code", label: "Kode" },
       { key: "customer_name", label: "Customer" },
@@ -274,31 +182,12 @@ export default {
       searchTerm.value = query;
     };
 
-    const loadSalesDetails = async (force = false) => {
-      if (saleDetails.value.length && !force) return;
-      detailsLoading.value = true;
-      detailError.value = "";
-      try {
-        saleDetails.value = await fetchSalesDetails();
-      } catch (err) {
-        detailError.value = err.message || "Gagal memuat detail penjualan.";
-      } finally {
-        detailsLoading.value = false;
-      }
-    };
-
-    const filteredDetails = computed(() => {
-      if (!selectedSale.value) return [];
-      return saleDetails.value.filter(
-        (detail) =>
-          detail.transaction_code === selectedSale.value.transaction_code,
-      );
-    });
-
-    const openSaleDetail = async (sale) => {
-      selectedSale.value = sale;
-      detailDialogOpen.value = true;
-      await loadSalesDetails();
+    const goToSaleDetail = (sale) => {
+      if (!sale.transaction_code) return;
+      router.push({
+        name: "transaction-sale-detail",
+        params: { code: sale.transaction_code },
+      });
     };
 
     const openCreateSale = () => {
@@ -331,10 +220,6 @@ export default {
       }
     };
 
-    watch(detailDialogOpen, (visible) => {
-      if (!visible) selectedSale.value = null;
-    });
-
     onMounted(() => {
       loadData();
       detachSearchListener = eventBus.on("global-search", handleSearch);
@@ -358,14 +243,7 @@ export default {
       searchTerm,
       totalRecords,
       formatDate,
-      formatDateTime,
-      detailDialogOpen,
-      openSaleDetail,
-      filteredDetails,
-      detailsLoading,
-      detailError,
-      loadSalesDetails,
-      selectedSale,
+      goToSaleDetail,
       showForm,
       editingSale,
       openCreateSale,
@@ -395,73 +273,5 @@ export default {
   flex-wrap: wrap;
   gap: 0.4rem;
   justify-content: flex-end;
-}
-
-.detail-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
-
-.detail-card {
-  padding: 0.95rem 1rem;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background-color: #f8fafc;
-}
-
-.detail-card h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
-  color: #4338ca;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-  font-size: 0.9rem;
-  color: #485263;
-}
-
-.detail-item span {
-  color: #6b7280;
-}
-
-.detail-state {
-  text-align: center;
-  padding: 1rem 0;
-  color: #6b7280;
-}
-
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.detail-table th,
-.detail-table td {
-  padding: 0.6rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.9rem;
-}
-
-.detail-table thead {
-  background-color: #eef2ff;
-  font-weight: 600;
-}
-
-.retry-button {
-  margin-left: 0.75rem;
 }
 </style>

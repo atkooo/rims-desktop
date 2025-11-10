@@ -88,7 +88,7 @@
       >
         <template #actions="{ item }">
           <div class="table-actions">
-            <AppButton variant="secondary" @click="openRentalDetail(item)">
+            <AppButton variant="secondary" @click="goToRentalDetail(item)">
               Detail
             </AppButton>
             <AppButton variant="primary" @click="handleEdit(item)">
@@ -103,91 +103,6 @@
     </section>
   </div>
 
-  <AppDialog
-    v-model="detailDialogOpen"
-    :title="
-      selectedRental
-        ? `Detail Transaksi ${selectedRental.transaction_code || ''}`
-        : 'Detail Transaksi'
-    "
-    :show-footer="false"
-  >
-      <div class="detail-dialog">
-        <div v-if="selectedRental" class="detail-grid">
-          <div class="detail-card">
-            <h4>Info Umum</h4>
-            <div class="detail-item">
-              <span>Customer</span>
-              <strong>{{ selectedRental.customer_name || "-" }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Tanggal Sewa</span>
-              <strong>{{ formatDate(selectedRental.rental_date) }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Rencana Kembali</span>
-              <strong>{{ formatDate(selectedRental.planned_return_date) }}</strong>
-            </div>
-          </div>
-
-          <div class="detail-card">
-            <h4>Keuangan</h4>
-            <div class="detail-item">
-              <span>Status</span>
-              <strong>{{ selectedRental.status || "-" }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Total Nilai</span>
-              <strong>{{ formatCurrency(selectedRental.total_amount) }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Dibayar</span>
-              <strong>{{ formatCurrency(selectedRental.paid_amount) }}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="detailsLoading" class="detail-state">
-          Memuat detail transaksi...
-        </div>
-        <div v-else-if="detailError" class="error-banner">
-          {{ detailError }}
-          <AppButton
-            class="retry-button"
-            variant="secondary"
-            @click="loadRentalDetails(true)"
-          >
-            Coba Lagi
-          </AppButton>
-        </div>
-        <div v-else-if="!filteredDetails.length" class="detail-state">
-          Tidak ada item terkait transaksi ini.
-        </div>
-        <table v-else class="detail-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Jumlah</th>
-              <th>Harga Sewa</th>
-              <th>Subtotal</th>
-              <th>Dikembalikan</th>
-              <th>Catatan</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="detail in filteredDetails" :key="detail.id">
-              <td>{{ detail.item_name || "-" }}</td>
-              <td>{{ detail.quantity }}</td>
-              <td>{{ formatCurrency(detail.rental_price) }}</td>
-              <td>{{ formatCurrency(detail.subtotal) }}</td>
-              <td>{{ detail.is_returned ? "Ya" : "Belum" }}</td>
-              <td>{{ detail.notes || "-" }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-  </AppDialog>
-
   <TransactionForm
     v-model="showForm"
     :edit-data="editingRental"
@@ -198,14 +113,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import DataTable from "@/components/ui/DataTable.vue";
-import AppDialog from "@/components/ui/AppDialog.vue";
 import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import {
   fetchRentalTransactions,
-  fetchRentalDetails,
 } from "@/services/transactions";
 import { fetchActiveRentals } from "@/services/reports";
 import { useTransactionStore } from "@/store/transactions";
@@ -213,23 +127,19 @@ import { TRANSACTION_TYPE } from "@shared/constants";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, DataTable, AppDialog, TransactionForm },
+  components: { AppButton, DataTable, TransactionForm },
   setup() {
     const rentals = ref([]);
     const activeRentals = ref([]);
-    const rentalDetails = ref([]);
     const loading = ref(false);
     const activeLoading = ref(false);
-    const detailsLoading = ref(false);
     const error = ref("");
     const activeError = ref("");
-    const detailError = ref("");
-    const detailDialogOpen = ref(false);
-    const selectedRental = ref(null);
     const currentTab = ref("all");
     const transactionStore = useTransactionStore();
     const showForm = ref(false);
     const editingRental = ref(null);
+    const router = useRouter();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -329,26 +239,13 @@ export default {
       }
     };
 
-    const loadRentalDetails = async (force = false) => {
-      if (rentalDetails.value.length && !force) return;
-      detailsLoading.value = true;
-      detailError.value = "";
-      try {
-        rentalDetails.value = await fetchRentalDetails();
-      } catch (err) {
-        detailError.value = err.message || "Gagal memuat detail sewa.";
-      } finally {
-        detailsLoading.value = false;
-      }
+    const goToRentalDetail = (rental) => {
+      if (!rental.transaction_code) return;
+      router.push({
+        name: "transaction-rental-detail",
+        params: { code: rental.transaction_code },
+      });
     };
-
-    const filteredDetails = computed(() => {
-      if (!selectedRental.value) return [];
-      return rentalDetails.value.filter(
-        (detail) =>
-          detail.transaction_code === selectedRental.value.transaction_code,
-      );
-    });
 
     const displayedItems = computed(() =>
       currentTab.value === "all" ? rentals.value : activeRentals.value,
@@ -362,16 +259,6 @@ export default {
     const currentError = computed(() =>
       currentTab.value === "all" ? error.value : activeError.value,
     );
-
-    const openRentalDetail = async (rental) => {
-      const enriched =
-        rentals.value.find(
-          (item) => item.transaction_code === rental.transaction_code,
-        ) || rental;
-      selectedRental.value = enriched;
-      detailDialogOpen.value = true;
-      await loadRentalDetails();
-    };
 
     const switchTab = (tabId) => {
       currentTab.value = tabId;
@@ -415,10 +302,6 @@ export default {
       }
     };
 
-    watch(detailDialogOpen, (visible) => {
-      if (!visible) selectedRental.value = null;
-    });
-
     onMounted(() => {
       loadData();
     });
@@ -436,13 +319,6 @@ export default {
       activeStats,
       loadData,
       loadActiveRentals,
-      detailDialogOpen,
-      selectedRental,
-      openRentalDetail,
-      filteredDetails,
-      detailsLoading,
-      detailError,
-      loadRentalDetails,
       formatCurrency,
       formatDate,
       currentTab,
@@ -460,6 +336,7 @@ export default {
       handleDelete,
       TRANSACTION_TYPE,
       handleRefresh,
+      goToRentalDetail,
     };
   },
 };
@@ -497,74 +374,5 @@ export default {
   flex-wrap: wrap;
   gap: 0.4rem;
   justify-content: flex-end;
-}
-
-.detail-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
-}
-
-.detail-card {
-  padding: 0.95rem 1rem;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background-color: #f8fafc;
-}
-
-.detail-card h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
-  color: #4338ca;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-  font-size: 0.9rem;
-  color: #485263;
-}
-
-.detail-item span {
-  color: #6b7280;
-}
-
-.detail-state {
-  text-align: center;
-  padding: 1rem 0;
-  color: #6b7280;
-}
-
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.detail-table th,
-.detail-table td {
-  padding: 0.6rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.9rem;
-}
-
-.detail-table thead {
-  background-color: #eef2ff;
-  font-weight: 600;
-  color: #1e1e1e;
-}
-
-.retry-button {
-  margin-left: 0.75rem;
 }
 </style>

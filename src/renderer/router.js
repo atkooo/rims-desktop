@@ -23,6 +23,8 @@ import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue
 import BookingsView from "./views/transaction/BookingsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
 import PaymentsView from "./views/transaction/PaymentsView.vue";
+import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
+import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
 import { getCurrentUser } from "./services/auth.js";
 
 const routes = [
@@ -57,9 +59,19 @@ const routes = [
     component: RentalTransactionsView,
   },
   {
+    path: "/transactions/rentals/:code",
+    name: "transaction-rental-detail",
+    component: RentalTransactionDetailView,
+  },
+  {
     path: "/transactions/sales",
     name: "transactions-sales",
     component: SalesTransactionsView,
+  },
+  {
+    path: "/transactions/sales/:code",
+    name: "transaction-sale-detail",
+    component: SaleTransactionDetailView,
   },
   {
     path: "/transactions/bookings",
