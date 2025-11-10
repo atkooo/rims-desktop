@@ -24,6 +24,9 @@
       <div v-else-if="error" class="error-banner">
         {{ error }}
       </div>
+      <div v-else-if="!rental" class="detail-state">
+        Detail transaksi tidak tersedia.
+      </div>
       <div v-else class="detail-grid">
         <div class="detail-card">
           <h4>Info Umum</h4>
