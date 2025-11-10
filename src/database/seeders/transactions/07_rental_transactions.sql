@@ -74,16 +74,16 @@ INSERT INTO rental_transaction_details (
 VALUES
     -- RNT-2025-0001
     ((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0001'),
-        (SELECT id FROM items WHERE code = 'ITM-001'),
-        1, 85.00, 255.00, 1, 'good', 'Dry cleaned after use'
+        (SELECT id FROM items WHERE code = 'ITM-PER-001'),
+        1, 220.00, 660.00, 1, 'good', 'Dry cleaned after use'
     ),
     ((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0001'),
-        (SELECT id FROM items WHERE code = 'ITM-002'),
-        1, 65.00, 195.00, 1, 'good', 'Minor alterations completed'
+        (SELECT id FROM items WHERE code = 'ITM-PER-002'),
+        1, 160.00, 480.00, 1, 'good', 'Minor alterations completed'
     ),
 
     -- RNT-2025-0002
     ((SELECT id FROM rental_transactions WHERE transaction_code = 'RNT-2025-0002'),
-        (SELECT id FROM items WHERE code = 'ITM-003'),
-        1, 110.00, 220.00, 0, NULL, 'Deliver to hotel lobby on 20 Oct'
+        (SELECT id FROM items WHERE code = 'ITM-ACF-001'),
+        1, 85.00, 170.00, 0, NULL, 'Deliver to hotel lobby on 20 Oct'
     );

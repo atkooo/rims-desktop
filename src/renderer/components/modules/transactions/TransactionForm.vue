@@ -598,11 +598,18 @@ export default {
       loading.value = true;
       try {
         const user = getStoredUser();
+        const transactionDate = isRental.value
+          ? form.value.rentalDate
+          : form.value.saleDate;
+
         if (isEdit.value && props.editData) {
           const payload = {
             customerId: form.value.customerId,
             notes: form.value.notes,
-            totalAmount: Number(totalAmount.value) || Number(props.editData.total_amount ?? 0),
+            totalAmount:
+              Number(totalAmount.value) ||
+              Number(props.editData.total_amount ?? 0),
+            transactionDate,
           };
           if (isRental.value) {
             payload.rentalDate = form.value.rentalDate;
@@ -620,6 +627,7 @@ export default {
             paymentStatus: form.value.paymentStatus,
             notes: form.value.notes,
             totalAmount: Number(totalAmount.value),
+            transactionDate,
             items: normalizedItems.value,
           };
           if (isRental.value) {
@@ -633,15 +641,16 @@ export default {
               paidAmount: Number(form.value.paidAmount) || 0,
             });
           } else {
-          await transactionStore.createTransaction({
-            ...basePayload,
-            saleDate: form.value.saleDate,
-            subtotal: subtotal.value,
-            discount: Number(form.value.discount) || 0,
-            tax: Number(form.value.tax) || 0,
-            paidAmount: Number(form.value.paidAmount) || Number(totalAmount.value),
-            bundles: normalizedBundles.value,
-          });
+            await transactionStore.createTransaction({
+              ...basePayload,
+              saleDate: form.value.saleDate,
+              subtotal: subtotal.value,
+              discount: Number(form.value.discount) || 0,
+              tax: Number(form.value.tax) || 0,
+              paidAmount:
+                Number(form.value.paidAmount) || Number(totalAmount.value),
+              bundles: normalizedBundles.value,
+            });
           }
         }
         emit("saved");
