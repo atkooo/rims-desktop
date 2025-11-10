@@ -1,14 +1,36 @@
 <template>
   <div class="data-page settings-page admin-page">
     <div class="page-header">
-      <h1>Pengaturan Aplikasi</h1>
+      <div>
+        <p class="eyebrow">Pengaturan</p>
+        <h1>Pengaturan Aplikasi</h1>
+        <p class="subtitle">
+          Kelola profil toko, backup database, dan pengaturan printer agar operasional tetap lancar.
+        </p>
+      </div>
+      <div class="header-meta">
+        <div class="meta-chip">
+          <span>Backup terakhir</span>
+          <strong>{{ lastBackupDate || "Belum ada backup" }}</strong>
+        </div>
+        <div class="meta-chip secondary">
+          <span>Printer aktif</span>
+          <strong>{{ settings.printer || "Belum dipilih" }}</strong>
+        </div>
+      </div>
     </div>
 
-    <div class="settings-container">
-      <!-- Company Profile -->
-      <section class="settings-section card-section">
-        <h2>Profil Toko</h2>
-        <div class="form-group">
+    <div class="settings-grid">
+      <section class="settings-card card-section">
+        <header class="section-header">
+          <div>
+            <h2>Profil Toko</h2>
+            <p class="section-subtitle">
+              Informasi ini akan muncul di struk dan laporan agar pelanggan mengenali toko Anda dengan mudah.
+            </p>
+          </div>
+        </header>
+        <div class="form-grid">
           <FormInput
             id="companyName"
             label="Nama Toko"
@@ -28,20 +50,37 @@
             :error="errors.phone"
           />
         </div>
-        <AppButton
-          variant="primary"
-          :loading="loading"
-          @click="saveCompanyProfile"
-        >
-          Simpan Profil
-        </AppButton>
+        <div class="card-actions">
+          <AppButton
+            variant="primary"
+            :loading="loading"
+            @click="saveCompanyProfile"
+          >
+            Simpan Profil
+          </AppButton>
+        </div>
       </section>
 
-      <!-- Backup Settings -->
-      <section class="settings-section card-section">
-        <h2>Database Backup</h2>
-        <div class="backup-info">
-          <p>Last backup: {{ lastBackupDate || "Belum ada backup" }}</p>
+      <section class="settings-card card-section accent-card">
+        <header class="section-header">
+          <div>
+            <h2>Database Backup</h2>
+            <p class="section-subtitle">
+              Cadangkan data secara rutin agar Anda bisa kembali pulih jika terjadi situasi tak terduga.
+            </p>
+          </div>
+        </header>
+        <div class="backup-panel">
+          <div class="backup-stats">
+            <div class="stat">
+              <span>File tersimpan</span>
+              <strong>{{ backupFiles.length }}</strong>
+            </div>
+            <div class="stat">
+              <span>Backup terakhir</span>
+              <strong>{{ lastBackupDate || "Belum ada" }}</strong>
+            </div>
+          </div>
           <div class="backup-actions">
             <AppButton
               variant="primary"
@@ -61,44 +100,50 @@
         </div>
       </section>
 
-      <!-- Printer Settings -->
-      <section class="settings-section card-section">
-        <h2>Pengaturan Printer</h2>
-        <div class="form-group">
-          <div class="form-row">
-            <div class="select-group">
-              <label>Printer Receipt</label>
-              <select v-model="settings.printer" class="form-select">
-                <option
-                  v-for="printer in printers"
-                  :key="printer"
-                  :value="printer"
-                >
-                  {{ printer }}
-                </option>
-              </select>
-            </div>
-            <FormInput
-              id="paperWidth"
-              label="Lebar Kertas (mm)"
-              type="number"
-              v-model.number="settings.paperWidth"
-            />
+      <section class="settings-card card-section">
+        <header class="section-header">
+          <div>
+            <h2>Pengaturan Printer</h2>
+            <p class="section-subtitle">
+              Sesuaikan printer agar struk tercetak rapi sesuai ukuran kertas di toko Anda.
+            </p>
           </div>
-          <div class="checkbox-group">
-            <label>
-              <input type="checkbox" v-model="settings.autoPrint" />
-              Auto-print setelah transaksi
-            </label>
+        </header>
+        <div class="form-grid">
+          <div class="select-group">
+            <label>Printer Receipt</label>
+            <select v-model="settings.printer" class="form-select">
+              <option
+                v-for="printer in printers"
+                :key="printer"
+                :value="printer"
+              >
+                {{ printer }}
+              </option>
+            </select>
           </div>
+          <FormInput
+            id="paperWidth"
+            label="Lebar Kertas (mm)"
+            type="number"
+            v-model.number="settings.paperWidth"
+          />
         </div>
-        <AppButton
-          variant="primary"
-          :loading="loading"
-          @click="savePrinterSettings"
-        >
-          Simpan Pengaturan
-        </AppButton>
+        <div class="checkbox-wrapper">
+          <label>
+            <input type="checkbox" v-model="settings.autoPrint" />
+            Auto-print setelah transaksi
+          </label>
+        </div>
+        <div class="card-actions">
+          <AppButton
+            variant="primary"
+            :loading="loading"
+            @click="savePrinterSettings"
+          >
+            Simpan Pengaturan
+          </AppButton>
+        </div>
       </section>
     </div>
 
@@ -112,9 +157,9 @@
     >
       <div class="restore-dialog">
         <p class="warning-text">
-          âš ï¸ Restore akan mengganti data saat ini dengan data dari backup.
-          Pastikan Anda telah membuat backup terlebih dahulu.
+          Restore akan mengganti data saat ini dengan data dari backup. Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum melanjutkan.
         </p>
+
         <div class="select-group">
           <label>Pilih Backup File</label>
           <select v-model="selectedBackup" class="form-select">
@@ -295,79 +340,150 @@ export default {
   width: 100%;
 }
 
-.page-header {
-  margin-bottom: 0;
+.settings-page .page-header {
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
+.settings-page .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: #7c3aed;
+}
+
+.header-meta {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.meta-chip {
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #e0e7ff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 150px;
+}
+
+.meta-chip span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.meta-chip strong {
+  font-size: 0.9rem;
   color: #111827;
 }
 
-.settings-container {
+.meta-chip.secondary {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.settings-grid {
   display: grid;
-  gap: 2rem;
-  max-width: 900px;
-  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
-.settings-section {
-  background: transparent;
-  padding: 0;
+.settings-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.settings-section h2 {
-  margin: 0 0 1rem 0;
+.settings-card.accent-card {
+  background-color: #f9fafc;
+  border-color: #c7d2fe;
+}
+
+.section-header h2 {
+  margin: 0;
   font-size: 1.25rem;
-  color: #374151;
+  color: #111827;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1rem;
+.section-subtitle {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
-.form-row {
+.form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 
-.select-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.select-group label {
-  font-weight: 500;
-}
-
-.form-select {
-  padding: 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.checkbox-group {
+.checkbox-wrapper label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 500;
+  color: #334155;
+  font-size: 0.95rem;
 }
 
-.backup-info {
+.checkbox-wrapper input {
+  width: 16px;
+  height: 16px;
+}
+
+.backup-panel {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px dashed #cbd5f5;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.backup-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.75rem;
+  border: 1px solid #e0e7ff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stat span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.stat strong {
+  font-size: 1.2rem;
+  color: #111827;
 }
 
 .backup-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.card-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .restore-dialog {
@@ -380,7 +496,27 @@ export default {
   color: #991b1b;
   background-color: #fee2e2;
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 6px;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .header-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-actions {
+    justify-content: flex-start;
+  }
 }
 </style>
