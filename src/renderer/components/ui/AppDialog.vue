@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="modelValue" class="dialog-overlay" @click="close">
-        <div class="dialog" @click.stop>
+        <div class="dialog" :style="{ maxWidth: maxWidth ? maxWidth + 'px' : undefined }" @click.stop>
           <div class="dialog-header">
             <h3 class="dialog-title">{{ title }}</h3>
             <button class="close-button" @click="close">&times;</button>
@@ -73,6 +73,10 @@ export default {
     loading: {
       type: Boolean,
       default: false,
+    },
+    maxWidth: {
+      type: Number,
+      default: null,
     },
   },
   emits: ["update:modelValue", "confirm"],

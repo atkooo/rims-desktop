@@ -8,14 +8,14 @@
         aria-label="Toggle sidebar"
         @click="emit('toggle-sidebar')"
       >
-        <Icon name="menu" size="20" />
+        <Icon name="menu" :size="20" />
       </button>
       <div class="topbar__brand">
         <h2>RIMS Desktop</h2>
         <p>Monitoring Center</p>
       </div>
       <form class="topbar__search" @submit.prevent="handleSearch">
-        <Icon name="search" size="16" class="search-icon" />
+        <Icon name="search" :size="16" class="search-icon" />
         <input
           v-model="searchQuery"
           type="search"
@@ -33,13 +33,13 @@
         aria-label="Refresh notifikasi"
         @click="refreshTransactions"
       >
-        <Icon name="bell" size="20" />
+        <Icon name="bell" :size="20" />
         <span v-if="pendingTransactions" class="icon-badge">
           {{ pendingTransactions }}
         </span>
       </button>
       <button class="icon-btn" type="button" aria-label="Tagihan menunggu">
-        <Icon name="message" size="20" />
+        <Icon name="message" :size="20" />
         <span v-if="awaitingPayments" class="icon-badge">
           {{ awaitingPayments }}
         </span>
@@ -57,7 +57,7 @@
             <strong>{{ currentUser?.full_name || "Pengguna" }}</strong>
           </div>
           <div class="avatar">{{ initials }}</div>
-          <Icon name="chevron-down" size="16" class="chevron" />
+          <Icon name="chevron-down" :size="16" class="chevron" />
         </button>
         <Teleport to="body">
           <transition name="fade-scale">
@@ -71,11 +71,11 @@
               }"
             >
               <button type="button" @click="goToProfile">
-                <Icon name="user" size="16" />
+                <Icon name="user" :size="16" />
                 <span>Profil Saya</span>
               </button>
               <button type="button" class="logout" @click="logout">
-                <Icon name="log-out" size="16" />
+                <Icon name="log-out" :size="16" />
                 <span>Keluar</span>
               </button>
             </div>
