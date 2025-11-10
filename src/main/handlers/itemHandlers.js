@@ -3,6 +3,19 @@ const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 
+const normalizeCode = (value, fallbackName = "") => {
+  let code = (value ?? "").toString().trim();
+  if (code) return code.toUpperCase();
+  if (!fallbackName) return `ITM-${Date.now()}`;
+  const sanitized = fallbackName
+    .toUpperCase()
+    .replace(/[^0-9A-Z]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-")
+    .slice(0, 20);
+  return `ITM-${sanitized || Date.now()}`;
+};
+
 // Setup item handlers
 function setupItemHandlers() {
   // Get all items
@@ -27,6 +40,9 @@ function setupItemHandlers() {
   // Add new item
   ipcMain.handle("items:add", async (event, itemData) => {
     try {
+      const code = normalizeCode(itemData.code, itemData.name);
+      itemData.code = code;
+
       // Validasi input
       if (!validator.isNotEmpty(itemData.name)) {
         throw new Error("Nama item harus diisi");
@@ -34,15 +50,30 @@ function setupItemHandlers() {
       if (!validator.isPositiveNumber(itemData.price)) {
         throw new Error("Harga harus berupa angka positif");
       }
+      if (!itemData.category_id) {
+        throw new Error("Kategori harus dipilih");
+      }
 
       const result = await database.execute(
-        "INSERT INTO items (name, description, price, type, status) VALUES (?, ?, ?, ?, ?)",
+        `INSERT INTO items (
+            code,
+            name,
+            description,
+            price,
+            type,
+            status,
+            size_id,
+            category_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          code,
           itemData.name,
-          itemData.description,
+          itemData.description ?? null,
           itemData.price,
-          itemData.type,
-          "AVAILABLE",
+          itemData.type ?? "RENTAL",
+          itemData.status ?? "AVAILABLE",
+          itemData.size_id ?? null,
+          itemData.category_id,
         ],
       );
 
@@ -68,9 +99,19 @@ function setupItemHandlers() {
       if (updates.price && !validator.isPositiveNumber(updates.price)) {
         throw new Error("Harga harus berupa angka positif");
       }
+      if (updates.code !== undefined && !validator.isNotEmpty(updates.code)) {
+        throw new Error("Kode item harus diisi");
+      }
+      if (updates.category_id !== undefined && !updates.category_id) {
+        throw new Error("Kategori harus dipilih");
+      }
 
-      const fields = Object.keys(updates);
-      const values = Object.values(updates);
+      const normalizedUpdates = { ...updates };
+      if (updates.code !== undefined) {
+        normalizedUpdates.code = normalizeCode(updates.code);
+      }
+      const fields = Object.keys(normalizedUpdates);
+      const values = Object.values(normalizedUpdates);
       const sql = `UPDATE items SET ${fields.map((f) => `${f} = ?`).join(", ")} WHERE id = ?`;
 
       await database.execute(sql, [...values, id]);

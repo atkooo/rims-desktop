@@ -124,25 +124,41 @@
         </div>
       </section>
 
-      <section class="form-section">
-        <h3>Pilih Item</h3>
-        <ItemSelector v-model="form.items" />
-        <div v-if="errors.items" class="error-message">
-          {{ errors.items }}
-        </div>
-      </section>
+    <section class="form-section">
+      <h3>Pilih Item</h3>
+      <ItemSelector v-model="form.items" />
+      <div v-if="errors.items" class="error-message">
+        {{ errors.items }}
+      </div>
+    </section>
+
+    <section class="form-section" v-if="!isRental">
+      <h3>Pilih Paket</h3>
+      <BundleSelector v-model="form.bundles" />
+    </section>
 
       <section class="form-section">
         <h3>Ringkasan</h3>
         <div class="summary-grid">
-          <div class="summary-line">
-            <span>Total Item</span>
-            <strong>{{ totalItems }}</strong>
-          </div>
-          <div class="summary-line">
-            <span>Subtotal</span>
-            <strong>{{ formatCurrency(subtotal) }}</strong>
-          </div>
+        <div class="summary-line">
+          <span>Total Item</span>
+          <strong>{{ totalItems }}</strong>
+        </div>
+        <div class="summary-line" v-if="!isRental">
+          <span>Total Paket</span>
+          <strong>{{ bundleCount }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>Subtotal</span>
+          <strong>{{ formatCurrency(subtotal) }}</strong>
+        </div>
+        <div
+          class="summary-line"
+          v-if="!isRental && bundleSubtotal > 0"
+        >
+          <span>Subtotal Paket</span>
+          <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
+        </div>
           <div class="summary-line" v-if="isRental">
             <span>Total Hari</span>
             <strong>{{ totalDays }}</strong>
@@ -228,6 +244,7 @@ import { useItemStore } from "@/store/items";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
+import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { TRANSACTION_TYPE } from "@shared/constants";
@@ -260,21 +277,22 @@ const createDefaultForm = (type = TRANSACTION_TYPE.RENTAL) => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return {
-    customerId: "",
-    transactionType: type,
-    rentalDate: toDateInput(today),
-    plannedReturnDate: toDateInput(tomorrow),
-    saleDate: toDateInput(today),
-    paymentMethod: "cash",
-    paymentStatus: "unpaid",
-    deposit: 0,
-    discount: 0,
-    tax: 0,
-    paidAmount: 0,
-    items: [],
-    notes: "",
-  };
+    return {
+      customerId: "",
+      transactionType: type,
+      rentalDate: toDateInput(today),
+      plannedReturnDate: toDateInput(tomorrow),
+      saleDate: toDateInput(today),
+      paymentMethod: "cash",
+      paymentStatus: "unpaid",
+      deposit: 0,
+      discount: 0,
+      tax: 0,
+      paidAmount: 0,
+      items: [],
+      bundles: [],
+      notes: "",
+    };
 };
 
 export default {
@@ -283,6 +301,7 @@ export default {
     AppDialog,
     FormInput,
     ItemSelector,
+    BundleSelector,
   },
   props: {
     modelValue: Boolean,
@@ -341,15 +360,30 @@ export default {
       }, 0);
     });
 
+    const itemSubtotal = computed(() => {
+      return baseSubtotal.value * (isRental.value ? totalDays.value : 1);
+    });
+
+    const bundleSubtotal = computed(() => {
+      return form.value.bundles.reduce((sum, bundle) => {
+        return sum + (Number(bundle.price) || 0) * (bundle.quantity || 0);
+      }, 0);
+    });
+
     const subtotal = computed(() => {
-      if (!form.value.items.length) {
+      if (!form.value.items.length && !form.value.bundles.length) {
         if (isEdit.value) {
           return Number(props.editData?.total_amount ?? 0);
         }
         return 0;
       }
-      return baseSubtotal.value * (isRental.value ? totalDays.value : 1);
+      if (isRental.value) return itemSubtotal.value;
+      return itemSubtotal.value + bundleSubtotal.value;
     });
+
+    const bundleCount = computed(() =>
+      form.value.bundles.reduce((sum, bundle) => sum + (bundle.quantity || 0), 0),
+    );
 
     const totalAmount = computed(() => {
       const numericSubtotal = subtotal.value;
@@ -392,6 +426,13 @@ export default {
         };
       });
     });
+
+    const normalizedBundles = computed(() =>
+      form.value.bundles.map((bundle) => ({
+        bundleId: bundle.id,
+        quantity: Math.max(1, Number(bundle.quantity) || 1),
+      })),
+    );
 
     const formatCurrency = (value) => {
       return new Intl.NumberFormat("id-ID", {
@@ -541,8 +582,12 @@ export default {
       } else if (!form.value.saleDate) {
         newErrors.saleDate = "Tanggal penjualan harus diisi";
       }
-      if (!isEdit.value && form.value.items.length === 0) {
-        newErrors.items = "Pilih minimal 1 item";
+      if (
+        !isEdit.value &&
+        form.value.items.length === 0 &&
+        form.value.bundles.length === 0
+      ) {
+        newErrors.items = "Pilih minimal 1 item atau paket";
       }
       errors.value = newErrors;
       return Object.keys(newErrors).length === 0;
@@ -588,14 +633,15 @@ export default {
               paidAmount: Number(form.value.paidAmount) || 0,
             });
           } else {
-            await transactionStore.createTransaction({
-              ...basePayload,
-              saleDate: form.value.saleDate,
-              subtotal: subtotal.value,
-              discount: Number(form.value.discount) || 0,
-              tax: Number(form.value.tax) || 0,
-              paidAmount: Number(form.value.paidAmount) || Number(totalAmount.value),
-            });
+          await transactionStore.createTransaction({
+            ...basePayload,
+            saleDate: form.value.saleDate,
+            subtotal: subtotal.value,
+            discount: Number(form.value.discount) || 0,
+            tax: Number(form.value.tax) || 0,
+            paidAmount: Number(form.value.paidAmount) || Number(totalAmount.value),
+            bundles: normalizedBundles.value,
+          });
           }
         }
         emit("saved");
@@ -623,6 +669,8 @@ export default {
       totalAmount,
       totalDays,
       totalItems,
+      bundleSubtotal,
+      bundleCount,
       fixedTypeLabel,
       formatCurrency,
       handleSubmit,

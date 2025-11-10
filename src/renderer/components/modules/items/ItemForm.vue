@@ -75,10 +75,29 @@
           />
         </div>
 
+        <div class="form-group grid-span-2">
+          <label class="form-label">Kategori</label>
+          <select v-model.number="form.category_id" class="form-select">
+            <option :value="null" disabled>
+              {{ categories.length ? "Pilih kategori" : "Memuat kategori..." }}
+            </option>
+            <option
+              v-for="category in categories"
+              :key="category.id"
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
+          </select>
+          <div v-if="errors.category_id" class="error-message">
+            {{ errors.category_id }}
+          </div>
+        </div>
+
         <!-- Ukuran -->
         <div class="form-group grid-span-2">
           <label class="form-label">Ukuran</label>
-          <select v-model="form.size_id" class="form-select">
+          <select v-model.number="form.size_id" class="form-select">
             <option :value="null">Pilih ukuran</option>
             <option v-for="size in sizeOptions" :key="size.id" :value="size.id">
               {{ size.name }}
@@ -127,6 +146,7 @@ import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import { ipcRenderer } from "@/services/ipc";
 
 const defaultForm = () => ({
   name: "",
@@ -139,6 +159,7 @@ const defaultForm = () => ({
   weeklyRate: 0,
   deposit: 0,
   size_id: null,
+  category_id: null,
 });
 
 export default {
@@ -161,6 +182,25 @@ export default {
       set: (value) => emit("update:modelValue", value),
     });
     const sizeOptions = computed(() => itemStore.sizes || []);
+    const categories = ref([]);
+    const autoCodeRef = ref("");
+    const slugifyCode = (value) =>
+      `${value ?? ""}`
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-+/g, "-")
+        .slice(0, 20);
+
+    const syncAutoCode = () => {
+      const base = form.value.name?.trim() || "";
+      if (!base) return;
+      const generated = `ITM-${slugifyCode(base) || Date.now()}`;
+      if (!form.value.code || form.value.code === autoCodeRef.value) {
+        form.value.code = generated;
+        autoCodeRef.value = generated;
+      }
+    };
 
     const resetForm = () => {
       form.value = props.editData
@@ -172,16 +212,28 @@ export default {
               props.editData.sizeId ??
               props.editData.size ??
               null,
+            category_id:
+              props.editData.category_id ??
+              props.editData.categoryId ??
+              props.editData.category ??
+              null,
           }
         : defaultForm();
+      if (!isEdit.value && categories.value.length && !form.value.category_id) {
+        form.value.category_id = categories.value[0].id;
+      }
       errors.value = {};
+      if (!isEdit.value) syncAutoCode();
     };
 
     const validateForm = () => {
       const e = {};
       if (!form.value.name.trim()) e.name = "Nama item harus diisi";
+      if (!form.value.code.trim()) e.code = "Kode item harus diisi";
       if (!form.value.price || form.value.price <= 0)
         e.price = "Harga harus > 0";
+      if (!form.value.category_id)
+        e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       if (form.value.type === "RENTAL") {
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
@@ -213,7 +265,31 @@ export default {
       () => props.modelValue,
       (val) => val && resetForm(),
     );
-    onMounted(() => itemStore.fetchSizes().catch(() => {}));
+    watch(categories, (list) => {
+      if (!isEdit.value && list.length && !form.value.category_id) {
+        form.value.category_id = list[0].id;
+      }
+    });
+    watch(
+      () => form.value.name,
+      () => {
+        if (!isEdit.value) syncAutoCode();
+      },
+    );
+
+    const loadCategories = async () => {
+      try {
+        const data = await ipcRenderer.invoke("categories:getAll");
+        categories.value = data;
+      } catch (error) {
+        console.error("Gagal memuat kategori:", error);
+      }
+    };
+
+    onMounted(() => {
+      itemStore.fetchSizes().catch(() => {});
+      loadCategories();
+    });
 
     return {
       form,
@@ -224,6 +300,7 @@ export default {
       ITEM_TYPE,
       handleSubmit,
       sizeOptions,
+      categories,
     };
   },
 };

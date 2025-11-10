@@ -345,9 +345,20 @@ watch(profileMenuOpen, async (isOpen) => {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #f8fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   flex: 1 1 320px;
   min-width: 220px;
   max-width: 480px;
+}
+
+.topbar__search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  background: #ffffff;
+}
+
+.topbar__search:focus-within .search-icon {
+  color: var(--primary);
 }
 
 .topbar__search .search-icon {
@@ -368,6 +379,16 @@ watch(profileMenuOpen, async (isOpen) => {
   color: #0f172a;
   outline: none;
   padding: 6px 0;
+}
+
+.topbar__search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.topbar__search button:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .topbar__search button {

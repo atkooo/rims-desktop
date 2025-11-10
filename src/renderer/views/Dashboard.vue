@@ -34,7 +34,7 @@
     <div class="section">
       <div class="section-header">
         <h2>Transaksi Terbaru</h2>
-        <AppButton variant="primary" @click="$router.push('/transactions')">
+        <AppButton variant="primary" @click="navigateToTransactions">
           Lihat Semua
         </AppButton>
       </div>
@@ -50,7 +50,7 @@
     <div class="section">
       <div class="section-header">
         <h2>Item Populer</h2>
-        <AppButton variant="primary" @click="$router.push('/items')">
+        <AppButton variant="primary" @click="navigateToItems">
           Kelola Item
         </AppButton>
       </div>
@@ -66,6 +66,7 @@
 
 <script>
 import { onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useTransactionStore } from "@/store/transactions";
 import { useItemStore } from "@/store/items";
 import AppButton from "@/components/ui/AppButton.vue";
@@ -78,6 +79,7 @@ export default {
   setup() {
     const transactionStore = useTransactionStore();
     const itemStore = useItemStore();
+    const router = useRouter();
 
     // Load data
     onMounted(async () => {
@@ -102,6 +104,14 @@ export default {
         month: "short",
         year: "numeric",
       });
+    };
+
+    const navigateToTransactions = () => {
+      router.push({ name: "transactions-sales" });
+    };
+
+    const navigateToItems = () => {
+      router.push({ name: "items" });
     };
 
     return {
@@ -136,6 +146,8 @@ export default {
 
       // Methods
       formatCurrency,
+      navigateToTransactions,
+      navigateToItems,
     };
   },
 };

@@ -46,7 +46,10 @@ export const useItemStore = defineStore("items", {
     async addItem(itemData) {
       this.loading = true;
       try {
-        const newItem = await ipcRenderer.invoke("items:add", itemData);
+        const newItem = await ipcRenderer.invoke(
+          "items:add",
+          JSON.parse(JSON.stringify(itemData)),
+        );
         this.items.push(newItem);
         this.error = null;
       } catch (err) {
@@ -61,7 +64,11 @@ export const useItemStore = defineStore("items", {
     async updateItem(id, updates) {
       this.loading = true;
       try {
-        await ipcRenderer.invoke("items:update", id, updates);
+        await ipcRenderer.invoke(
+          "items:update",
+          id,
+          JSON.parse(JSON.stringify(updates)),
+        );
         const index = this.items.findIndex((item) => item.id === id);
         if (index !== -1) {
           this.items[index] = { ...this.items[index], ...updates };

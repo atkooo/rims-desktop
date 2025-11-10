@@ -16,6 +16,63 @@ function generateTransactionCode(type) {
   return `${prefix}${year}${month}${day}${random}`;
 }
 
+const toInteger = (value) => {
+  const num = Number.parseInt(value, 10);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const bundleItemSql = `
+  SELECT
+    bd.bundle_id,
+    bd.quantity,
+    bd.item_id,
+    COALESCE(i.sale_price, i.price, 0) AS sale_price,
+    b.name AS bundle_name
+  FROM bundle_details bd
+  JOIN bundles b ON bd.bundle_id = b.id AND b.bundle_type = 'sale'
+  JOIN items i ON bd.item_id = i.id
+  WHERE bd.bundle_id = ?
+`;
+
+async function fetchBundleItemDetails(bundleId) {
+  return database.query(bundleItemSql, [bundleId]);
+}
+
+async function expandBundleSelections(selections = []) {
+  const cache = new Map();
+  const result = [];
+
+  for (const selection of selections) {
+    const bundleId = toInteger(selection.bundleId);
+    if (!bundleId) {
+      throw new Error("Bundle tidak valid");
+    }
+    const bundleQuantity = Math.max(1, toInteger(selection.quantity));
+
+    if (!cache.has(bundleId)) {
+      const details = await fetchBundleItemDetails(bundleId);
+      if (!details.length) {
+        throw new Error(`Bundle ${bundleId} tidak memiliki item penjualan`);
+      }
+      cache.set(bundleId, details);
+    }
+
+    const details = cache.get(bundleId);
+    for (const detail of details) {
+      const detailQuantity = Math.max(1, toInteger(detail.quantity)) * bundleQuantity;
+      const salePrice = Number(detail.sale_price) || 0;
+      if (detailQuantity <= 0) continue;
+      result.push({
+        itemId: detail.item_id,
+        quantity: detailQuantity,
+        salePrice,
+        subtotal: salePrice * detailQuantity,
+      });
+    }
+  }
+  return result;
+}
+
 function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
@@ -73,8 +130,14 @@ function setupTransactionHandlers() {
       if (!validator.isPositiveNumber(transactionData.totalAmount)) {
         throw new Error("Total amount harus berupa angka positif");
       }
-      if (!transactionData.items || transactionData.items.length === 0) {
-        throw new Error("Transaksi harus memiliki minimal 1 item");
+      const saleItems = Array.isArray(transactionData.items)
+        ? transactionData.items
+        : [];
+      const hasBundles =
+        Array.isArray(transactionData.bundles) &&
+        transactionData.bundles.length > 0;
+      if (saleItems.length === 0 && !hasBundles) {
+        throw new Error("Transaksi harus memiliki minimal 1 item atau paket");
       }
 
       // Mulai transaction database
@@ -157,8 +220,16 @@ function setupTransactionHandlers() {
             ],
           );
 
-          // Insert sales transaction items
-          for (const item of transactionData.items) {
+          const bundleLines = hasBundles
+            ? await expandBundleSelections(transactionData.bundles)
+            : [];
+          const saleLines = [...saleItems, ...bundleLines];
+
+          for (const line of saleLines) {
+            const quantity = Math.max(1, Number(line.quantity) || 0);
+            const salePrice = Number(line.salePrice) || 0;
+            const lineSubtotal = Number(line.subtotal) || salePrice * quantity;
+
             await database.execute(
               `INSERT INTO sales_transaction_details (
                 sales_transaction_id, item_id, quantity,
@@ -166,17 +237,17 @@ function setupTransactionHandlers() {
               ) VALUES (?, ?, ?, ?, ?)`,
               [
                 result.id,
-                item.itemId,
-                item.quantity,
-                item.salePrice,
-                item.subtotal,
+                line.itemId,
+                quantity,
+                salePrice,
+                lineSubtotal,
               ],
             );
 
             // Update available quantity for the item
             await database.execute(
               "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
-              [item.quantity, item.itemId],
+              [quantity, line.itemId],
             );
           }
         }
