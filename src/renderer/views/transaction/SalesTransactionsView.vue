@@ -192,7 +192,7 @@ export default {
 
     const openCreateSale = () => {
       editingSale.value = null;
-      showForm.value = true;
+      router.push({ name: "transaction-sale-new" });
     };
 
     const handleEdit = (sale) => {

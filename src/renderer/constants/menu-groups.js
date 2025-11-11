@@ -7,11 +7,13 @@ export const menuGroups = [
         label: "Sewa & Pengembalian",
         icon: "key",
       },
+
       {
         to: "/transactions/sales",
         label: "Penjualan Toko",
         icon: "shopping-bag",
       },
+
       {
         to: "/transactions/bookings",
         label: "Booking Jadwal",

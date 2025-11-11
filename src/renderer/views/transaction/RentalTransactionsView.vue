@@ -273,8 +273,7 @@ export default {
     };
 
     const openCreateRental = () => {
-      editingRental.value = null;
-      showForm.value = true;
+      router.push({ name: "transaction-rental-new" });
     };
 
     const handleEdit = (rental) => {
