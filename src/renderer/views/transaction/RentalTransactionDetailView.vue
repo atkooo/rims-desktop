@@ -65,6 +65,10 @@
             <span>Metode</span>
             <strong>{{ rental.payment_method || "-" }}</strong>
           </div>
+          <div v-if="rental.cashier_session_code" class="detail-item">
+            <span>Sesi Kasir</span>
+            <strong>{{ rental.cashier_session_code }}</strong>
+          </div>
         </div>
       </div>
     </section>

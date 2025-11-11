@@ -17,6 +17,29 @@
       </div>
     </div>
 
+    <!-- Cashier Status Banner -->
+    <section v-if="cashierStatus" class="card-section">
+      <div :class="['cashier-status-banner', cashierStatus.status === 'open' ? 'open' : 'closed']">
+        <div class="cashier-status-content">
+          <div>
+            <strong>Sesi Kasir: {{ cashierStatus.status === 'open' ? 'Aktif' : 'Tidak Aktif' }}</strong>
+            <span v-if="cashierStatus.status === 'open'" class="cashier-info">
+              | Saldo Awal: {{ formatCurrency(cashierStatus.opening_balance) }} | 
+              Saldo Diharapkan: {{ formatCurrency(cashierStatus.expected_balance || 0) }}
+            </span>
+          </div>
+          <AppButton 
+            v-if="cashierStatus.status !== 'open'" 
+            variant="primary" 
+            size="small"
+            @click="$router.push('/transactions/cashier')"
+          >
+            Buka Kasir
+          </AppButton>
+        </div>
+      </div>
+    </section>
+
     <section class="card-section form-page-grid">
       <div class="form-panel">
         <div v-if="submissionError" class="error-banner">
@@ -195,8 +218,9 @@ import FormInput from "@/components/ui/FormInput.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import { fetchCustomers } from "@/services/masterData";
-import { getStoredUser } from "@/services/auth";
+import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
+import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 
 const paymentMethods = [
@@ -248,6 +272,7 @@ export default {
     const errors = ref({});
     const submissionError = ref("");
     const successMessage = ref("");
+    const cashierStatus = ref(null);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -376,6 +401,8 @@ export default {
         successMessage.value = "Penjualan berhasil disimpan. Formulir kembali kosong.";
         form.value = createDefaultForm();
         errors.value = {};
+        // Refresh cashier status after transaction
+        await loadCashierStatus();
       } catch (error) {
         console.error("Gagal menyimpan penjualan:", error);
         submissionError.value =
@@ -385,8 +412,26 @@ export default {
       }
     };
 
-    onMounted(() => {
+    const loadCashierStatus = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.id) {
+          const session = await getCurrentSession(user.id);
+          cashierStatus.value = session
+            ? { status: "open", ...session }
+            : { status: "closed" };
+        } else {
+          cashierStatus.value = { status: "closed" };
+        }
+      } catch (error) {
+        console.error("Error loading cashier status:", error);
+        cashierStatus.value = { status: "closed" };
+      }
+    };
+
+    onMounted(async () => {
       loadCustomers();
+      await loadCashierStatus();
     });
 
     return {
@@ -405,6 +450,7 @@ export default {
       totalItems,
       totalBundles,
       paymentStatusLabel,
+      cashierStatus,
       handleSubmit,
       resetForm,
       goBack,

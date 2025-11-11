@@ -46,38 +46,71 @@ function setupCashierHandlers() {
             );
 
       if (session) {
-        // Calculate expected balance from transactions
+        // Calculate expected balance from transactions linked to this cashier session
+        // First try using cashier_session_id (more accurate)
         const salesResult = await database.queryOne(
           `SELECT 
             COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
           FROM sales_transactions
-          WHERE user_id = ? 
-            AND sale_date >= date(?)
-            AND sale_date <= date('now', '+1 day')
+          WHERE cashier_session_id = ?
           `,
-          [userId, session.opening_date]
+          [session.id]
         );
 
         const rentalResult = await database.queryOne(
           `SELECT 
             COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
           FROM rental_transactions
-          WHERE user_id = ? 
-            AND rental_date >= date(?)
-            AND rental_date <= date('now', '+1 day')
+          WHERE cashier_session_id = ?
           `,
-          [userId, session.opening_date]
+          [session.id]
         );
 
-                const cashSales = Number(salesResult?.cash_sales || 0);
-                const cashRentals = Number(rentalResult?.cash_rentals || 0);
-                const expectedBalance = Number(session.opening_balance) + cashSales + cashRentals;
+        // If no transactions found with cashier_session_id, fallback to date-based calculation
+        const totalCashSales = Number(salesResult?.cash_sales || 0);
+        const totalCashRentals = Number(rentalResult?.cash_rentals || 0);
+        
+        // Fallback: if no transactions linked, use date-based calculation
+        if (totalCashSales === 0 && totalCashRentals === 0) {
+          const salesResultFallback = await database.queryOne(
+            `SELECT 
+              COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
+            FROM sales_transactions
+            WHERE user_id = ? 
+              AND sale_date >= date(?)
+              AND sale_date <= date('now', '+1 day')
+            `,
+            [userId, session.opening_date]
+          );
 
-                return {
-                    ...session,
-                    expected_balance: expectedBalance,
-                };
-            }
+          const rentalResultFallback = await database.queryOne(
+            `SELECT 
+              COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
+            FROM rental_transactions
+            WHERE user_id = ? 
+              AND rental_date >= date(?)
+              AND rental_date <= date('now', '+1 day')
+            `,
+            [userId, session.opening_date]
+          );
+
+          const cashSales = Number(salesResultFallback?.cash_sales || 0);
+          const cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
+          const expectedBalance = Number(session.opening_balance) + cashSales + cashRentals;
+
+          return {
+            ...session,
+            expected_balance: expectedBalance,
+          };
+        }
+
+        const expectedBalance = Number(session.opening_balance) + totalCashSales + totalCashRentals;
+
+        return {
+          ...session,
+          expected_balance: expectedBalance,
+        };
+      }
 
             return null;
         } catch (error) {
@@ -254,30 +287,53 @@ function setupCashierHandlers() {
                 throw new Error("Sesi kasir tidak ditemukan atau sudah ditutup");
             }
 
-            // Calculate expected balance
-            const salesResult = await database.queryOne(
-                `SELECT 
+      // Calculate expected balance using cashier_session_id (more accurate)
+      const salesResult = await database.queryOne(
+        `SELECT 
           COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
         FROM sales_transactions
-        WHERE user_id = ? 
-          AND sale_date >= date(?) 
-          AND sale_date <= date('now', '+1 day')`,
-                [session.user_id, session.opening_date]
-            );
+        WHERE cashier_session_id = ?`,
+        [session.id]
+      );
 
-            const rentalResult = await database.queryOne(
-                `SELECT 
+      const rentalResult = await database.queryOne(
+        `SELECT 
           COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
         FROM rental_transactions
-        WHERE user_id = ? 
-          AND rental_date >= date(?) 
-          AND rental_date <= date('now', '+1 day')`,
-                [session.user_id, session.opening_date]
-            );
+        WHERE cashier_session_id = ?`,
+        [session.id]
+      );
 
-            const cashSales = Number(salesResult?.cash_sales || 0);
-            const cashRentals = Number(rentalResult?.cash_rentals || 0);
-            const expectedBalance = Number(session.opening_balance) + cashSales + cashRentals;
+      // Fallback to date-based if no transactions linked
+      let cashSales = Number(salesResult?.cash_sales || 0);
+      let cashRentals = Number(rentalResult?.cash_rentals || 0);
+
+      if (cashSales === 0 && cashRentals === 0) {
+        const salesResultFallback = await database.queryOne(
+          `SELECT 
+            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
+          FROM sales_transactions
+          WHERE user_id = ? 
+            AND sale_date >= date(?) 
+            AND sale_date <= date('now', '+1 day')`,
+          [session.user_id, session.opening_date]
+        );
+
+        const rentalResultFallback = await database.queryOne(
+          `SELECT 
+            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
+          FROM rental_transactions
+          WHERE user_id = ? 
+            AND rental_date >= date(?) 
+            AND rental_date <= date('now', '+1 day')`,
+          [session.user_id, session.opening_date]
+        );
+
+        cashSales = Number(salesResultFallback?.cash_sales || 0);
+        cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
+      }
+
+      const expectedBalance = Number(session.opening_balance) + cashSales + cashRentals;
             const difference = Number(actualBalance) - expectedBalance;
 
             await database.execute("BEGIN TRANSACTION");

@@ -140,6 +140,36 @@ function setupTransactionHandlers() {
         throw new Error("Transaksi harus memiliki minimal 1 item atau paket");
       }
 
+      // Validasi cashier session untuk transaksi dengan pembayaran cash
+      let cashierSessionId = null;
+      if (
+        !transactionData.paymentMethod ||
+        transactionData.paymentMethod === "cash"
+      ) {
+        if (!transactionData.userId) {
+          throw new Error("User ID harus diisi untuk membuat transaksi");
+        }
+
+        // Check if cashier session exists
+        const cashierTableExists = await database.tableExists("cashier_sessions");
+        if (cashierTableExists) {
+          const activeSession = await database.queryOne(
+            `SELECT id FROM cashier_sessions 
+             WHERE user_id = ? AND status = 'open' 
+             ORDER BY opening_date DESC LIMIT 1`,
+            [transactionData.userId]
+          );
+
+          if (!activeSession) {
+            throw new Error(
+              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash."
+            );
+          }
+
+          cashierSessionId = activeSession.id;
+        }
+      }
+
       // Mulai transaction database
       await database.execute("BEGIN TRANSACTION");
 
@@ -154,8 +184,8 @@ function setupTransactionHandlers() {
               transaction_code, customer_id, user_id, rental_date, 
               planned_return_date, total_days, subtotal, deposit,
               total_amount, payment_method, payment_status, paid_amount,
-              status, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              status, notes, cashier_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -171,6 +201,7 @@ function setupTransactionHandlers() {
               transactionData.paidAmount || 0,
               "active",
               transactionData.notes,
+              cashierSessionId,
             ],
           );
 
@@ -202,8 +233,8 @@ function setupTransactionHandlers() {
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
               subtotal, discount, tax, total_amount, payment_method,
-              payment_status, paid_amount, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              payment_status, paid_amount, notes, cashier_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -217,6 +248,7 @@ function setupTransactionHandlers() {
               transactionData.paymentStatus || "paid",
               transactionData.paidAmount || transactionData.totalAmount,
               transactionData.notes,
+              cashierSessionId,
             ],
           );
 
@@ -660,6 +692,32 @@ function setupPaymentHandlers() {
       }
       if (!paymentData.transactionType || !paymentData.transactionId) {
         throw new Error("Transaksi referensi harus diisi");
+      }
+
+      // Validasi cashier session untuk pembayaran cash
+      if (
+        !paymentData.paymentMethod ||
+        paymentData.paymentMethod === "cash"
+      ) {
+        if (!paymentData.userId) {
+          throw new Error("User ID harus diisi untuk membuat pembayaran");
+        }
+
+        const cashierTableExists = await database.tableExists("cashier_sessions");
+        if (cashierTableExists) {
+          const activeSession = await database.queryOne(
+            `SELECT id FROM cashier_sessions 
+             WHERE user_id = ? AND status = 'open' 
+             ORDER BY opening_date DESC LIMIT 1`,
+            [paymentData.userId]
+          );
+
+          if (!activeSession) {
+            throw new Error(
+              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat pembayaran cash."
+            );
+          }
+        }
       }
 
       const result = await database.execute(

@@ -33,10 +33,13 @@ function setupTransactionViewHandlers() {
         rt.paid_amount,
         rt.payment_status,
         rt.status,
-        rt.notes
+        rt.notes,
+        rt.cashier_session_id,
+        cs.session_code AS cashier_session_code
       FROM rental_transactions rt
       LEFT JOIN customers c ON rt.customer_id = c.id
       LEFT JOIN users u ON rt.user_id = u.id
+      LEFT JOIN cashier_sessions cs ON rt.cashier_session_id = cs.id
       ORDER BY rt.rental_date DESC
     `,
     "rental transactions",
@@ -77,10 +80,13 @@ function setupTransactionViewHandlers() {
         st.paid_amount,
         st.payment_status,
         st.payment_method,
-        st.notes
+        st.notes,
+        st.cashier_session_id,
+        cs.session_code AS cashier_session_code
       FROM sales_transactions st
       LEFT JOIN customers c ON st.customer_id = c.id
       LEFT JOIN users u ON st.user_id = u.id
+      LEFT JOIN cashier_sessions cs ON st.cashier_session_id = cs.id
       ORDER BY st.sale_date DESC
     `,
     "sales transactions",

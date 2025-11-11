@@ -58,6 +58,10 @@
             <span>Dibayar</span>
             <strong>{{ formatCurrency(sale.paid_amount) }}</strong>
           </div>
+          <div v-if="sale.cashier_session_code" class="detail-item">
+            <span>Sesi Kasir</span>
+            <strong>{{ sale.cashier_session_code }}</strong>
+          </div>
         </div>
       </div>
     </section>

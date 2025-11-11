@@ -10,6 +10,38 @@
       </div>
     </div>
 
+    <!-- Cashier Status Card -->
+    <section v-if="cashierStatus" class="card-section" style="margin-bottom: 1.5rem;">
+      <div :class="['cashier-status-banner', cashierStatus.status === 'open' ? 'open' : 'closed']">
+        <div class="cashier-status-content">
+          <div>
+            <strong>Sesi Kasir: {{ cashierStatus.status === 'open' ? 'Aktif' : 'Tidak Aktif' }}</strong>
+            <span v-if="cashierStatus.status === 'open'" class="cashier-info">
+              | Kode: {{ cashierStatus.session_code }} | 
+              Saldo Awal: {{ formatCurrency(cashierStatus.opening_balance) }} | 
+              Saldo Diharapkan: {{ formatCurrency(cashierStatus.expected_balance || 0) }}
+            </span>
+          </div>
+          <AppButton 
+            v-if="cashierStatus.status !== 'open'" 
+            variant="primary" 
+            size="small"
+            @click="$router.push('/transactions/cashier')"
+          >
+            Buka Kasir
+          </AppButton>
+          <AppButton 
+            v-else
+            variant="secondary" 
+            size="small"
+            @click="$router.push('/transactions/cashier')"
+          >
+            Kelola Kasir
+          </AppButton>
+        </div>
+      </div>
+    </section>
+
     <!-- Summary Cards -->
     <div class="summary-cards">
       <div class="card">
@@ -65,10 +97,12 @@
 </template>
 
 <script>
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useTransactionStore } from "@/store/transactions";
 import { useItemStore } from "@/store/items";
+import { getCurrentUser } from "@/services/auth";
+import { getCurrentSession } from "@/services/cashier";
 import AppButton from "@/components/ui/AppButton.vue";
 import DataTable from "@/components/ui/DataTable.vue";
 
@@ -80,12 +114,32 @@ export default {
     const transactionStore = useTransactionStore();
     const itemStore = useItemStore();
     const router = useRouter();
+    const cashierStatus = ref(null);
+
+    // Load cashier status
+    const loadCashierStatus = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.id) {
+          const session = await getCurrentSession(user.id);
+          cashierStatus.value = session
+            ? { status: "open", ...session }
+            : { status: "closed" };
+        } else {
+          cashierStatus.value = { status: "closed" };
+        }
+      } catch (error) {
+        console.error("Error loading cashier status:", error);
+        cashierStatus.value = { status: "closed" };
+      }
+    };
 
     // Load data
     onMounted(async () => {
       await Promise.all([
         transactionStore.fetchTransactions(),
         itemStore.fetchItems(),
+        loadCashierStatus(),
       ]);
     });
 
@@ -148,6 +202,7 @@ export default {
       formatCurrency,
       navigateToTransactions,
       navigateToItems,
+      cashierStatus,
     };
   },
 };
