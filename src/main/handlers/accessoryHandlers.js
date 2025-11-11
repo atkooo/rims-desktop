@@ -25,13 +25,11 @@ function sanitizeAvailable(stock, available) {
 function setupAccessoryHandlers() {
   ipcMain.handle("accessories:create", async (_event, payload = {}) => {
     try {
-      const code = (payload.code ?? "").toString().trim();
+      // Auto-generate code if empty
+      const { normalizeCode } = require("../helpers/codeUtils");
+      const code = normalizeCode(payload.code, payload.name, "ACC");
       const name = (payload.name ?? "").toString().trim();
       const description = (payload.description ?? "").toString().trim();
-
-      if (!validator.isNotEmpty(code)) {
-        throw new Error("Kode aksesoris wajib diisi");
-      }
 
       if (!validator.isNotEmpty(name)) {
         throw new Error("Nama aksesoris wajib diisi");
@@ -121,10 +119,9 @@ function setupAccessoryHandlers() {
       const updates = {};
 
       if (payload.code !== undefined) {
-        const code = (payload.code ?? "").toString().trim();
-        if (!validator.isNotEmpty(code)) {
-          throw new Error("Kode aksesoris wajib diisi");
-        }
+        // Auto-generate code if empty
+        const { normalizeCode } = require("../helpers/codeUtils");
+        const code = normalizeCode(payload.code, payload.name || "", "ACC");
         updates.code = code;
       }
 

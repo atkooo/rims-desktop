@@ -67,12 +67,6 @@
             </div>
           </div>
 
-          <FormInput
-            id="code"
-            label="Kode Item"
-            v-model="form.code"
-            :error="errors.code"
-          />
         </div>
 
         <div class="form-group grid-span-2">
@@ -256,7 +250,7 @@ export default {
     const validateForm = () => {
       const e = {};
       if (!form.value.name.trim()) e.name = "Nama item harus diisi";
-      if (!form.value.code.trim()) e.code = "Kode item harus diisi";
+      // Kode akan di-generate otomatis, tidak perlu validasi
       if (!form.value.price || form.value.price <= 0)
         e.price = "Harga harus > 0";
       if (!form.value.category_id)

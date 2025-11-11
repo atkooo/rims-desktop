@@ -9,14 +9,6 @@
     <form class="customer-form" @submit.prevent="handleSubmit">
       <div class="form-grid">
         <FormInput
-          id="customerCode"
-          label="Kode Pelanggan"
-          v-model="form.code"
-          :error="errors.code"
-          maxlength="50"
-          :hint="!isEdit ? 'Kosongkan untuk generate otomatis' : ''"
-        />
-        <FormInput
           id="customerName"
           label="Nama Lengkap"
           v-model="form.name"

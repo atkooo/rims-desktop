@@ -44,8 +44,12 @@ async function buildPayload(raw) {
     }
   }
 
+  // Auto-generate code if empty
+  const { normalizeCode } = require("../helpers/codeUtils");
+  const code = normalizeCode(raw.code, raw.name, "BND");
+
   return {
-    code: (raw.code ?? "").toString().trim(),
+    code: code,
     name: (raw.name ?? "").toString().trim(),
     description: (raw.description ?? "").toString().trim(),
     bundle_type: sanitizeBundleType(raw.bundle_type),
@@ -59,9 +63,7 @@ async function buildPayload(raw) {
 }
 
 function validatePayload(payload) {
-  if (!validator.isNotEmpty(payload.code)) {
-    throw new Error("Kode paket wajib diisi");
-  }
+  // Kode akan di-generate otomatis, tidak perlu validasi
   if (!validator.isNotEmpty(payload.name)) {
     throw new Error("Nama paket wajib diisi");
   }

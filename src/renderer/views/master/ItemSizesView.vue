@@ -41,10 +41,6 @@
     ">
       <form class="form" @submit.prevent="saveSize">
         <div class="form-group">
-          <label>Kode</label>
-          <input v-model="form.code" type="text" placeholder="Contoh: SIZE-M" />
-        </div>
-        <div class="form-group">
           <label>Nama Ukuran</label>
           <input v-model="form.name" type="text" required placeholder="Misal: Medium" />
         </div>

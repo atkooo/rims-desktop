@@ -9,13 +9,6 @@
     <form class="bundle-form" @submit.prevent="handleSubmit">
       <div class="form-grid">
         <FormInput
-          id="code"
-          label="Kode Paket"
-          v-model="form.code"
-          :error="errors.code"
-          required
-        />
-        <FormInput
           id="name"
           label="Nama Paket"
           v-model="form.name"
@@ -174,9 +167,7 @@ export default {
 
     const validate = () => {
       const validationErrors = {};
-      if (!form.value.code || !form.value.code.trim()) {
-        validationErrors.code = "Kode wajib diisi";
-      }
+      // Kode akan di-generate otomatis, tidak perlu validasi
       if (!form.value.name || !form.value.name.trim()) {
         validationErrors.name = "Nama wajib diisi";
       }
