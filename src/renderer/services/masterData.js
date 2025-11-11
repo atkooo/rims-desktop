@@ -16,6 +16,14 @@ export function deleteAccessory(id) {
   return ipcRenderer.invoke("accessories:delete", id);
 }
 
+export function fetchAccessoryById(id) {
+  return ipcRenderer.invoke("accessories:getById", id);
+}
+
+export function fetchAccessoryByCode(code) {
+  return ipcRenderer.invoke("accessories:getByCode", code);
+}
+
 export function fetchBundles() {
   return ipcRenderer.invoke("master:getBundles");
 }
@@ -34,6 +42,10 @@ export function deleteBundle(id) {
 
 export function fetchBundleDetails() {
   return ipcRenderer.invoke("master:getBundleDetails");
+}
+
+export function fetchBundleById(id) {
+  return ipcRenderer.invoke("bundles:getById", id);
 }
 
 export function fetchBundleDetailsByBundle(bundleId) {
@@ -86,4 +98,8 @@ export function fetchUsers() {
 
 export function fetchItemSizes() {
   return ipcRenderer.invoke("itemSizes:getAll");
+}
+
+export function fetchItemById(id) {
+  return ipcRenderer.invoke("items:getById", id);
 }

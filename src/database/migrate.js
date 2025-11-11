@@ -1,40 +1,19 @@
-const fs = require("fs");
 const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
-const dbConfig = require("../main/config/database");
+const {
+  createDatabaseConnection,
+  promisifyDb,
+  collectSqlFiles,
+  parseSqlStatements,
+} = require("./utils/db-utils");
 
 // Setup database connection using shared config
-const dataDir = path.dirname(dbConfig.path);
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-const db = new sqlite3.Database(dbConfig.path);
+const db = createDatabaseConnection();
+const dbPromisified = promisifyDb(db);
 
-// Promisify database operations
-function runAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
-}
-
-function allAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
-
-function getAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
+// Alias for backward compatibility
+const runAsync = dbPromisified.runAsync.bind(dbPromisified);
+const allAsync = dbPromisified.allAsync.bind(dbPromisified);
+const getAsync = dbPromisified.getAsync.bind(dbPromisified);
 
 async function ensureMigrationsTable() {
   try {
@@ -73,21 +52,7 @@ async function getCurrentBatch() {
   }
 }
 
-function collectSqlFiles(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files = [];
-
-  for (const entry of entries) {
-    const entryPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectSqlFiles(entryPath));
-    } else if (entry.isFile() && entry.name.endsWith(".sql")) {
-      files.push(entryPath);
-    }
-  }
-
-  return files;
-}
+// collectSqlFiles is now imported from utils/db-utils
 
 async function runMigrations() {
   const migrationsPath = path.join(__dirname, "migrations");
@@ -124,13 +89,10 @@ async function runMigrations() {
 
     for (const file of pendingFiles) {
       console.log(`Running migration: ${file.displayName}`);
-      const migration = fs.readFileSync(file.fullPath, "utf8");
+      const migration = require("fs").readFileSync(file.fullPath, "utf8");
 
-      // Split the migration file into individual statements
-      const statements = migration
-        .split(";")
-        .map((statement) => statement.trim())
-        .filter((statement) => statement.length > 0);
+      // Parse SQL file into individual statements
+      const statements = parseSqlStatements(migration);
 
       // Execute each statement
       for (const statement of statements) {

@@ -246,6 +246,28 @@ function setupBundleHandlers() {
     }
   });
 
+  ipcMain.handle("bundles:getById", async (_event, id) => {
+    try {
+      if (!id) {
+        throw new Error("ID paket tidak ditemukan");
+      }
+
+      const bundle = await database.queryOne(
+        "SELECT * FROM bundles WHERE id = ?",
+        [id],
+      );
+
+      if (!bundle) {
+        throw new Error("Paket tidak ditemukan");
+      }
+
+      return bundle;
+    } catch (error) {
+      logger.error(`Error getting bundle ${id}:`, error);
+      throw error;
+    }
+  });
+
   ipcMain.handle("bundleDetails:getByBundle", async (_event, bundleId) => {
     try {
       if (!bundleId) throw new Error("Bundle tidak valid");

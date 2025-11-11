@@ -71,6 +71,19 @@
         @edit="handleEdit"
         @delete="handleDelete"
       >
+        <template #actions="{ item }">
+          <div class="action-buttons">
+            <AppButton variant="primary" @click="handleViewDetail(item)">
+              Detail
+            </AppButton>
+            <AppButton variant="secondary" @click="handleEdit(item)">
+              Edit
+            </AppButton>
+            <AppButton variant="danger" @click="handleDelete(item)">
+              Hapus
+            </AppButton>
+          </div>
+        </template>
         <template #status="{ value }">
           <span class="status-badge" :class="value.toLowerCase()">
             {{ value }}
@@ -102,6 +115,7 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppButton from "@/components/ui/AppButton.vue";
@@ -122,6 +136,7 @@ export default {
   },
 
   setup() {
+    const router = useRouter();
     const itemStore = useItemStore();
     const loading = ref(false);
     const showForm = ref(false);
@@ -202,6 +217,10 @@ export default {
     );
 
     // Methods
+    const handleViewDetail = (item) => {
+      router.push(`/master/items/${item.id}`);
+    };
+
     const handleEdit = (item) => {
       editingItem.value = item;
       showForm.value = true;
@@ -256,6 +275,7 @@ export default {
       totalValue,
       ITEM_TYPE,
       formatCurrency,
+      handleViewDetail,
       handleEdit,
       handleDelete,
       confirmDelete,
@@ -339,5 +359,11 @@ export default {
 .status-badge.maintenance {
   background-color: #fef3c7;
   color: #92400e;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 </style>

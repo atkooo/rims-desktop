@@ -62,14 +62,14 @@
         </template>
         <template #actions="{ row }">
           <div class="action-buttons">
+            <AppButton variant="primary" @click="handleViewDetail(row)">
+              Detail
+            </AppButton>
             <AppButton variant="secondary" @click="handleEdit(row)">
               Edit
             </AppButton>
             <AppButton variant="danger" @click="promptDelete(row)">
               Hapus
-            </AppButton>
-            <AppButton variant="secondary" @click="openBundleDetail(row)">
-              Detail
             </AppButton>
           </div>
         </template>
@@ -183,6 +183,7 @@
 
 <script>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
@@ -204,6 +205,7 @@ export default {
     BundleDetailEditor,
   },
   setup() {
+    const router = useRouter();
     const bundles = ref([]);
     const bundleDetails = ref([]);
     const loading = ref(false);
@@ -297,6 +299,10 @@ export default {
         (detail) => detail.bundle_name === selectedBundle.value.name,
       );
     });
+
+    const handleViewDetail = (bundle) => {
+      router.push(`/master/bundles/${bundle.id}`);
+    };
 
     const openBundleDetail = async (bundle) => {
       selectedBundle.value = bundle;
@@ -399,6 +405,7 @@ export default {
       filteredDetails,
       detailsLoading,
       detailError,
+      handleViewDetail,
       openBundleDetail,
       loadBundleDetails,
       formatCurrency,

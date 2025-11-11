@@ -89,6 +89,39 @@ function setupItemHandlers() {
     }
   });
 
+  // Get item by ID
+  ipcMain.handle("items:getById", async (event, id) => {
+    try {
+      if (!id) {
+        throw new Error("ID item tidak ditemukan");
+      }
+
+      const item = await database.queryOne(
+        `
+        SELECT
+          i.*,
+          s.name AS size_name,
+          s.code AS size_code,
+          c.name AS category_name
+        FROM items i
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE i.id = ?
+      `,
+        [id],
+      );
+
+      if (!item) {
+        throw new Error("Item tidak ditemukan");
+      }
+
+      return item;
+    } catch (error) {
+      logger.error(`Error getting item ${id}:`, error);
+      throw error;
+    }
+  });
+
   // Update item
   ipcMain.handle("items:update", async (event, id, updates) => {
     try {

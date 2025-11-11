@@ -3,10 +3,13 @@ import Dashboard from "./views/Dashboard.vue";
 import Login from "./views/Login.vue";
 import Categories from "./views/master/Categories.vue";
 import AccessoriesView from "./views/master/AccessoriesView.vue";
+import AccessoryDetailView from "./views/master/AccessoryDetailView.vue";
 import ItemsPage from "./views/master/ItemsPage.vue";
 import ItemSizesView from "./views/master/ItemSizesView.vue";
 import BundlesView from "./views/master/BundlesView.vue";
 import BundlesDetailView from "./views/master/BundlesDetailView.vue";
+import BundleDetailPageView from "./views/master/BundleDetailPageView.vue";
+import ItemDetailView from "./views/master/ItemDetailView.vue";
 import CustomersView from "./views/master/CustomersView.vue";
 import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
@@ -39,6 +42,11 @@ const routes = [
     name: "accessories",
     component: AccessoriesView,
   },
+  {
+    path: "/master/accessories/:id",
+    name: "accessory-detail",
+    component: AccessoryDetailView,
+  },
   { path: "/master/items", name: "items", component: ItemsPage },
   {
     path: "/master/item-sizes",
@@ -47,9 +55,20 @@ const routes = [
   },
   { path: "/master/bundles", name: "bundles", component: BundlesView },
   {
+    path: "/master/bundles/:id",
+    name: "bundle-detail",
+    component: BundleDetailPageView,
+  },
+  {
     path: "/master/bundle-details",
     name: "bundle-details",
     component: BundlesDetailView,
+  },
+  { path: "/master/items", name: "items", component: ItemsPage },
+  {
+    path: "/master/items/:id",
+    name: "item-detail",
+    component: ItemDetailView,
   },
   { path: "/master/customers", name: "customers", component: CustomersView },
   { path: "/master/roles", name: "roles", component: RolesView },

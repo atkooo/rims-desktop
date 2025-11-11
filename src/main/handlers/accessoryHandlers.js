@@ -240,6 +240,50 @@ function setupAccessoryHandlers() {
       throw error;
     }
   });
+
+  ipcMain.handle("accessories:getById", async (_event, id) => {
+    try {
+      if (!id) {
+        throw new Error("ID aksesoris tidak ditemukan");
+      }
+
+      const accessory = await database.queryOne(
+        "SELECT * FROM accessories WHERE id = ?",
+        [id],
+      );
+
+      if (!accessory) {
+        throw new Error("Aksesoris tidak ditemukan");
+      }
+
+      return accessory;
+    } catch (error) {
+      logger.error(`Error getting accessory ${id}:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("accessories:getByCode", async (_event, code) => {
+    try {
+      if (!code) {
+        throw new Error("Kode aksesoris tidak ditemukan");
+      }
+
+      const accessory = await database.queryOne(
+        "SELECT * FROM accessories WHERE code = ?",
+        [code],
+      );
+
+      if (!accessory) {
+        throw new Error("Aksesoris tidak ditemukan");
+      }
+
+      return accessory;
+    } catch (error) {
+      logger.error(`Error getting accessory by code ${code}:`, error);
+      throw error;
+    }
+  });
 }
 
 module.exports = setupAccessoryHandlers;

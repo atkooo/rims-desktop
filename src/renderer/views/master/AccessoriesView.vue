@@ -50,23 +50,11 @@
         :searchable-keys="['code', 'name', 'description']"
         row-key="id"
       >
-        <template #cell-rental_price_per_day="{ row }">
-          {{ formatCurrency(row.rental_price_per_day) }}
-        </template>
-        <template #cell-sale_price="{ row }">
-          {{ formatCurrency(row.sale_price) }}
-        </template>
-        <template #cell-is_available_for_rent="{ row }">
-          {{ row.is_available_for_rent ? "Ya" : "Tidak" }}
-        </template>
-        <template #cell-is_available_for_sale="{ row }">
-          {{ row.is_available_for_sale ? "Ya" : "Tidak" }}
-        </template>
-        <template #cell-is_active="{ row }">
-          {{ row.is_active ? "Aktif" : "Nonaktif" }}
-        </template>
         <template #actions="{ row }">
           <div class="action-buttons">
+            <AppButton variant="primary" @click="handleViewDetail(row)">
+              Detail
+            </AppButton>
             <AppButton variant="secondary" @click="handleEdit(row)">
               Edit
             </AppButton>
@@ -103,6 +91,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
@@ -113,6 +102,7 @@ export default {
   name: "AccessoriesView",
   components: { AppButton, AppDialog, AppTable, AccessoryForm },
   setup() {
+    const router = useRouter();
     const accessories = ref([]);
     const loading = ref(false);
     const error = ref("");
@@ -144,17 +134,6 @@ export default {
       },
       { key: "stock_quantity", label: "Total Stok" },
       { key: "available_quantity", label: "Tersedia" },
-      { key: "min_stock_alert", label: "Min Alert" },
-      {
-        key: "is_available_for_rent",
-        label: "Bisa Disewa",
-        format: (value) => (value ? "Ya" : "Tidak"),
-      },
-      {
-        key: "is_available_for_sale",
-        label: "Bisa Dijual",
-        format: (value) => (value ? "Ya" : "Tidak"),
-      },
       {
         key: "is_active",
         label: "Status",
@@ -201,6 +180,10 @@ export default {
     const openCreate = () => {
       editingAccessory.value = null;
       showForm.value = true;
+    };
+
+    const handleViewDetail = (item) => {
+      router.push(`/master/accessories/${item.id}`);
     };
 
     const handleEdit = (item) => {
@@ -251,6 +234,7 @@ export default {
       deleteLoading,
       accessoryToDelete,
       openCreate,
+      handleViewDetail,
       handleEdit,
       handleFormSaved,
       promptDelete,
