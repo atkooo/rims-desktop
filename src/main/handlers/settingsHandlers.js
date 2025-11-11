@@ -34,9 +34,32 @@ function setupSettingsHandlers() {
   });
 
   // Save settings
-  ipcMain.handle("settings:save", async (event, settings) => {
+  ipcMain.handle("settings:save", async (event, newSettings) => {
     try {
-      await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+      // Read existing settings first
+      let existingSettings = {};
+      try {
+        const data = await fs.readFile(SETTINGS_FILE, "utf8");
+        existingSettings = JSON.parse(data);
+      } catch (error) {
+        // If file doesn't exist or can't be read, start with empty object
+        if (error.code !== "ENOENT") {
+          logger.warn("Could not read existing settings, starting fresh");
+        }
+      }
+
+      // Merge new settings with existing settings
+      const mergedSettings = { ...existingSettings, ...newSettings };
+      
+      // If receiptSettings is being updated, merge it properly
+      if (newSettings.receiptSettings && existingSettings.receiptSettings) {
+        mergedSettings.receiptSettings = {
+          ...existingSettings.receiptSettings,
+          ...newSettings.receiptSettings,
+        };
+      }
+
+      await fs.writeFile(SETTINGS_FILE, JSON.stringify(mergedSettings, null, 2));
       logger.info("Settings saved successfully");
       return true;
     } catch (error) {

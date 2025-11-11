@@ -10,7 +10,7 @@
   >
     <div class="printer-select-dialog">
       <p class="dialog-description">
-        Pilih printer yang akan digunakan untuk mencetak invoice.
+        Pilih printer yang akan digunakan untuk mencetak struk.
       </p>
       
       <div class="printer-list" v-if="!loading && printers.length > 0">

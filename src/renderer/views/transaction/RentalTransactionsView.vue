@@ -101,9 +101,6 @@
             <AppButton variant="primary" @click="handleEdit(item)">
               Edit
             </AppButton>
-            <AppButton variant="danger" @click="handleDelete(item)">
-              Hapus
-            </AppButton>
           </div>
         </template>
       </DataTable>
@@ -307,20 +304,6 @@ export default {
       await loadData();
     };
 
-    const handleDelete = async (rental) => {
-      const confirmed = window.confirm(
-        `Hapus transaksi ${rental.transaction_code}? Tindakan ini tidak dapat dibatalkan.`,
-      );
-      if (!confirmed) return;
-
-      try {
-        await transactionStore.deleteTransaction(rental.id);
-        await loadData();
-      } catch (error) {
-        console.error("Gagal menghapus transaksi:", error);
-      }
-    };
-
     onMounted(() => {
       loadData();
     });
@@ -352,7 +335,6 @@ export default {
       openCreateRental,
       handleEdit,
       handleSaved,
-      handleDelete,
       TRANSACTION_TYPE,
       handleRefresh,
       goToRentalDetail,

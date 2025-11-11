@@ -16,6 +16,7 @@ import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
 import ReportsPage from "./views/reports/ReportsPage.vue";
 import SettingsPage from "./views/settings/SettingsPage.vue";
+import ReceiptSettingsPage from "./views/settings/ReceiptSettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
 import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
@@ -160,6 +161,11 @@ const routes = [
     path: "/settings/system",
     name: "settings-system",
     component: SettingsPage,
+  },
+  {
+    path: "/settings/receipt",
+    name: "settings-receipt",
+    component: ReceiptSettingsPage,
   },
   {
     path: "/settings/backup-history",

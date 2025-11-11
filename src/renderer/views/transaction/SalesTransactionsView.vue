@@ -77,9 +77,6 @@
             <AppButton variant="primary" @click="handleEdit(item)">
               Edit
             </AppButton>
-            <AppButton variant="danger" @click="handleDelete(item)">
-              Hapus
-            </AppButton>
           </div>
         </template>
       </DataTable>
@@ -226,20 +223,6 @@ export default {
       await loadData();
     };
 
-    const handleDelete = async (sale) => {
-      const confirmed = window.confirm(
-        `Hapus transaksi ${sale.transaction_code}? Tindakan ini tidak dapat dibatalkan.`,
-      );
-      if (!confirmed) return;
-
-      try {
-        await transactionStore.deleteTransaction(sale.id);
-        await loadData();
-      } catch (error) {
-        console.error("Gagal menghapus transaksi:", error);
-      }
-    };
-
     onMounted(() => {
       loadData();
       detachSearchListener = eventBus.on("global-search", handleSearch);
@@ -271,7 +254,6 @@ export default {
       openCreateSale,
       handleEdit,
       handleSaved,
-      handleDelete,
       TRANSACTION_TYPE,
     };
   },

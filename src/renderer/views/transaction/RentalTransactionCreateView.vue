@@ -182,7 +182,7 @@
           <ul>
             <li>Pastikan item tersedia sebelum menyimpan transaksi.</li>
             <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
-            <li>Catatan akan tampil di invoice dan riwayat customer.</li>
+            <li>Catatan akan tampil di struk dan riwayat customer.</li>
           </ul>
           <AppButton variant="success" @click="goBack">Lihat Daftar Transaksi</AppButton>
         </div>

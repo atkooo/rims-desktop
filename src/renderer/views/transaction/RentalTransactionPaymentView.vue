@@ -216,8 +216,8 @@
           <h3>Pembayaran Lunas</h3>
           <p>Transaksi ini telah dibayar lunas.</p>
           <div class="action-buttons">
-            <AppButton variant="primary" @click="showPrinterDialog = true">
-              <i class="fas fa-print"></i> Cetak Invoice
+            <AppButton variant="primary" @click="showReceiptPreview = true">
+              <i class="fas fa-eye"></i> Preview Struk
             </AppButton>
             <AppButton variant="secondary" @click="goBack">
               Kembali ke Daftar
@@ -227,10 +227,12 @@
       </section>
     </div>
 
-    <!-- Printer Selection Dialog -->
-    <PrinterSelectDialog
-      v-model="showPrinterDialog"
-      @print="handlePrintInvoice"
+    <!-- Receipt Preview Dialog -->
+    <ReceiptPreviewDialog
+      v-model="showReceiptPreview"
+      :transaction-id="transaction?.id"
+      transaction-type="rental"
+      @printed="handleReceiptPrinted"
     />
   </div>
 </template>
@@ -240,17 +242,16 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import PrinterSelectDialog from "@/components/ui/PrinterSelectDialog.vue";
+import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
 import { fetchRentalTransactions, fetchRentalDetails, createPayment, fetchPayments } from "@/services/transactions";
 import { getStoredUser } from "@/services/auth";
-import { ipcRenderer } from "@/services/ipc";
 
 export default {
   name: "RentalTransactionPaymentView",
   components: {
     AppButton,
     FormInput,
-    PrinterSelectDialog,
+    ReceiptPreviewDialog,
   },
   setup() {
     const route = useRoute();
@@ -263,7 +264,7 @@ export default {
     const error = ref("");
     const paymentLoading = ref(false);
     const errors = ref({});
-    const showPrinterDialog = ref(false);
+    const showReceiptPreview = ref(false);
 
     const paymentForm = ref({
       amount: 0,
@@ -400,12 +401,12 @@ export default {
           notes: "",
         };
 
-        // If payment is complete, show success and offer to print invoice
+        // If payment is complete, show success and offer to print receipt
         if (remainingAmount.value === 0) {
           // Wait a bit then offer to print
           setTimeout(() => {
-            if (confirm("Pembayaran berhasil! Apakah Anda ingin mencetak invoice?")) {
-              showPrinterDialog.value = true;
+            if (confirm("Pembayaran berhasil! Apakah Anda ingin mencetak struk?")) {
+              showReceiptPreview.value = true;
             }
           }, 500);
         }
@@ -417,23 +418,10 @@ export default {
       }
     };
 
-    const handlePrintInvoice = async (printer) => {
-      try {
-        // Print invoice to selected printer
-        const result = await ipcRenderer.invoke("invoice:print", {
-          transactionId: transaction.value.id,
-          transactionType: "rental",
-          printerName: printer.name,
-          silent: false, // Show print dialog
-        });
-        
-        if (result.success) {
-          // Show success message
-          alert(`Invoice sedang dicetak ke ${printer.displayName || printer.name}`);
-        }
-      } catch (err) {
-        console.error("Error printing invoice:", err);
-        alert("Gagal mencetak invoice: " + (err.message || "Unknown error"));
+    const handleReceiptPrinted = (result) => {
+      if (result && result.success) {
+        // Receipt printed successfully
+        console.log("Receipt printed:", result);
       }
     };
 
@@ -462,8 +450,8 @@ export default {
       paymentHistory,
       fillFullAmount,
       handlePayment,
-      handlePrintInvoice,
-      showPrinterDialog,
+      handleReceiptPrinted,
+      showReceiptPreview,
       goBack,
     };
   },

@@ -1,39 +1,68 @@
 <template>
-  <div class="data-page admin-page">
+  <div class="data-page backup-history-page admin-page">
     <div class="page-header">
       <div>
+        <p class="eyebrow">Pengaturan</p>
         <h1>Riwayat Backup</h1>
-        <p class="subtitle">Daftar backup database yang pernah dibuat.</p>
+        <p class="subtitle">
+          Daftar backup database yang pernah dibuat. Lakukan backup secara rutin untuk menjaga keamanan data.
+        </p>
       </div>
-      <AppButton variant="secondary" :loading="loading" @click="loadHistory">
-        Refresh Data
-      </AppButton>
+      <div class="header-actions">
+        <AppButton variant="secondary" :loading="loading" @click="loadHistory">
+          <i class="fas fa-sync-alt"></i> Refresh Data
+        </AppButton>
+        <AppButton variant="primary" @click="$router.push('/settings/system')">
+          <i class="fas fa-arrow-left"></i> Kembali
+        </AppButton>
+      </div>
     </div>
 
-    <section class="card-section">
+    <section class="card-section stats-section">
       <div class="summary-grid">
         <div class="summary-card">
-          <span>Total Backup</span>
-          <strong>{{ history.length }}</strong>
+          <div class="summary-icon">
+            <i class="fas fa-file-archive"></i>
+          </div>
+          <div class="summary-content">
+            <span>Total Backup</span>
+            <strong>{{ history.length }}</strong>
+          </div>
         </div>
         <div class="summary-card">
-          <span>Backup Otomatis</span>
-          <strong>{{ stats.autoCount }}</strong>
+          <div class="summary-icon automatic">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="summary-content">
+            <span>Backup Otomatis</span>
+            <strong>{{ stats.autoCount }}</strong>
+          </div>
         </div>
         <div class="summary-card">
-          <span>Backup Manual</span>
-          <strong>{{ stats.manualCount }}</strong>
+          <div class="summary-icon manual">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="summary-content">
+            <span>Backup Manual</span>
+            <strong>{{ stats.manualCount }}</strong>
+          </div>
         </div>
         <div class="summary-card">
-          <span>Total Ukuran</span>
-          <strong>{{ stats.totalSize }}</strong>
+          <div class="summary-icon size">
+            <i class="fas fa-hdd"></i>
+          </div>
+          <div class="summary-content">
+            <span>Total Ukuran</span>
+            <strong>{{ stats.totalSize }}</strong>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="card-section">
       <div v-if="error" class="error-banner">
-        {{ error }}
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
       </div>
       <DataTable :columns="columns" :items="history" :loading="loading" />
     </section>
@@ -124,3 +153,146 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.backup-history-page {
+  width: 100%;
+}
+
+.backup-history-page .page-header {
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.backup-history-page .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: #7c3aed;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stats-section {
+  margin-bottom: 1.5rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.summary-icon.automatic {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.summary-icon.manual {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.summary-icon.size {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.summary-content span {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-content strong {
+  font-size: 1.5rem;
+  color: #111827;
+  font-weight: 700;
+}
+
+.error-banner {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #991b1b;
+}
+
+.error-banner i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.error-banner span {
+  flex: 1;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .header-actions .app-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

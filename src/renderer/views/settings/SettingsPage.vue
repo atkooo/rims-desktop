@@ -9,20 +9,41 @@
         </p>
       </div>
       <div class="header-meta">
-        <div class="meta-chip">
-          <span>Backup terakhir</span>
-          <strong>{{ lastBackupDate || "Belum ada backup" }}</strong>
-        </div>
-        <div class="meta-chip secondary">
-          <span>Printer aktif</span>
-          <strong>{{ settings.printer || "Belum dipilih" }}</strong>
+        <div class="meta-chip" v-if="lastBackupDate">
+          <i class="fas fa-clock"></i>
+          <div>
+            <span>Backup terakhir</span>
+            <strong>{{ lastBackupDate }}</strong>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Success Message -->
+    <div v-if="successMessage" class="success-message">
+      <i class="fas fa-check-circle"></i>
+      <span>{{ successMessage }}</span>
+      <button @click="successMessage = ''" class="close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="errorMessage" class="error-message">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ errorMessage }}</span>
+      <button @click="errorMessage = ''" class="close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
     <div class="settings-grid">
+      <!-- Profil Toko Card -->
       <section class="settings-card card-section">
         <header class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-store"></i>
+          </div>
           <div>
             <h2>Profil Toko</h2>
             <p class="section-subtitle">
@@ -36,18 +57,21 @@
             label="Nama Toko"
             v-model="settings.companyName"
             :error="errors.companyName"
+            placeholder="Masukkan nama toko"
           />
           <FormInput
             id="address"
             label="Alamat"
             type="textarea"
             v-model="settings.address"
+            placeholder="Masukkan alamat toko"
           />
           <FormInput
             id="phone"
             label="Nomor Telepon"
             v-model="settings.phone"
             :error="errors.phone"
+            placeholder="Masukkan nomor telepon"
           />
         </div>
         <div class="card-actions">
@@ -56,13 +80,17 @@
             :loading="loading"
             @click="saveCompanyProfile"
           >
-            Simpan Profil
+            <i class="fas fa-save"></i> Simpan Profil
           </AppButton>
         </div>
       </section>
 
+      <!-- Database Backup Card -->
       <section class="settings-card card-section accent-card">
         <header class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-database"></i>
+          </div>
           <div>
             <h2>Database Backup</h2>
             <p class="section-subtitle">
@@ -73,12 +101,18 @@
         <div class="backup-panel">
           <div class="backup-stats">
             <div class="stat">
-              <span>File tersimpan</span>
-              <strong>{{ backupFiles.length }}</strong>
+              <i class="fas fa-file-archive"></i>
+              <div>
+                <span>File tersimpan</span>
+                <strong>{{ backupFiles.length }}</strong>
+              </div>
             </div>
             <div class="stat">
-              <span>Backup terakhir</span>
-              <strong>{{ lastBackupDate || "Belum ada" }}</strong>
+              <i class="fas fa-clock"></i>
+              <div>
+                <span>Backup terakhir</span>
+                <strong>{{ lastBackupDate || "Belum ada" }}</strong>
+              </div>
             </div>
           </div>
           <div class="backup-actions">
@@ -87,63 +121,38 @@
               :loading="backupLoading"
               @click="createBackup"
             >
-              Backup Sekarang
+              <i class="fas fa-save"></i> Backup Sekarang
             </AppButton>
             <AppButton
               variant="secondary"
-              :loading="restoreLoading"
+              :disabled="backupFiles.length === 0"
               @click="showRestoreDialog = true"
             >
-              Restore Backup
+              <i class="fas fa-upload"></i> Restore Backup
             </AppButton>
           </div>
         </div>
       </section>
 
+      <!-- Printer & Struk Card -->
       <section class="settings-card card-section">
         <header class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-print"></i>
+          </div>
           <div>
-            <h2>Pengaturan Printer</h2>
+            <h2>Pengaturan Printer & Struk</h2>
             <p class="section-subtitle">
-              Sesuaikan printer agar struk tercetak rapi sesuai ukuran kertas di toko Anda.
+              Kelola pengaturan printer dan tampilan struk transaksi untuk mencetak struk dengan benar.
             </p>
           </div>
         </header>
-        <div class="form-grid">
-          <div class="select-group">
-            <label>Printer Receipt</label>
-            <select v-model="settings.printer" class="form-select">
-              <option value="">Pilih Printer</option>
-              <option
-                v-for="printer in printers"
-                :key="typeof printer === 'string' ? printer : printer.name"
-                :value="typeof printer === 'string' ? printer : printer.name"
-              >
-                {{ typeof printer === 'string' ? printer : (printer.displayName || printer.name) }}
-                <span v-if="typeof printer === 'object' && printer.isDefault"> (Default)</span>
-              </option>
-            </select>
-          </div>
-          <FormInput
-            id="paperWidth"
-            label="Lebar Kertas (mm)"
-            type="number"
-            v-model.number="settings.paperWidth"
-          />
-        </div>
-        <div class="checkbox-wrapper">
-          <label>
-            <input type="checkbox" v-model="settings.autoPrint" />
-            Auto-print setelah transaksi
-          </label>
-        </div>
         <div class="card-actions">
           <AppButton
             variant="primary"
-            :loading="loading"
-            @click="savePrinterSettings"
+            @click="$router.push('/settings/receipt')"
           >
-            Simpan Pengaturan
+            <i class="fas fa-cog"></i> Buka Pengaturan Printer & Struk
           </AppButton>
         </div>
       </section>
@@ -154,21 +163,29 @@
       v-model="showRestoreDialog"
       title="Restore Backup"
       confirm-text="Restore"
+      cancel-text="Batal"
       :loading="restoreLoading"
       @confirm="restoreBackup"
     >
       <div class="restore-dialog">
-        <p class="warning-text">
-          Restore akan mengganti data saat ini dengan data dari backup. Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum melanjutkan.
-        </p>
+        <div class="warning-banner">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>
+            Restore akan mengganti data saat ini dengan data dari backup. Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum melanjutkan.
+          </p>
+        </div>
 
         <div class="select-group">
           <label>Pilih Backup File</label>
           <select v-model="selectedBackup" class="form-select">
+            <option value="" disabled>-- Pilih backup file --</option>
             <option v-for="backup in backupFiles" :key="backup" :value="backup">
               {{ backup }}
             </option>
           </select>
+          <p v-if="backupFiles.length === 0" class="help-text">
+            Tidak ada file backup yang tersedia.
+          </p>
         </div>
       </div>
     </AppDialog>
@@ -197,19 +214,25 @@ export default {
     const restoreLoading = ref(false);
     const showRestoreDialog = ref(false);
     const errors = ref({});
-    const printers = ref([]);
     const backupFiles = ref([]);
     const selectedBackup = ref("");
     const lastBackupDate = ref(null);
+    const successMessage = ref("");
+    const errorMessage = ref("");
 
     const settings = ref({
       companyName: "",
       address: "",
       phone: "",
-      printer: "",
-      paperWidth: 80,
-      autoPrint: true,
     });
+
+    // Clear messages after 5 seconds
+    const clearMessages = () => {
+      setTimeout(() => {
+        successMessage.value = "";
+        errorMessage.value = "";
+      }, 5000);
+    };
 
     // Load settings
     const loadSettings = async () => {
@@ -219,10 +242,6 @@ export default {
           settings.value = { ...settings.value, ...savedSettings };
         }
 
-        // Load printers list
-        const printersList = await ipcRenderer.invoke("printer:list");
-        printers.value = printersList;
-
         // Load backup files
         const backups = await ipcRenderer.invoke("backup:list");
         backupFiles.value = backups;
@@ -230,10 +249,12 @@ export default {
         // Get last backup date
         const lastBackup = await ipcRenderer.invoke("backup:getLastDate");
         if (lastBackup) {
-          lastBackupDate.value = new Date(lastBackup).toLocaleString();
+          lastBackupDate.value = new Date(lastBackup).toLocaleString("id-ID");
         }
       } catch (error) {
         console.error("Error loading settings:", error);
+        errorMessage.value = "Gagal memuat pengaturan";
+        clearMessages();
       }
     };
 
@@ -242,30 +263,19 @@ export default {
       if (!validateCompanyProfile()) return;
 
       loading.value = true;
+      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("settings:save", {
           companyName: settings.value.companyName,
           address: settings.value.address,
           phone: settings.value.phone,
         });
+        successMessage.value = "Profil toko berhasil disimpan";
+        clearMessages();
       } catch (error) {
         console.error("Error saving company profile:", error);
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    // Save printer settings
-    const savePrinterSettings = async () => {
-      loading.value = true;
-      try {
-        await ipcRenderer.invoke("settings:save", {
-          printer: settings.value.printer,
-          paperWidth: settings.value.paperWidth,
-          autoPrint: settings.value.autoPrint,
-        });
-      } catch (error) {
-        console.error("Error saving printer settings:", error);
+        errorMessage.value = "Gagal menyimpan profil toko";
+        clearMessages();
       } finally {
         loading.value = false;
       }
@@ -274,11 +284,16 @@ export default {
     // Create backup
     const createBackup = async () => {
       backupLoading.value = true;
+      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("backup:create");
         await loadSettings(); // Reload backup list and last backup date
+        successMessage.value = "Backup berhasil dibuat";
+        clearMessages();
       } catch (error) {
         console.error("Error creating backup:", error);
+        errorMessage.value = "Gagal membuat backup";
+        clearMessages();
       } finally {
         backupLoading.value = false;
       }
@@ -286,14 +301,25 @@ export default {
 
     // Restore backup
     const restoreBackup = async () => {
-      if (!selectedBackup.value) return;
+      if (!selectedBackup.value) {
+        errorMessage.value = "Pilih file backup terlebih dahulu";
+        clearMessages();
+        return;
+      }
 
       restoreLoading.value = true;
+      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("backup:restore", selectedBackup.value);
         showRestoreDialog.value = false;
+        selectedBackup.value = "";
+        await loadSettings();
+        successMessage.value = "Backup berhasil direstore";
+        clearMessages();
       } catch (error) {
         console.error("Error restoring backup:", error);
+        errorMessage.value = error.message || "Gagal restore backup";
+        clearMessages();
       } finally {
         restoreLoading.value = false;
       }
@@ -315,7 +341,9 @@ export default {
       return Object.keys(newErrors).length === 0;
     };
 
-    onMounted(loadSettings);
+    onMounted(async () => {
+      await loadSettings();
+    });
 
     return {
       settings,
@@ -324,12 +352,12 @@ export default {
       restoreLoading,
       showRestoreDialog,
       errors,
-      printers,
       backupFiles,
       selectedBackup,
       lastBackupDate,
+      successMessage,
+      errorMessage,
       saveCompanyProfile,
-      savePrinterSettings,
       createBackup,
       restoreBackup,
     };
@@ -365,13 +393,24 @@ export default {
 
 .meta-chip {
   background: #f8fafc;
-  border-radius: 999px;
-  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
   border: 1px solid #e0e7ff;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 180px;
+}
+
+.meta-chip i {
+  color: #7c3aed;
+  font-size: 1.1rem;
+}
+
+.meta-chip > div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  min-width: 150px;
 }
 
 .meta-chip span {
@@ -382,6 +421,7 @@ export default {
 .meta-chip strong {
   font-size: 0.9rem;
   color: #111827;
+  font-weight: 600;
 }
 
 .meta-chip.secondary {
@@ -391,38 +431,66 @@ export default {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
 .settings-card {
-  padding: 1.5rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .settings-card.accent-card {
-  background-color: #f9fafc;
+  background: linear-gradient(135deg, #f9fafc 0%, #f3f4f6 100%);
   border-color: #c7d2fe;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
 .section-header h2 {
   margin: 0;
   font-size: 1.25rem;
+  font-weight: 600;
   color: #111827;
 }
 
 .section-subtitle {
-  margin: 0.25rem 0 0;
+  margin: 0.5rem 0 0;
   color: #6b7280;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .checkbox-wrapper label {
@@ -432,7 +500,9 @@ export default {
   font-weight: 500;
   color: #334155;
   font-size: 0.95rem;
+  cursor: pointer;
 }
+
 
 .checkbox-wrapper input {
   width: 16px;
@@ -451,28 +521,51 @@ export default {
 
 .backup-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
 }
 
 .stat {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 0.75rem;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1rem;
   border: 1px solid #e0e7ff;
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.stat i {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.stat > div {
+  display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.25rem;
+  flex: 1;
 }
 
 .stat span {
   font-size: 0.75rem;
   color: #64748b;
+  font-weight: 500;
 }
 
 .stat strong {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #111827;
+  font-weight: 600;
 }
 
 .backup-actions {
@@ -491,24 +584,155 @@ export default {
 .restore-dialog {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-.warning-text {
-  color: #991b1b;
-  background-color: #fee2e2;
+.warning-banner {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
   padding: 1rem;
-  border-radius: 6px;
-  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
-@media (max-width: 640px) {
+.warning-banner i {
+  color: #d97706;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.warning-banner p {
+  margin: 0;
+  color: #92400e;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.select-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.select-group .form-select {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.select-group .form-select:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.help-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.success-message,
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+.success-message {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 1px solid #10b981;
+  color: #065f46;
+}
+
+.error-message {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.success-message i,
+.error-message i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.success-message span,
+.error-message span {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  opacity: 0.7;
+}
+
+.close-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
   .header-meta {
     flex-direction: column;
     align-items: flex-start;
+    width: 100%;
+  }
+
+  .meta-chip {
+    width: 100%;
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-stats {
     grid-template-columns: 1fr;
   }
 
@@ -517,8 +741,27 @@ export default {
     align-items: stretch;
   }
 
+  .backup-actions .app-button {
+    width: 100%;
+  }
+
   .card-actions {
     justify-content: flex-start;
+  }
+
+  .card-actions .app-button {
+    width: 100%;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .section-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
 }
 </style>

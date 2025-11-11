@@ -19,7 +19,7 @@
         <input
           v-model="searchQuery"
           type="search"
-          placeholder="Cari transaksi, pelanggan, atau kode invoice"
+          placeholder="Cari transaksi, pelanggan, atau kode transaksi"
         />
         <button type="submit" :disabled="searchBusy">
           {{ searchBusy ? "Mencari..." : "Cari" }}
