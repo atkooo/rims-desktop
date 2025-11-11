@@ -13,12 +13,15 @@
           v-model="search"
           placeholder="Masukkan kata kunci..."
         />
-        <select v-model="typeFilter" class="filter-dropdown">
-          <option value="">Semua Tipe</option>
-          <option v-for="type in itemTypes" :key="type" :value="type">
-            {{ type }}
-          </option>
-        </select>
+        <div class="form-group">
+          <label for="typeFilter" class="form-label">Filter Tipe</label>
+          <select id="typeFilter" v-model="typeFilter" class="filter-dropdown">
+            <option value="">Semua Tipe</option>
+            <option v-for="type in itemTypes" :key="type" :value="type">
+              {{ type }}
+            </option>
+          </select>
+        </div>
       </div>
 
       <div class="picker-list">
@@ -171,15 +174,45 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.picker-controls :deep(.form-group) {
+  margin-bottom: 0;
+}
+
+.picker-controls > .form-group {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-controls :deep(.form-label),
+.picker-controls > .form-group > .form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
 .filter-dropdown {
   width: 100%;
+  max-width: 100%;
   padding: 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   background: white;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  box-sizing: border-box;
+  appearance: none;
+  cursor: pointer;
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
 .picker-list {
@@ -213,6 +246,10 @@ export default {
 
 .picker-icon {
   color: #4338ca;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .picker-name {
