@@ -97,32 +97,6 @@
         </div>
 
         <div class="form-section">
-          <h3 class="section-title">Metode & Status Pembayaran</h3>
-          <div class="form-grid">
-            <div class="field-group">
-              <label for="paymentMethod">Metode Pembayaran</label>
-              <select id="paymentMethod" v-model="form.paymentMethod" class="form-select">
-                <option v-for="method in paymentMethods" :key="method.value" :value="method.value">
-                  {{ method.label }}
-                </option>
-              </select>
-            </div>
-            <div class="field-group">
-              <label for="paymentStatus">Status Pembayaran</label>
-              <select id="paymentStatus" v-model="form.paymentStatus" class="form-select">
-                <option
-                  v-for="status in paymentStatusOptions"
-                  :key="status.value"
-                  :value="status.value"
-                >
-                  {{ status.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
           <h3 class="section-title">Pilih Item</h3>
           <ItemSelector v-model="form.items" />
           <div v-if="errors.items" class="error-message">
@@ -151,15 +125,6 @@
             </div>
             <div class="field-group">
               <FormInput id="tax" label="Pajak" type="number" min="0" v-model.number="form.tax" />
-            </div>
-            <div class="field-group">
-              <FormInput
-                id="paidAmount"
-                label="Jumlah Dibayar"
-                type="number"
-                min="0"
-                v-model.number="form.paidAmount"
-              />
             </div>
           </div>
         </div>
@@ -204,17 +169,13 @@
             <span>Pajak</span>
             <strong>+ {{ formatCurrency(Number(form.tax) || 0) }}</strong>
           </div>
-          <div class="summary-card">
-            <span>Status Pembayaran</span>
-            <strong>{{ paymentStatusLabel }}</strong>
-          </div>
         </div>
         <div class="summary-note">
           <h3>Catatan Kasir</h3>
           <ul>
             <li>Sertakan catatan jika ada request pelanggan khusus.</li>
             <li>Periksa kembali jumlah bundle sebelum menyimpan.</li>
-            <li>Jumlah dibayar default mengikuti total jika tidak diisi.</li>
+            <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
           </ul>
           <AppButton variant="success" @click="goBack">Lihat Daftar Penjualan</AppButton>
         </div>
@@ -236,18 +197,6 @@ import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 
-const paymentMethods = [
-  { value: "cash", label: "Tunai" },
-  { value: "transfer", label: "Transfer" },
-  { value: "card", label: "Kartu" },
-];
-
-const paymentStatusOptions = [
-  { value: "unpaid", label: "Belum Dibayar" },
-  { value: "partial", label: "Pembayaran Parsial" },
-  { value: "paid", label: "Lunas" },
-];
-
 const toDateInput = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -258,11 +207,8 @@ const toDateInput = (value) => {
 const createDefaultForm = () => ({
   customerId: "",
   saleDate: toDateInput(new Date()),
-  paymentMethod: "cash",
-  paymentStatus: "unpaid",
   discount: 0,
   tax: 0,
-  paidAmount: 0,
   notes: "",
   items: [],
   bundles: [],
@@ -373,13 +319,6 @@ export default {
         quantity: Math.max(1, Number(bundle.quantity) || 1),
       })),
     );
-
-    const paymentStatusLabel = computed(() => {
-      const match = paymentStatusOptions.find(
-        (status) => status.value === form.value.paymentStatus,
-      );
-      return match ? match.label : "";
-    });
 
     const getDiscountHint = () => {
       if (form.value.customerId) {
@@ -509,8 +448,6 @@ export default {
           type: TRANSACTION_TYPE.SALE,
           customerId: form.value.customerId || null,
           userId: user?.id || 1,
-          paymentMethod: form.value.paymentMethod,
-          paymentStatus: form.value.paymentStatus,
           notes: form.value.notes,
           totalAmount: Number(totalAmount.value),
           transactionDate: form.value.saleDate,
@@ -518,7 +455,6 @@ export default {
           subtotal: subtotal.value,
           discount: Number(form.value.discount) || 0,
           tax: Number(form.value.tax) || 0,
-          paidAmount: Number(form.value.paidAmount) || 0,
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
         });
@@ -576,15 +512,12 @@ export default {
       loading,
       submissionError,
       successMessage,
-      paymentMethods,
-      paymentStatusOptions,
       formatCurrency,
       totalAmount,
       baseSubtotal,
       bundleSubtotal,
       totalItems,
       totalBundles,
-      paymentStatusLabel,
       cashierStatus,
       getDiscountHint,
       isDiscountReadonly,

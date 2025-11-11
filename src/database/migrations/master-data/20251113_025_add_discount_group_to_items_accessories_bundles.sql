@@ -16,3 +16,4 @@ CREATE INDEX IF NOT EXISTS idx_accessories_discount_group ON accessories(discoun
 CREATE INDEX IF NOT EXISTS idx_bundles_discount_group ON bundles(discount_group_id);
 
 
+

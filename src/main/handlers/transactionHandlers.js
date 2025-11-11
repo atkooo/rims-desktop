@@ -77,36 +77,63 @@ function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
     try {
-      // Get rental transactions
+      // Get rental transactions with payment calculation from payments table
       const rentalTransactions = await database.query(`
                 SELECT 
                     rt.*,
                     c.name AS customer_name,
                     GROUP_CONCAT(rtd.item_id) as item_ids,
                     GROUP_CONCAT(rtd.quantity) as quantities,
-                    'rental' as transaction_type
+                    'rental' as transaction_type,
+                    COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+                    CASE 
+                      WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
+                      WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
+                      ELSE 'partial'
+                    END as calculated_payment_status
                 FROM rental_transactions rt
                 LEFT JOIN customers c ON rt.customer_id = c.id
                 LEFT JOIN rental_transaction_details rtd ON rt.id = rtd.rental_transaction_id
+                LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
                 GROUP BY rt.id
             `);
 
-      // Get sales transactions
+      // Get sales transactions with payment calculation from payments table
       const salesTransactions = await database.query(`
                 SELECT 
                     st.*,
                     c.name AS customer_name,
                     GROUP_CONCAT(std.item_id) as item_ids,
                     GROUP_CONCAT(std.quantity) as quantities,
-                    'sale' as transaction_type
+                    'sale' as transaction_type,
+                    COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+                    CASE 
+                      WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
+                      WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
+                      ELSE 'partial'
+                    END as calculated_payment_status
                 FROM sales_transactions st
                 LEFT JOIN customers c ON st.customer_id = c.id
                 LEFT JOIN sales_transaction_details std ON st.id = std.sales_transaction_id
+                LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
                 GROUP BY st.id
             `);
 
+      // Process transactions to use actual payment data
+      const processedRentalTransactions = rentalTransactions.map(t => ({
+        ...t,
+        paid_amount: t.actual_paid_amount || 0,
+        payment_status: t.calculated_payment_status || t.payment_status || 'unpaid'
+      }));
+
+      const processedSalesTransactions = salesTransactions.map(t => ({
+        ...t,
+        paid_amount: t.actual_paid_amount || 0,
+        payment_status: t.calculated_payment_status || t.payment_status || 'unpaid'
+      }));
+
       // Combine and sort both types of transactions
-      const transactions = [...rentalTransactions, ...salesTransactions].sort(
+      const transactions = [...processedRentalTransactions, ...processedSalesTransactions].sort(
         (a, b) => {
           const dateA = new Date(a.created_at);
           const dateB = new Date(b.created_at);
@@ -186,9 +213,8 @@ function setupTransactionHandlers() {
             `INSERT INTO rental_transactions (
               transaction_code, customer_id, user_id, booking_id, rental_date, 
               planned_return_date, total_days, subtotal, deposit,
-              total_amount, payment_method, payment_status, paid_amount,
-              status, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              total_amount, status, notes, cashier_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -200,9 +226,6 @@ function setupTransactionHandlers() {
               transactionData.subtotal,
               transactionData.deposit,
               transactionData.totalAmount,
-              transactionData.paymentMethod || "cash",
-              transactionData.paymentStatus || "unpaid",
-              transactionData.paidAmount || 0,
               "active",
               transactionData.notes,
               cashierSessionId,
@@ -273,27 +296,11 @@ function setupTransactionHandlers() {
             ? transactionData.customerId 
             : null;
           
-          // Determine payment status based on paid amount
-          const paidAmount = transactionData.paidAmount || 0;
-          const totalAmount = transactionData.totalAmount || 0;
-          let paymentStatus = transactionData.paymentStatus;
-          
-          if (!paymentStatus) {
-            if (paidAmount >= totalAmount && paidAmount > 0) {
-              paymentStatus = "paid";
-            } else if (paidAmount > 0) {
-              paymentStatus = "partial";
-            } else {
-              paymentStatus = "unpaid";
-            }
-          }
-
           result = await database.execute(
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
-              subtotal, discount, tax, total_amount, payment_method,
-              payment_status, paid_amount, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              subtotal, discount, tax, total_amount, notes, cashier_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               customerId,
@@ -302,10 +309,7 @@ function setupTransactionHandlers() {
               transactionData.subtotal,
               transactionData.discount || 0,
               transactionData.tax || 0,
-              totalAmount,
-              transactionData.paymentMethod || "cash",
-              paymentStatus,
-              paidAmount,
+              transactionData.totalAmount,
               transactionData.notes,
               cashierSessionId,
             ],
@@ -475,18 +479,8 @@ function setupTransactionHandlers() {
             }
           }
         } else {
-          // Map UI status -> sales payment status
-          const paymentMap = {
-            [TRANSACTION_STATUS.COMPLETED]: "paid",
-            [TRANSACTION_STATUS.PENDING]: "unpaid",
-            [TRANSACTION_STATUS.CANCELLED]: "unpaid",
-          };
-          const paymentStatus = paymentMap[status] || "unpaid";
-          // Update sales transaction status
-          await database.execute(
-            "UPDATE sales_transactions SET payment_status = ? WHERE id = ?",
-            [paymentStatus, transactionId],
-          );
+          // For sales transactions, status is determined by payments table
+          // No need to update payment_status as it's calculated from payments
         }
 
         await database.execute("COMMIT");
@@ -870,67 +864,6 @@ function setupPaymentHandlers() {
         [result.id],
       );
 
-      // Update transaction payment status and paid amount
-      if (paymentData.transactionType === "sale") {
-        // Get current transaction
-        const transaction = await database.queryOne(
-          "SELECT paid_amount, total_amount FROM sales_transactions WHERE id = ?",
-          [paymentData.transactionId]
-        );
-
-        if (transaction) {
-          const newPaidAmount = (transaction.paid_amount || 0) + paymentData.amount;
-          const totalAmount = transaction.total_amount || 0;
-          
-          // Determine payment status
-          let paymentStatus = "partial";
-          if (newPaidAmount >= totalAmount) {
-            paymentStatus = "paid";
-          } else if (newPaidAmount > 0) {
-            paymentStatus = "partial";
-          } else {
-            paymentStatus = "unpaid";
-          }
-
-          // Update transaction
-          await database.execute(
-            `UPDATE sales_transactions 
-             SET paid_amount = ?, payment_status = ?
-             WHERE id = ?`,
-            [newPaidAmount, paymentStatus, paymentData.transactionId]
-          );
-        }
-      } else if (paymentData.transactionType === "rental") {
-        // Get current transaction
-        const transaction = await database.queryOne(
-          "SELECT paid_amount, total_amount FROM rental_transactions WHERE id = ?",
-          [paymentData.transactionId]
-        );
-
-        if (transaction) {
-          const newPaidAmount = (transaction.paid_amount || 0) + paymentData.amount;
-          const totalAmount = transaction.total_amount || 0;
-          
-          // Determine payment status
-          let paymentStatus = "partial";
-          if (newPaidAmount >= totalAmount) {
-            paymentStatus = "paid";
-          } else if (newPaidAmount > 0) {
-            paymentStatus = "partial";
-          } else {
-            paymentStatus = "unpaid";
-          }
-
-          // Update transaction
-          await database.execute(
-            `UPDATE rental_transactions 
-             SET paid_amount = ?, payment_status = ?
-             WHERE id = ?`,
-            [newPaidAmount, paymentStatus, paymentData.transactionId]
-          );
-        }
-      }
-
       return newPayment;
     } catch (error) {
       logger.error("Error creating payment:", error);
@@ -992,6 +925,7 @@ function setupPaymentHandlers() {
   ipcMain.handle("payments:delete", async (event, id) => {
     try {
       await database.execute("DELETE FROM payments WHERE id = ?", [id]);
+
       return true;
     } catch (error) {
       logger.error("Error deleting payment:", error);

@@ -19,3 +19,4 @@ CREATE INDEX IF NOT EXISTS idx_discount_groups_code ON discount_groups(code);
 CREATE INDEX IF NOT EXISTS idx_discount_groups_active ON discount_groups(is_active);
 
 
+

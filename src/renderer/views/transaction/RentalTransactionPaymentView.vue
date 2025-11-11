@@ -3,7 +3,7 @@
     <div class="page-header">
       <div class="header-content">
         <div>
-          <h1>Pembayaran Penjualan</h1>
+          <h1>Pembayaran Sewa</h1>
           <p class="subtitle">
             {{ transaction ? `Transaksi ${transaction.transaction_code}` : "Memuat data transaksi..." }}
           </p>
@@ -36,8 +36,12 @@
             <strong class="info-value">{{ transaction.customer_name || "-" }}</strong>
           </div>
           <div class="info-item">
-            <span class="info-label">Tanggal</span>
-            <strong class="info-value">{{ formatDate(transaction.sale_date) }}</strong>
+            <span class="info-label">Tanggal Sewa</span>
+            <strong class="info-value">{{ formatDate(transaction.rental_date) }}</strong>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Rencana Kembali</span>
+            <strong class="info-value">{{ formatDate(transaction.planned_return_date) }}</strong>
           </div>
           <div class="info-item">
             <span class="info-label">Status Pembayaran</span>
@@ -45,18 +49,22 @@
               {{ getPaymentStatusLabel(transaction.payment_status) }}
             </strong>
           </div>
+          <div class="info-item">
+            <span class="info-label">Status Sewa</span>
+            <strong class="info-value">{{ getRentalStatusLabel(transaction.status) }}</strong>
+          </div>
         </div>
       </section>
 
       <!-- Transaction Items -->
       <section class="card-section">
-        <h3 class="section-title">Item Penjualan</h3>
+        <h3 class="section-title">Item Sewa</h3>
         <table class="items-table">
           <thead>
             <tr>
               <th>Item</th>
               <th>Jumlah</th>
-              <th>Harga</th>
+              <th>Harga Sewa</th>
               <th>Subtotal</th>
             </tr>
           </thead>
@@ -64,7 +72,7 @@
             <tr v-for="detail in transactionDetails" :key="detail.id">
               <td>{{ detail.item_name || "-" }}</td>
               <td>{{ detail.quantity }}</td>
-              <td>{{ formatCurrency(detail.sale_price) }}</td>
+              <td>{{ formatCurrency(detail.rental_price) }}</td>
               <td>{{ formatCurrency(detail.subtotal) }}</td>
             </tr>
           </tbody>
@@ -106,13 +114,17 @@
             <span>Subtotal</span>
             <strong>{{ formatCurrency(transaction.subtotal) }}</strong>
           </div>
+          <div class="summary-row" v-if="transaction.deposit > 0">
+            <span>Deposit</span>
+            <strong>+ {{ formatCurrency(transaction.deposit) }}</strong>
+          </div>
           <div class="summary-row" v-if="transaction.discount > 0">
             <span>Diskon</span>
             <strong class="discount">- {{ formatCurrency(transaction.discount) }}</strong>
           </div>
-          <div class="summary-row" v-if="transaction.tax > 0">
-            <span>Pajak</span>
-            <strong>+ {{ formatCurrency(transaction.tax) }}</strong>
+          <div class="summary-row" v-if="transaction.late_fee > 0">
+            <span>Denda Keterlambatan</span>
+            <strong>+ {{ formatCurrency(transaction.late_fee) }}</strong>
           </div>
           <div class="summary-row total">
             <span>Total</span>
@@ -229,12 +241,12 @@ import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import PrinterSelectDialog from "@/components/ui/PrinterSelectDialog.vue";
-import { fetchSalesTransactions, fetchSalesDetails, createPayment, fetchPayments } from "@/services/transactions";
+import { fetchRentalTransactions, fetchRentalDetails, createPayment, fetchPayments } from "@/services/transactions";
 import { getStoredUser } from "@/services/auth";
 import { ipcRenderer } from "@/services/ipc";
 
 export default {
-  name: "SaleTransactionPaymentView",
+  name: "RentalTransactionPaymentView",
   components: {
     AppButton,
     FormInput,
@@ -278,6 +290,16 @@ export default {
       return labels[status] || status;
     };
 
+    const getRentalStatusLabel = (status) => {
+      const labels = {
+        active: "Aktif",
+        returned: "Dikembalikan",
+        cancelled: "Dibatalkan",
+        overdue: "Terlambat",
+      };
+      return labels[status] || status;
+    };
+
     const getPaymentMethodLabel = (method) => {
       const labels = {
         cash: "Tunai",
@@ -302,7 +324,7 @@ export default {
       error.value = "";
       try {
         // Load transactions
-        const transactions = await fetchSalesTransactions();
+        const transactions = await fetchRentalTransactions();
         const found = transactions.find((t) => t.id === Number(transactionId.value));
         
         if (!found) {
@@ -312,7 +334,7 @@ export default {
         transaction.value = found;
 
         // Load transaction details
-        const details = await fetchSalesDetails();
+        const details = await fetchRentalDetails();
         transactionDetails.value = details.filter(
           (d) => d.transaction_code === found.transaction_code
         );
@@ -320,7 +342,7 @@ export default {
         // Load payment history
         const payments = await fetchPayments();
         paymentHistory.value = payments.filter(
-          (p) => p.transaction_type === "sale" && p.transaction_id === found.id
+          (p) => p.transaction_type === "rental" && p.transaction_id === found.id
         ).sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
       } catch (err) {
         error.value = err.message || "Gagal memuat data transaksi";
@@ -356,7 +378,7 @@ export default {
         const user = getStoredUser();
         const paymentData = {
           transactionId: transaction.value.id,
-          transactionType: "sale",
+          transactionType: "rental",
           amount: paymentForm.value.amount,
           paymentMethod: paymentForm.value.paymentMethod,
           paymentDate: new Date().toISOString(),
@@ -400,7 +422,7 @@ export default {
         // Print invoice to selected printer
         const result = await ipcRenderer.invoke("invoice:print", {
           transactionId: transaction.value.id,
-          transactionType: "sale",
+          transactionType: "rental",
           printerName: printer.name,
           silent: false, // Show print dialog
         });
@@ -416,7 +438,7 @@ export default {
     };
 
     const goBack = () => {
-      router.push({ name: "transactions-sales" });
+      router.push({ name: "transactions-rentals" });
     };
 
     onMounted(() => {
@@ -435,6 +457,7 @@ export default {
       formatCurrency,
       formatDate,
       getPaymentStatusLabel,
+      getRentalStatusLabel,
       getPaymentMethodLabel,
       paymentHistory,
       fillFullAmount,

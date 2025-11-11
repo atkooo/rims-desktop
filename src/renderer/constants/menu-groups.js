@@ -20,11 +20,6 @@ export const menuGroups = [
         icon: "calendar",
       },
       {
-        to: "/transactions/payments",
-        label: "Pembayaran & Invoice",
-        icon: "credit-card",
-      },
-      {
         to: "/transactions/cashier",
         label: "Buka Kasir",
         icon: "money",

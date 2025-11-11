@@ -776,8 +776,6 @@ export default {
             type: form.value.transactionType,
             customerId: form.value.customerId || null,
             userId: user?.id || 1,
-            paymentMethod: form.value.paymentMethod,
-            paymentStatus: form.value.paymentStatus,
             notes: form.value.notes,
             totalAmount: Number(totalAmount.value),
             transactionDate,
@@ -791,7 +789,6 @@ export default {
               totalDays: totalDays.value,
               subtotal: subtotal.value,
               deposit: Number(form.value.deposit) || 0,
-              paidAmount: Number(form.value.paidAmount) || 0,
             });
           } else {
             await transactionStore.createTransaction({
@@ -800,8 +797,6 @@ export default {
               subtotal: subtotal.value,
               discount: Number(form.value.discount) || 0,
               tax: Number(form.value.tax) || 0,
-              paidAmount:
-                Number(form.value.paidAmount) || Number(totalAmount.value),
               bundles: normalizedBundles.value,
             });
           }

@@ -26,7 +26,6 @@ import RentalTransactionsView from "./views/transaction/RentalTransactionsView.v
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
 import BookingsView from "./views/transaction/BookingsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
-import PaymentsView from "./views/transaction/PaymentsView.vue";
 import CashierView from "./views/transaction/CashierView.vue";
 import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
 import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
@@ -66,7 +65,6 @@ const routes = [
     name: "bundle-details",
     component: BundlesDetailView,
   },
-  { path: "/master/items", name: "items", component: ItemsPage },
   {
     path: "/master/items/:id",
     name: "item-detail",
@@ -91,6 +89,11 @@ const routes = [
     path: "/transactions/rentals/:code",
     name: "transaction-rental-detail",
     component: RentalTransactionDetailView,
+  },
+  {
+    path: "/transactions/rentals/:id/payment",
+    name: "transaction-rental-payment",
+    component: () => import("./views/transaction/RentalTransactionPaymentView.vue"),
   },
   {
     path: "/transactions/sales",
@@ -121,11 +124,6 @@ const routes = [
     path: "/transactions/stock-movements",
     name: "transactions-stock-movements",
     component: StockMovementsView,
-  },
-  {
-    path: "/transactions/payments",
-    name: "transactions-payments",
-    component: PaymentsView,
   },
   {
     path: "/transactions/cashier",

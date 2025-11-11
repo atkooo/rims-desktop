@@ -62,8 +62,8 @@
             <strong>{{ formatCurrency(rental.paid_amount) }}</strong>
           </div>
           <div class="detail-item">
-            <span>Metode</span>
-            <strong>{{ rental.payment_method || "-" }}</strong>
+            <span>Sisa</span>
+            <strong>{{ formatCurrency((rental.total_amount || 0) - (rental.paid_amount || 0)) }}</strong>
           </div>
           <div v-if="rental.cashier_session_code" class="detail-item">
             <span>Sesi Kasir</span>

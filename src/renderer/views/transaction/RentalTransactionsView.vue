@@ -91,6 +91,13 @@
             <AppButton variant="secondary" @click="goToRentalDetail(item)">
               Detail
             </AppButton>
+            <AppButton 
+              v-if="!isPaid(item)" 
+              variant="success" 
+              @click="continuePayment(item)"
+            >
+              Lanjutkan Pembayaran
+            </AppButton>
             <AppButton variant="primary" @click="handleEdit(item)">
               Edit
             </AppButton>
@@ -247,6 +254,19 @@ export default {
       });
     };
 
+    const continuePayment = (rental) => {
+      if (!rental.id) return;
+      router.push({
+        name: "transaction-rental-payment",
+        params: { id: rental.id },
+      });
+    };
+
+    const isPaid = (rental) => {
+      const status = (rental.payment_status || rental.paymentStatus || "").toString().toLowerCase();
+      return status === "paid";
+    };
+
     const displayedItems = computed(() =>
       currentTab.value === "all" ? rentals.value : activeRentals.value,
     );
@@ -336,6 +356,8 @@ export default {
       TRANSACTION_TYPE,
       handleRefresh,
       goToRentalDetail,
+      continuePayment,
+      isPaid,
     };
   },
 };

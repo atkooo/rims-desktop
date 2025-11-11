@@ -12,9 +12,6 @@ CREATE TABLE sales_transactions (
     discount DECIMAL(15,2) DEFAULT 0,
     tax DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
-    payment_method VARCHAR(20) CHECK (payment_method IN ('cash','transfer','card')) DEFAULT 'cash',
-    payment_status VARCHAR(20) CHECK (payment_status IN ('unpaid','partial','paid')) DEFAULT 'paid',
-    paid_amount DECIMAL(15,2) DEFAULT 0,
     change_amount DECIMAL(15,2) DEFAULT 0,
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -26,7 +23,6 @@ CREATE TABLE sales_transactions (
     CHECK (subtotal >= 0),
     CHECK (discount >= 0),
     CHECK (tax >= 0),
-    CHECK (paid_amount >= 0),
     CHECK (change_amount >= 0)
 );
 
@@ -50,8 +46,6 @@ CREATE INDEX idx_sales_transactions_customer ON sales_transactions(customer_id);
 CREATE INDEX idx_sales_transactions_user ON sales_transactions(user_id);
 CREATE INDEX idx_sales_transactions_cashier_session ON sales_transactions(cashier_session_id);
 CREATE INDEX idx_sales_transactions_date ON sales_transactions(sale_date);
-CREATE INDEX idx_sales_transactions_payment_status ON sales_transactions(payment_status);
-CREATE INDEX idx_sales_transactions_payment_method ON sales_transactions(payment_method);
 
 CREATE INDEX idx_sales_transaction_details_transaction ON sales_transaction_details(sales_transaction_id);
 CREATE INDEX idx_sales_transaction_details_item ON sales_transaction_details(item_id);

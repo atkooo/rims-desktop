@@ -17,9 +17,6 @@ CREATE TABLE rental_transactions (
     late_fee DECIMAL(15,2) DEFAULT 0,
     discount DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
-    payment_method VARCHAR(20) CHECK (payment_method IN ('cash','transfer','card')) DEFAULT 'cash',
-    payment_status VARCHAR(20) CHECK (payment_status IN ('unpaid','partial','paid')) DEFAULT 'unpaid',
-    paid_amount DECIMAL(15,2) DEFAULT 0,
     status VARCHAR(20) CHECK (status IN ('active','returned','cancelled','overdue')) DEFAULT 'active',
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +28,6 @@ CREATE TABLE rental_transactions (
     CHECK (planned_return_date >= rental_date),
     CHECK (total_days > 0),
     CHECK (total_amount >= 0),
-    CHECK (paid_amount >= 0),
     CHECK (deposit >= 0),
     CHECK (late_fee >= 0),
     CHECK (discount >= 0)
@@ -63,7 +59,6 @@ CREATE INDEX idx_rental_transactions_cashier_session ON rental_transactions(cash
 CREATE INDEX idx_rental_transactions_status ON rental_transactions(status);
 CREATE INDEX idx_rental_transactions_date ON rental_transactions(rental_date);
 CREATE INDEX idx_rental_transactions_return_date ON rental_transactions(planned_return_date);
-CREATE INDEX idx_rental_transactions_payment_status ON rental_transactions(payment_status);
 
 CREATE INDEX idx_rental_transaction_details_transaction ON rental_transaction_details(rental_transaction_id);
 CREATE INDEX idx_rental_transaction_details_item ON rental_transaction_details(item_id);

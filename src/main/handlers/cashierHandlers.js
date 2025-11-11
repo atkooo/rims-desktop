@@ -46,22 +46,24 @@ function setupCashierHandlers() {
             );
 
       if (session) {
-        // Calculate expected balance from transactions linked to this cashier session
+        // Calculate expected balance from payments linked to transactions in this cashier session
         // First try using cashier_session_id (more accurate)
         const salesResult = await database.queryOne(
           `SELECT 
-            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
-          FROM sales_transactions
-          WHERE cashier_session_id = ?
+            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+          FROM sales_transactions st
+          LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+          WHERE st.cashier_session_id = ?
           `,
           [session.id]
         );
 
         const rentalResult = await database.queryOne(
           `SELECT 
-            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
-          FROM rental_transactions
-          WHERE cashier_session_id = ?
+            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+          FROM rental_transactions rt
+          LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+          WHERE rt.cashier_session_id = ?
           `,
           [session.id]
         );
@@ -74,22 +76,24 @@ function setupCashierHandlers() {
         if (totalCashSales === 0 && totalCashRentals === 0) {
           const salesResultFallback = await database.queryOne(
             `SELECT 
-              COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
-            FROM sales_transactions
-            WHERE user_id = ? 
-              AND sale_date >= date(?)
-              AND sale_date <= date('now', '+1 day')
+              COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+            FROM sales_transactions st
+            LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+            WHERE st.user_id = ? 
+              AND st.sale_date >= date(?)
+              AND st.sale_date <= date('now', '+1 day')
             `,
             [userId, session.opening_date]
           );
 
           const rentalResultFallback = await database.queryOne(
             `SELECT 
-              COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
-            FROM rental_transactions
-            WHERE user_id = ? 
-              AND rental_date >= date(?)
-              AND rental_date <= date('now', '+1 day')
+              COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+            FROM rental_transactions rt
+            LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+            WHERE rt.user_id = ? 
+              AND rt.rental_date >= date(?)
+              AND rt.rental_date <= date('now', '+1 day')
             `,
             [userId, session.opening_date]
           );
@@ -290,17 +294,19 @@ function setupCashierHandlers() {
       // Calculate expected balance using cashier_session_id (more accurate)
       const salesResult = await database.queryOne(
         `SELECT 
-          COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
-        FROM sales_transactions
-        WHERE cashier_session_id = ?`,
+          COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+        FROM sales_transactions st
+        LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+        WHERE st.cashier_session_id = ?`,
         [session.id]
       );
 
       const rentalResult = await database.queryOne(
         `SELECT 
-          COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
-        FROM rental_transactions
-        WHERE cashier_session_id = ?`,
+          COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+        FROM rental_transactions rt
+        LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+        WHERE rt.cashier_session_id = ?`,
         [session.id]
       );
 
@@ -311,21 +317,23 @@ function setupCashierHandlers() {
       if (cashSales === 0 && cashRentals === 0) {
         const salesResultFallback = await database.queryOne(
           `SELECT 
-            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_sales
-          FROM sales_transactions
-          WHERE user_id = ? 
-            AND sale_date >= date(?) 
-            AND sale_date <= date('now', '+1 day')`,
+            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+          FROM sales_transactions st
+          LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+          WHERE st.user_id = ? 
+            AND st.sale_date >= date(?) 
+            AND st.sale_date <= date('now', '+1 day')`,
           [session.user_id, session.opening_date]
         );
 
         const rentalResultFallback = await database.queryOne(
           `SELECT 
-            COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN paid_amount ELSE 0 END), 0) as cash_rentals
-          FROM rental_transactions
-          WHERE user_id = ? 
-            AND rental_date >= date(?) 
-            AND rental_date <= date('now', '+1 day')`,
+            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+          FROM rental_transactions rt
+          LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+          WHERE rt.user_id = ? 
+            AND rt.rental_date >= date(?) 
+            AND rt.rental_date <= date('now', '+1 day')`,
           [session.user_id, session.opening_date]
         );
 

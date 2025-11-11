@@ -67,6 +67,13 @@
             <AppButton variant="secondary" @click="goToSaleDetail(item)">
               Detail
             </AppButton>
+            <AppButton 
+              v-if="!isPaid(item)" 
+              variant="success" 
+              @click="continuePayment(item)"
+            >
+              Lanjutkan Pembayaran
+            </AppButton>
             <AppButton variant="primary" @click="handleEdit(item)">
               Edit
             </AppButton>
@@ -190,6 +197,19 @@ export default {
       });
     };
 
+    const continuePayment = (sale) => {
+      if (!sale.id) return;
+      router.push({
+        name: "transaction-sale-payment",
+        params: { id: sale.id },
+      });
+    };
+
+    const isPaid = (sale) => {
+      const status = (sale.payment_status || sale.paymentStatus || "").toString().toLowerCase();
+      return status === "paid";
+    };
+
     const openCreateSale = () => {
       editingSale.value = null;
       router.push({ name: "transaction-sale-new" });
@@ -244,6 +264,8 @@ export default {
       totalRecords,
       formatDate,
       goToSaleDetail,
+      continuePayment,
+      isPaid,
       showForm,
       editingSale,
       openCreateSale,

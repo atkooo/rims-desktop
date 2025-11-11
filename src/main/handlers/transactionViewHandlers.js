@@ -30,8 +30,12 @@ function setupTransactionViewHandlers() {
         rt.actual_return_date,
         rt.total_days,
         rt.total_amount,
-        rt.paid_amount,
-        rt.payment_status,
+        COALESCE(SUM(p.amount), 0) as paid_amount,
+        CASE 
+          WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
+          WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
+          ELSE 'partial'
+        END as payment_status,
         rt.status,
         rt.notes,
         rt.cashier_session_id,
@@ -40,6 +44,8 @@ function setupTransactionViewHandlers() {
       LEFT JOIN customers c ON rt.customer_id = c.id
       LEFT JOIN users u ON rt.user_id = u.id
       LEFT JOIN cashier_sessions cs ON rt.cashier_session_id = cs.id
+      LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+      GROUP BY rt.id
       ORDER BY rt.rental_date DESC
     `,
     "rental transactions",
@@ -77,9 +83,12 @@ function setupTransactionViewHandlers() {
         u.full_name AS user_name,
         st.sale_date,
         st.total_amount,
-        st.paid_amount,
-        st.payment_status,
-        st.payment_method,
+        COALESCE(SUM(p.amount), 0) as paid_amount,
+        CASE 
+          WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
+          WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
+          ELSE 'partial'
+        END as payment_status,
         st.notes,
         st.cashier_session_id,
         cs.session_code AS cashier_session_code
@@ -87,6 +96,8 @@ function setupTransactionViewHandlers() {
       LEFT JOIN customers c ON st.customer_id = c.id
       LEFT JOIN users u ON st.user_id = u.id
       LEFT JOIN cashier_sessions cs ON st.cashier_session_id = cs.id
+      LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+      GROUP BY st.id
       ORDER BY st.sale_date DESC
     `,
     "sales transactions",

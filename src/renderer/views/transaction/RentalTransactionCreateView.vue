@@ -108,37 +108,8 @@
         </div>
 
         <div class="form-section">
-          <h3 class="section-title">Pembayaran & Kasir</h3>
-          <p class="section-description">
-            Tetapkan metode pembayaran, status, dan nominal deposit sebelum menyimpan.
-          </p>
+          <h3 class="section-title">Deposit</h3>
           <div class="form-content">
-            <div class="form-grid">
-              <div class="field-group">
-                <label for="paymentMethod">Metode Pembayaran</label>
-                <select id="paymentMethod" v-model="form.paymentMethod" class="form-select">
-                  <option
-                    v-for="method in paymentMethods"
-                    :key="method.value"
-                    :value="method.value"
-                  >
-                    {{ method.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="paymentStatus">Status Pembayaran</label>
-                <select id="paymentStatus" v-model="form.paymentStatus" class="form-select">
-                  <option
-                    v-for="status in paymentStatusOptions"
-                    :key="status.value"
-                    :value="status.value"
-                  >
-                    {{ status.label }}
-                  </option>
-                </select>
-              </div>
-            </div>
             <div class="form-grid">
               <FormInput
                 id="deposit"
@@ -146,13 +117,6 @@
                 type="number"
                 min="0"
                 v-model.number="form.deposit"
-              />
-              <FormInput
-                id="paidAmount"
-                label="Jumlah Dibayar"
-                type="number"
-                min="0"
-                v-model.number="form.paidAmount"
               />
             </div>
           </div>
@@ -212,16 +176,12 @@
             <span>Deposit</span>
             <strong>{{ formatCurrency(Number(form.deposit) || 0) }}</strong>
           </div>
-          <div class="summary-card">
-            <span>Status Pembayaran</span>
-            <strong>{{ paymentStatusLabel }}</strong>
-          </div>
         </div>
         <div class="summary-note">
           <h3>Petunjuk Kasir</h3>
           <ul>
             <li>Pastikan item tersedia sebelum menyimpan transaksi.</li>
-            <li>Gunakan status pembayaran untuk menandai parsial atau lunas.</li>
+            <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
             <li>Catatan akan tampil di invoice dan riwayat customer.</li>
           </ul>
           <AppButton variant="success" @click="goBack">Lihat Daftar Transaksi</AppButton>
@@ -243,18 +203,6 @@ import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 
-const paymentMethods = [
-  { value: "cash", label: "Tunai" },
-  { value: "transfer", label: "Transfer" },
-  { value: "card", label: "Kartu" },
-];
-
-const paymentStatusOptions = [
-  { value: "unpaid", label: "Belum Dibayar" },
-  { value: "partial", label: "Pembayaran Parsial" },
-  { value: "paid", label: "Lunas" },
-];
-
 const toDateInput = (value) => {
   if (!value) return "";
   const date = new Date(value);
@@ -271,10 +219,7 @@ const createDefaultForm = () => {
     customerId: "",
     rentalDate: toDateInput(today),
     plannedReturnDate: toDateInput(tomorrow),
-    paymentMethod: "cash",
-    paymentStatus: "unpaid",
     deposit: 0,
-    paidAmount: 0,
     notes: "",
     items: [],
   };
@@ -345,13 +290,6 @@ export default {
       }),
     );
 
-    const paymentStatusLabel = computed(() => {
-      const match = paymentStatusOptions.find(
-        (status) => status.value === form.value.paymentStatus,
-      );
-      return match ? match.label : "";
-    });
-
     const loadCustomers = async () => {
       try {
         customers.value = await fetchCustomers();
@@ -404,12 +342,10 @@ export default {
       successMessage.value = "";
       try {
         const user = getStoredUser();
-        await transactionStore.createTransaction({
+        const newTransaction = await transactionStore.createTransaction({
           type: TRANSACTION_TYPE.RENTAL,
           customerId: form.value.customerId,
           userId: user?.id || 1,
-          paymentMethod: form.value.paymentMethod,
-          paymentStatus: form.value.paymentStatus,
           notes: form.value.notes,
           totalAmount: Number(totalAmount.value),
           transactionDate: form.value.rentalDate,
@@ -418,14 +354,24 @@ export default {
           totalDays: totalDays.value,
           subtotal: subtotal.value,
           deposit: Number(form.value.deposit) || 0,
-          paidAmount: Number(form.value.paidAmount) || 0,
           items: normalizedItems.value,
         });
-        successMessage.value = "Transaksi berhasil disimpan. Formulir kembali kosong.";
-        form.value = createDefaultForm();
-        errors.value = {};
+        
         // Refresh cashier status after transaction
         await loadCashierStatus();
+        
+        // Redirect to payment page
+        if (newTransaction && newTransaction.id) {
+          router.push({
+            name: "transaction-rental-payment",
+            params: { id: newTransaction.id },
+          });
+        } else {
+          // Fallback: show success message
+          successMessage.value = "Transaksi berhasil disimpan.";
+          form.value = createDefaultForm();
+          errors.value = {};
+        }
       } catch (error) {
         console.error("Gagal menyimpan transaksi:", error);
         submissionError.value =
@@ -464,13 +410,10 @@ export default {
       loading,
       submissionError,
       successMessage,
-      paymentMethods,
-      paymentStatusOptions,
       formatCurrency,
       totalAmount,
       totalDays,
       totalItems,
-      paymentStatusLabel,
       cashierStatus,
       handleSubmit,
       resetForm,

@@ -47,16 +47,16 @@
             <strong>{{ sale.payment_status || "-" }}</strong>
           </div>
           <div class="detail-item">
-            <span>Metode</span>
-            <strong>{{ sale.payment_method || "-" }}</strong>
-          </div>
-          <div class="detail-item">
             <span>Total</span>
             <strong>{{ formatCurrency(sale.total_amount) }}</strong>
           </div>
           <div class="detail-item">
             <span>Dibayar</span>
             <strong>{{ formatCurrency(sale.paid_amount) }}</strong>
+          </div>
+          <div class="detail-item">
+            <span>Sisa</span>
+            <strong>{{ formatCurrency((sale.total_amount || 0) - (sale.paid_amount || 0)) }}</strong>
           </div>
           <div v-if="sale.cashier_session_code" class="detail-item">
             <span>Sesi Kasir</span>
