@@ -16,11 +16,11 @@
         <div class="form-group">
           <label for="typeFilter" class="form-label">Filter Tipe</label>
           <select id="typeFilter" v-model="typeFilter" class="filter-dropdown">
-            <option value="">Semua Tipe</option>
-            <option v-for="type in itemTypes" :key="type" :value="type">
-              {{ type }}
-            </option>
-          </select>
+          <option value="">Semua Tipe</option>
+          <option v-for="type in itemTypes" :key="type" :value="type">
+            {{ type }}
+          </option>
+        </select>
         </div>
       </div>
 

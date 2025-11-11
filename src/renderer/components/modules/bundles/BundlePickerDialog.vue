@@ -16,10 +16,10 @@
         <div class="form-group">
           <label for="statusFilter" class="form-label">Filter Status</label>
           <select id="statusFilter" v-model="statusFilter" class="filter-dropdown">
-            <option value="">Semua Status Aktif</option>
-            <option value="open">Tersedia</option>
-            <option value="soldout">Habis</option>
-          </select>
+          <option value="">Semua Status Aktif</option>
+          <option value="open">Tersedia</option>
+          <option value="soldout">Habis</option>
+        </select>
         </div>
       </div>
 

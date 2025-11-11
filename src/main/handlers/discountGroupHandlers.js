@@ -213,6 +213,10 @@ function setupDiscountGroupHandlers() {
         }
       }
 
+      // Handle is_active: false, 0, '0', null as false; everything else as true
+      const isActiveValue = payload.is_active;
+      const isActive = (isActiveValue === false || isActiveValue === 0 || isActiveValue === '0' || isActiveValue === null) ? 0 : 1;
+
       const insertSql = `
         INSERT INTO discount_groups (
           code,
@@ -232,7 +236,7 @@ function setupDiscountGroupHandlers() {
         discountPercentage,
         discountAmount,
         description || null,
-        payload.is_active === false ? 0 : 1,
+        isActive,
         now,
         now,
       ]);
@@ -365,7 +369,13 @@ function setupDiscountGroupHandlers() {
         });
 
         if (payload.is_active !== undefined) {
-          updates.is_active = payload.is_active === false ? 0 : 1;
+          // Handle false, 0, '0', null as false; everything else as true
+          const isActiveValue = payload.is_active;
+          if (isActiveValue === false || isActiveValue === 0 || isActiveValue === '0' || isActiveValue === null) {
+            updates.is_active = 0;
+          } else {
+            updates.is_active = 1;
+          }
         }
 
         updates.updated_at = new Date().toISOString();
