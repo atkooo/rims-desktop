@@ -19,5 +19,19 @@ CREATE TABLE bookings (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
-    FOREIGN KEY (item_id) REFERENCES items(id)
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT,
+    CHECK (quantity > 0),
+    CHECK (estimated_price >= 0),
+    CHECK (deposit >= 0),
+    CHECK (planned_end_date >= planned_start_date)
 );
+
+-- Create indexes for better query performance
+CREATE INDEX idx_bookings_customer ON bookings(customer_id);
+CREATE INDEX idx_bookings_user ON bookings(user_id);
+CREATE INDEX idx_bookings_item ON bookings(item_id);
+CREATE INDEX idx_bookings_status ON bookings(status);
+CREATE INDEX idx_bookings_date ON bookings(booking_date);
+CREATE INDEX idx_bookings_planned_start ON bookings(planned_start_date);
+CREATE INDEX idx_bookings_planned_end ON bookings(planned_end_date);
+

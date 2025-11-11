@@ -77,14 +77,122 @@ function collectSqlFiles(dir) {
 
 /**
  * Parse SQL file into individual statements
+ * Handles BEGIN...END blocks in triggers and procedures
  * @param {string} sqlContent - SQL file content
  * @returns {Array<string>} Array of SQL statements
  */
 function parseSqlStatements(sqlContent) {
-  return sqlContent
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter((statement) => statement.length > 0);
+  const statements = [];
+  let currentStatement = "";
+  let depth = 0;
+  let inString = false;
+  let stringChar = null;
+  let inCase = false;
+  let i = 0;
+
+  while (i < sqlContent.length) {
+    const char = sqlContent[i];
+    const prevChar = i > 0 ? sqlContent[i - 1] : null;
+
+    // Handle string literals (single and double quotes)
+    if ((char === "'" || char === '"') && prevChar !== "\\") {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+        stringChar = null;
+      }
+      currentStatement += char;
+      i++;
+      continue;
+    }
+
+    // If we're inside a string, just add the character
+    if (inString) {
+      currentStatement += char;
+      i++;
+      continue;
+    }
+
+    // Track BEGIN/END blocks and CASE/END statements (case-insensitive)
+    const remaining = sqlContent.substring(i).toUpperCase();
+    
+    // Check for CASE statement
+    if (remaining.startsWith("CASE") && !/\w/.test(sqlContent[i + 4] || "")) {
+      inCase = true;
+      currentStatement += sqlContent.substring(i, i + 4);
+      i += 4;
+      continue;
+    }
+    
+    // Check for BEGIN block
+    if (remaining.startsWith("BEGIN") && !/\w/.test(sqlContent[i + 5] || "")) {
+      depth++;
+      currentStatement += sqlContent.substring(i, i + 5);
+      i += 5;
+      continue;
+    }
+    
+    // Check for END
+    if (remaining.startsWith("END") && !/\w/.test(sqlContent[i + 3] || "")) {
+      // If we're inside a CASE statement, close it
+      if (inCase) {
+        inCase = false;
+        currentStatement += sqlContent.substring(i, i + 3);
+        i += 3;
+        // Check if END is followed by semicolon
+        if (sqlContent[i] === ";") {
+          currentStatement += ";";
+          i++;
+        }
+        continue;
+      }
+      
+      // Otherwise, it's closing a BEGIN block
+      depth--;
+      currentStatement += sqlContent.substring(i, i + 3);
+      i += 3;
+      // Check if END is followed by semicolon
+      if (sqlContent[i] === ";") {
+        currentStatement += ";";
+        i++;
+        // If depth is 0 after closing the block, this semicolon terminates the statement
+        if (depth === 0) {
+          const trimmed = currentStatement.trim();
+          if (trimmed.length > 0) {
+            statements.push(trimmed);
+          }
+          currentStatement = "";
+          continue;
+        }
+      }
+      continue;
+    }
+
+    // If we encounter a semicolon and we're not in a block, it's a statement terminator
+    if (char === ";" && depth === 0) {
+      const trimmed = currentStatement.trim();
+      if (trimmed.length > 0) {
+        statements.push(trimmed);
+      }
+      currentStatement = "";
+      i++;
+      continue;
+    }
+
+    // Add character to current statement
+    currentStatement += char;
+    i++;
+  }
+
+  // Add any remaining statement
+  const trimmed = currentStatement.trim();
+  if (trimmed.length > 0) {
+    statements.push(trimmed);
+  }
+
+  return statements;
 }
 
 /**

@@ -178,18 +178,22 @@ function setupTransactionHandlers() {
         const transactionCode = generateTransactionCode(transactionData.type);
 
         if (transactionData.type === "RENTAL") {
+          // Get booking_id if provided
+          const bookingId = transactionData.bookingId || null;
+
           // Insert rental transaction
           result = await database.execute(
             `INSERT INTO rental_transactions (
-              transaction_code, customer_id, user_id, rental_date, 
+              transaction_code, customer_id, user_id, booking_id, rental_date, 
               planned_return_date, total_days, subtotal, deposit,
               total_amount, payment_method, payment_status, paid_amount,
               status, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
               transactionData.userId,
+              bookingId,
               transactionData.rentalDate,
               transactionData.plannedReturnDate,
               transactionData.totalDays,
@@ -205,8 +209,23 @@ function setupTransactionHandlers() {
             ],
           );
 
+          // Update booking status to 'fulfilled' if booking_id is provided
+          if (bookingId) {
+            await database.execute(
+              "UPDATE bookings SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+              [bookingId],
+            );
+          }
+
           // Insert rental transaction items
           for (const item of transactionData.items) {
+            // Get current stock before update
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+              [item.itemId],
+            );
+            const stockBefore = itemBefore?.available_quantity || 0;
+
             await database.execute(
               `INSERT INTO rental_transaction_details (
                 rental_transaction_id, item_id, quantity, 
@@ -225,6 +244,26 @@ function setupTransactionHandlers() {
             await database.execute(
               "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
               [item.quantity, item.itemId],
+            );
+
+            // Get stock after update
+            const stockAfter = stockBefore - item.quantity;
+
+            // Create stock movement record
+            await database.execute(
+              `INSERT INTO stock_movements (
+                item_id, movement_type, reference_type, reference_id,
+                quantity, stock_before, stock_after, user_id, notes
+              ) VALUES (?, 'OUT', 'rental_transaction', ?, ?, ?, ?, ?, ?)`,
+              [
+                item.itemId,
+                result.id,
+                item.quantity,
+                stockBefore,
+                stockAfter,
+                transactionData.userId,
+                `Rental transaction: ${transactionCode}`,
+              ],
             );
           }
         } else {
@@ -262,6 +301,14 @@ function setupTransactionHandlers() {
             const salePrice = Number(line.salePrice) || 0;
             const lineSubtotal = Number(line.subtotal) || salePrice * quantity;
 
+            // Get current stock before update
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+              [line.itemId],
+            );
+            const stockBefore = itemBefore?.available_quantity || 0;
+            const stockQtyBefore = itemBefore?.stock_quantity || 0;
+
             await database.execute(
               `INSERT INTO sales_transaction_details (
                 sales_transaction_id, item_id, quantity,
@@ -276,10 +323,31 @@ function setupTransactionHandlers() {
               ],
             );
 
-            // Update available quantity for the item
+            // Update available quantity and stock quantity for the item
             await database.execute(
-              "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
-              [quantity, line.itemId],
+              "UPDATE items SET available_quantity = available_quantity - ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+              [quantity, quantity, line.itemId],
+            );
+
+            // Get stock after update
+            const stockAfter = stockBefore - quantity;
+            const stockQtyAfter = stockQtyBefore - quantity;
+
+            // Create stock movement record
+            await database.execute(
+              `INSERT INTO stock_movements (
+                item_id, movement_type, reference_type, reference_id,
+                quantity, stock_before, stock_after, user_id, notes
+              ) VALUES (?, 'OUT', 'sales_transaction', ?, ?, ?, ?, ?, ?)`,
+              [
+                line.itemId,
+                result.id,
+                quantity,
+                stockBefore,
+                stockAfter,
+                transactionData.userId,
+                `Sales transaction: ${transactionCode}`,
+              ],
             );
           }
         }
@@ -339,7 +407,20 @@ function setupTransactionHandlers() {
               [transactionId],
             );
 
+            // Get rental transaction info for stock movement
+            const rentalTransaction = await database.queryOne(
+              "SELECT user_id, transaction_code FROM rental_transactions WHERE id = ?",
+              [transactionId],
+            );
+
             for (const item of rentalItems) {
+              // Get current stock before update
+              const itemBefore = await database.queryOne(
+                "SELECT available_quantity FROM items WHERE id = ?",
+                [item.item_id],
+              );
+              const stockBefore = itemBefore?.available_quantity || 0;
+
               // Mark item as returned in rental_transaction_details
               await database.execute(
                 "UPDATE rental_transaction_details SET is_returned = 1, return_condition = ? WHERE id = ?",
@@ -350,6 +431,26 @@ function setupTransactionHandlers() {
               await database.execute(
                 "UPDATE items SET available_quantity = available_quantity + ? WHERE id = ?",
                 [item.quantity, item.item_id],
+              );
+
+              // Get stock after update
+              const stockAfter = stockBefore + item.quantity;
+
+              // Create stock movement record for return
+              await database.execute(
+                `INSERT INTO stock_movements (
+                  item_id, movement_type, reference_type, reference_id,
+                  quantity, stock_before, stock_after, user_id, notes
+                ) VALUES (?, 'IN', 'rental_return', ?, ?, ?, ?, ?, ?)`,
+                [
+                  item.item_id,
+                  transactionId,
+                  item.quantity,
+                  stockBefore,
+                  stockAfter,
+                  rentalTransaction?.user_id,
+                  `Return rental transaction: ${rentalTransaction?.transaction_code || transactionId}`,
+                ],
               );
             }
           }

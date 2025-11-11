@@ -1,7 +1,7 @@
 -- Migration: Create item_sizes table
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS item_sizes (
+CREATE TABLE item_sizes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -12,3 +12,4 @@ CREATE TABLE IF NOT EXISTS item_sizes (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+

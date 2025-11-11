@@ -29,3 +29,4 @@ CREATE TABLE bundle_details (
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL,
     FOREIGN KEY (accessory_id) REFERENCES accessories(id) ON DELETE SET NULL
 );
+
