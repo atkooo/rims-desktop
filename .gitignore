@@ -45,6 +45,12 @@ data/exports/pdf/*
 data/uploads/items/*
 !data/uploads/items/.gitkeep
 
+# Temporary files
+src/data/temp/*
+!src/data/temp/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
+
 # Testing
 /test-results/
 /playwright-report/

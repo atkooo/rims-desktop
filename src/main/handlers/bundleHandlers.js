@@ -2,14 +2,10 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
+const { toInteger } = require("../helpers/codeUtils");
 
 const toNumber = (value) => {
   const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
-};
-
-const toInteger = (value) => {
-  const num = parseInt(value, 10);
   return Number.isFinite(num) ? num : 0;
 };
 

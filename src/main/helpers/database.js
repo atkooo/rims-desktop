@@ -173,6 +173,41 @@ class Database {
       });
     });
   }
+
+  // Transaction helpers
+  async beginTransaction() {
+    if (!this.db) {
+      await this.connect();
+    }
+    return this.execute("BEGIN TRANSACTION");
+  }
+
+  async commit() {
+    if (!this.db) {
+      await this.connect();
+    }
+    return this.execute("COMMIT");
+  }
+
+  async rollback() {
+    if (!this.db) {
+      await this.connect();
+    }
+    return this.execute("ROLLBACK");
+  }
+
+  // Execute a function within a transaction
+  async transaction(callback) {
+    await this.beginTransaction();
+    try {
+      const result = await callback();
+      await this.commit();
+      return result;
+    } catch (error) {
+      await this.rollback();
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

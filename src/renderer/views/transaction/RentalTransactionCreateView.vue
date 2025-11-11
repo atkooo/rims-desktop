@@ -118,6 +118,7 @@
                 min="0"
                 v-model.number="form.deposit"
               />
+              
             </div>
           </div>
         </div>

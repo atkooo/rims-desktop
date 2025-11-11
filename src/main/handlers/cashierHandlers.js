@@ -219,10 +219,8 @@ function setupCashierHandlers() {
 
             const sessionCode = generateSessionCode();
 
-            await database.execute("BEGIN TRANSACTION");
-
-            try {
-                const result = await database.execute(
+            const result = await database.transaction(async () => {
+                const sessionResult = await database.execute(
                     `INSERT INTO cashier_sessions (
             session_code, user_id, opening_balance, status, notes
           ) VALUES (?, ?, ?, 'open', ?)`,
@@ -236,24 +234,21 @@ function setupCashierHandlers() {
                     description: `Membuka sesi kasir ${sessionCode} dengan saldo awal ${openingBalance}`,
                 });
 
-                await database.execute("COMMIT");
+                return sessionResult;
+            });
 
-                const newSession = await database.queryOne(
-                    `SELECT 
+            const newSession = await database.queryOne(
+                `SELECT 
             cs.*,
             u.username,
             u.full_name
           FROM cashier_sessions cs
           JOIN users u ON cs.user_id = u.id
           WHERE cs.id = ?`,
-                    [result.id]
-                );
+                [result.id]
+            );
 
-                return newSession;
-            } catch (error) {
-                await database.execute("ROLLBACK");
-                throw error;
-            }
+            return newSession;
         } catch (error) {
             logger.error("Error opening cashier session:", error);
             throw error;
@@ -342,13 +337,11 @@ function setupCashierHandlers() {
       }
 
       const expectedBalance = Number(session.opening_balance) + cashSales + cashRentals;
-            const difference = Number(actualBalance) - expectedBalance;
+      const difference = Number(actualBalance) - expectedBalance;
 
-            await database.execute("BEGIN TRANSACTION");
-
-            try {
-                await database.execute(
-                    `UPDATE cashier_sessions SET
+      await database.transaction(async () => {
+        await database.execute(
+          `UPDATE cashier_sessions SET
             closing_date = CURRENT_TIMESTAMP,
             closing_balance = ?,
             expected_balance = ?,
@@ -358,46 +351,41 @@ function setupCashierHandlers() {
             notes = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?`,
-                    [
-                        actualBalance,
-                        expectedBalance,
-                        actualBalance,
-                        difference,
-                        notes || session.notes,
-                        sessionId,
-                    ]
-                );
+          [
+            actualBalance,
+            expectedBalance,
+            actualBalance,
+            difference,
+            notes || session.notes,
+            sessionId,
+          ]
+        );
 
-                await logActivity({
-                    userId: session.user_id,
-                    action: "CASHIER_CLOSE",
-                    module: "cashier",
-                    description: `Menutup sesi kasir ${session.session_code}. Selisih: ${difference}`,
-                });
+        await logActivity({
+          userId: session.user_id,
+          action: "CASHIER_CLOSE",
+          module: "cashier",
+          description: `Menutup sesi kasir ${session.session_code}. Selisih: ${difference}`,
+        });
+      });
 
-                await database.execute("COMMIT");
+      const closedSession = await database.queryOne(
+        `SELECT 
+          cs.*,
+          u.username,
+          u.full_name
+        FROM cashier_sessions cs
+        JOIN users u ON cs.user_id = u.id
+        WHERE cs.id = ?`,
+        [sessionId]
+      );
 
-                const closedSession = await database.queryOne(
-                    `SELECT 
-            cs.*,
-            u.username,
-            u.full_name
-          FROM cashier_sessions cs
-          JOIN users u ON cs.user_id = u.id
-          WHERE cs.id = ?`,
-                    [sessionId]
-                );
-
-                return closedSession;
-            } catch (error) {
-                await database.execute("ROLLBACK");
-                throw error;
-            }
-        } catch (error) {
-            logger.error("Error closing cashier session:", error);
-            throw error;
-        }
-    });
+      return closedSession;
+    } catch (error) {
+      logger.error("Error closing cashier session:", error);
+      throw error;
+    }
+  });
 
     // Get session by ID
     ipcMain.handle("cashier:getSessionById", async (event, sessionId) => {

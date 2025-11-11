@@ -1,9 +1,12 @@
 const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
+const { normalizeCode } = require("../helpers/codeUtils");
 
-function normalizeCode(code = "") {
-  return code.trim().toUpperCase();
+// Simple code normalizer for item sizes (no prefix, just uppercase)
+function normalizeItemSizeCode(code = "", fallbackName = "") {
+  const normalized = normalizeCode(code, fallbackName, "");
+  return normalized.replace(/^[A-Z]+-/, ""); // Remove prefix if present
 }
 
 function setupItemSizeHandlers() {
@@ -36,7 +39,7 @@ function setupItemSizeHandlers() {
         payload || {};
       if (!name) throw new Error("Nama ukuran wajib diisi");
 
-      const normalizedCode = normalizeCode(code || name);
+      const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
 
       const sql = `
@@ -80,7 +83,7 @@ function setupItemSizeHandlers() {
       if (!id) throw new Error("ID ukuran tidak ditemukan");
       if (!name) throw new Error("Nama ukuran wajib diisi");
 
-      const normalizedCode = normalizeCode(code || name);
+      const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
 
       const sql = `

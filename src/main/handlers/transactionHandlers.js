@@ -3,23 +3,7 @@ const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 const { TRANSACTION_STATUS } = require("../../shared/constants");
-
-function generateTransactionCode(type) {
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-  const random = Math.floor(Math.random() * 9999)
-    .toString()
-    .padStart(4, "0");
-  const prefix = type === "RENTAL" ? "RNT" : "SLS";
-  return `${prefix}${year}${month}${day}${random}`;
-}
-
-const toInteger = (value) => {
-  const num = Number.parseInt(value, 10);
-  return Number.isFinite(num) ? num : 0;
-};
+const { generateTransactionCode, toInteger } = require("../helpers/codeUtils");
 
 const bundleItemSql = `
   SELECT

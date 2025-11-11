@@ -4,6 +4,7 @@ const path = require("path");
 const database = require("../helpers/database");
 const dbConfig = require("../config/database");
 const logger = require("../helpers/logger");
+const { cleanupTempFiles, cleanupAllTempFiles } = require("../helpers/cleanup");
 
 // File paths
 const SETTINGS_FILE = path.join(__dirname, "../../../data/settings.json");
@@ -276,6 +277,28 @@ function setupSettingsHandlers() {
       return true;
     } catch (error) {
       logger.error("Error restoring backup:", error);
+      throw error;
+    }
+  });
+
+  // Cleanup temp files
+  ipcMain.handle("cleanup:tempFiles", async () => {
+    try {
+      const deletedCount = await cleanupTempFiles();
+      return { success: true, deletedCount };
+    } catch (error) {
+      logger.error("Error cleaning up temp files:", error);
+      throw error;
+    }
+  });
+
+  // Cleanup all temp files
+  ipcMain.handle("cleanup:allTempFiles", async () => {
+    try {
+      const deletedCount = await cleanupAllTempFiles();
+      return { success: true, deletedCount };
+    } catch (error) {
+      logger.error("Error cleaning up all temp files:", error);
       throw error;
     }
   });

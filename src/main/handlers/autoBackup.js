@@ -4,6 +4,7 @@ const path = require("path");
 const database = require("../helpers/database");
 const dbConfig = require("../config/database");
 const logger = require("../helpers/logger");
+const { cleanupTempFiles } = require("../helpers/cleanup");
 
 const BACKUPS_DIR = path.join(__dirname, "../../../data/backups");
 const DATABASE_FILE = dbConfig.path;
@@ -62,6 +63,11 @@ async function createBackup() {
 
     // Clean up old backups
     await cleanOldBackups();
+
+    // Clean up old temp files (non-blocking)
+    cleanupTempFiles().catch((err) => {
+      logger.warn("Error cleaning temp files during backup:", err);
+    });
 
     // Record backup history (auto) and activity log
     try {

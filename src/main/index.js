@@ -1,6 +1,5 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
 const path = require("path");
-const { globalShortcut } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 const setupItemHandlers = require("./handlers/itemHandlers");
@@ -93,11 +92,10 @@ app.whenReady().then(async () => {
     }
   }
 
-  const database = require("./helpers/database");
   try {
     await database.connect();
   } catch (err) {
-    console.error("Failed to connect to database", err);
+    logger.error("Failed to connect to database", err);
     app.quit();
     return;
   }

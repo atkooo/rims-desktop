@@ -2,19 +2,7 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
-
-const normalizeCode = (value, fallbackName = "") => {
-  let code = (value ?? "").toString().trim();
-  if (code) return code.toUpperCase();
-  if (!fallbackName) return `ITM-${Date.now()}`;
-  const sanitized = fallbackName
-    .toUpperCase()
-    .replace(/[^0-9A-Z]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-")
-    .slice(0, 20);
-  return `ITM-${sanitized || Date.now()}`;
-};
+const { normalizeCode } = require("../helpers/codeUtils");
 
 // Setup item handlers
 function setupItemHandlers() {
