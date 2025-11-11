@@ -20,20 +20,24 @@ function setupMasterDataViewHandlers() {
     "master:getAccessories",
     () => `
       SELECT
-        id,
-        code,
-        name,
-        description,
-        rental_price_per_day,
-        sale_price,
-        stock_quantity,
-        available_quantity,
-        min_stock_alert,
-        is_available_for_rent,
-        is_available_for_sale,
-        is_active
-      FROM accessories
-      ORDER BY name ASC
+        a.id,
+        a.code,
+        a.name,
+        a.description,
+        a.rental_price_per_day,
+        a.sale_price,
+        a.stock_quantity,
+        a.available_quantity,
+        a.min_stock_alert,
+        a.is_available_for_rent,
+        a.is_available_for_sale,
+        a.is_active,
+        dg.name AS discount_group_name,
+        dg.discount_percentage,
+        dg.discount_amount
+      FROM accessories a
+      LEFT JOIN discount_groups dg ON a.discount_group_id = dg.id
+      ORDER BY a.name ASC
     `,
     "accessories",
   );
@@ -42,18 +46,22 @@ function setupMasterDataViewHandlers() {
     "master:getBundles",
     () => `
       SELECT
-        id,
-        code,
-        name,
-        description,
-        bundle_type,
-        price,
-        rental_price_per_day,
-        stock_quantity,
-        available_quantity,
-        is_active
-      FROM bundles
-      ORDER BY name ASC
+        b.id,
+        b.code,
+        b.name,
+        b.description,
+        b.bundle_type,
+        b.price,
+        b.rental_price_per_day,
+        b.stock_quantity,
+        b.available_quantity,
+        b.is_active,
+        dg.name AS discount_group_name,
+        dg.discount_percentage,
+        dg.discount_amount
+      FROM bundles b
+      LEFT JOIN discount_groups dg ON b.discount_group_id = dg.id
+      ORDER BY b.name ASC
     `,
     "bundles",
   );
@@ -102,6 +110,10 @@ function setupMasterDataViewHandlers() {
         c.photo_path,
         c.id_card_image_path,
         c.notes,
+        c.discount_group_id,
+        dg.name AS discount_group_name,
+        dg.discount_percentage,
+        dg.discount_amount,
         COALESCE(rc.total_rentals, 0) + COALESCE(sc.total_sales, 0) AS total_transactions,
         c.is_active,
         c.created_at,
@@ -109,9 +121,29 @@ function setupMasterDataViewHandlers() {
       FROM customers c
       LEFT JOIN rental_counts rc ON rc.customer_id = c.id
       LEFT JOIN sales_counts sc ON sc.customer_id = c.id
+      LEFT JOIN discount_groups dg ON c.discount_group_id = dg.id
       ORDER BY c.name ASC
     `,
     "customers",
+  );
+
+  register(
+    "master:getDiscountGroups",
+    () => `
+      SELECT
+        id,
+        code,
+        name,
+        discount_percentage,
+        discount_amount,
+        description,
+        is_active,
+        created_at,
+        updated_at
+      FROM discount_groups
+      ORDER BY name ASC
+    `,
+    "discount groups",
   );
 
   register(

@@ -140,11 +140,51 @@ function mapCustomerRow(row) {
   };
 }
 
+/**
+ * Generate customer code automatically
+ * Format: CUS-001, CUS-002, etc.
+ */
+async function generateCustomerCode() {
+  try {
+    // Get all customer codes that match pattern CUS-XXX
+    const customers = await database.query(
+      `SELECT code FROM customers WHERE code LIKE 'CUS-%' ORDER BY code DESC`,
+    );
+
+    if (customers && customers.length > 0) {
+      // Find the highest number
+      let maxNumber = 0;
+      for (const customer of customers) {
+        const match = customer.code.match(/CUS-(\d+)/);
+        if (match && match[1]) {
+          const number = parseInt(match[1], 10);
+          if (number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      }
+
+      if (maxNumber > 0) {
+        const nextNumber = maxNumber + 1;
+        return `CUS-${nextNumber.toString().padStart(3, "0")}`;
+      }
+    }
+
+    // If no existing code found, start from CUS-001
+    return "CUS-001";
+  } catch (error) {
+    logger.error("Error generating customer code:", error);
+    // Fallback: use timestamp-based code
+    const timestamp = Date.now().toString().slice(-6);
+    return `CUS-${timestamp}`;
+  }
+}
+
 function setupCustomerHandlers() {
   ipcMain.handle("customers:create", async (_event, payload = {}) => {
     try {
       const now = new Date().toISOString();
-      const code = (payload.code ?? "").toString().trim();
+      let code = (payload.code ?? "").toString().trim();
       const name = (payload.name ?? "").toString().trim();
       const phone = (payload.phone ?? "").toString().trim();
       const email = (payload.email ?? "").toString().trim();
@@ -154,9 +194,14 @@ function setupCustomerHandlers() {
         .toString()
         .trim();
 
+      // Auto-generate code if not provided
       if (!validator.isNotEmpty(code)) {
-        throw new Error("Kode pelanggan wajib diisi");
+        code = await generateCustomerCode();
+      } else {
+        // Normalize code to uppercase
+        code = code.toUpperCase();
       }
+
       if (!validator.isNotEmpty(name)) {
         throw new Error("Nama pelanggan wajib diisi");
       }
@@ -164,13 +209,49 @@ function setupCustomerHandlers() {
         throw new Error("Format email tidak valid");
       }
 
-      const existing = await database.queryOne(
-        "SELECT id FROM customers WHERE code = ?",
-        [code],
-      );
+      // Check if code already exists (only if code was manually provided)
+      // For auto-generated codes, generateCustomerCode already handles uniqueness
+      if (payload.code && payload.code.trim() !== "") {
+        const existing = await database.queryOne(
+          "SELECT id FROM customers WHERE code = ?",
+          [code],
+        );
 
-      if (existing) {
-        throw new Error("Kode pelanggan sudah digunakan");
+        if (existing) {
+          throw new Error("Kode pelanggan sudah digunakan");
+        }
+      } else {
+        // For auto-generated codes, ensure uniqueness by checking if it exists
+        // and generating a new one if needed
+        let attempts = 0;
+        let maxAttempts = 10;
+        while (attempts < maxAttempts) {
+          const existing = await database.queryOne(
+            "SELECT id FROM customers WHERE code = ?",
+            [code],
+          );
+
+          if (!existing) {
+            // Code is unique, we can use it
+            break;
+          }
+
+          // Code exists, generate a new one
+          const match = code.match(/CUS-(\d+)/);
+          if (match && match[1]) {
+            const number = parseInt(match[1], 10) + 1;
+            code = `CUS-${number.toString().padStart(3, "0")}`;
+          } else {
+            // Fallback: regenerate completely
+            code = await generateCustomerCode();
+          }
+          attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+          // Final fallback: use timestamp-based code
+          code = `CUS-${Date.now().toString().slice(-6)}`;
+        }
       }
 
       let photoPath = null;
@@ -181,6 +262,23 @@ function setupCustomerHandlers() {
       }
       if (payload.id_card_image) {
         idCardImagePath = saveUploadedFile(payload.id_card_image, "ktp");
+      }
+
+      // Validate discount_group_id if provided
+      let discountGroupId = null;
+      if (payload.discount_group_id !== undefined && payload.discount_group_id !== null && payload.discount_group_id !== "") {
+        discountGroupId = Number(payload.discount_group_id);
+        if (discountGroupId) {
+          const discountGroup = await database.queryOne(
+            "SELECT id FROM discount_groups WHERE id = ?",
+            [discountGroupId],
+          );
+          if (!discountGroup) {
+            throw new Error("Grup diskon tidak ditemukan");
+          }
+        } else {
+          discountGroupId = null;
+        }
       }
 
       const insertSql = `
@@ -195,9 +293,10 @@ function setupCustomerHandlers() {
           is_active,
           photo_path,
           id_card_image_path,
+          discount_group_id,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const result = await database.execute(insertSql, [
@@ -211,6 +310,7 @@ function setupCustomerHandlers() {
         payload.is_active === false ? 0 : 1,
         photoPath,
         idCardImagePath,
+        discountGroupId,
         now,
         now,
       ]);
@@ -250,20 +350,26 @@ function setupCustomerHandlers() {
 
         if (payload.code !== undefined) {
           const code = (payload.code ?? "").toString().trim();
-          if (!validator.isNotEmpty(code)) {
-            throw new Error("Kode pelanggan wajib diisi");
+          
+          // Only update code if it's provided and not empty
+          // If empty, skip code update (keep existing code)
+          if (validator.isNotEmpty(code)) {
+            // Normalize code to uppercase
+            const normalizedCode = code.toUpperCase();
+            
+            // Check for duplicate
+            const duplicate = await database.queryOne(
+              "SELECT id FROM customers WHERE code = ? AND id != ?",
+              [normalizedCode, id],
+            );
+
+            if (duplicate) {
+              throw new Error("Kode pelanggan sudah digunakan oleh pelanggan lain");
+            }
+
+            updates.code = normalizedCode;
           }
-
-          const duplicate = await database.queryOne(
-            "SELECT id FROM customers WHERE code = ? AND id != ?",
-            [code, id],
-          );
-
-          if (duplicate) {
-            throw new Error("Kode pelanggan sudah digunakan oleh pelanggan lain");
-          }
-
-          updates.code = code;
+          // If code is empty, don't update it (skip)
         }
 
         if (payload.name !== undefined) {
@@ -291,6 +397,26 @@ function setupCustomerHandlers() {
             updates[field] = value || null;
           }
         });
+
+        if (payload.discount_group_id !== undefined) {
+          if (payload.discount_group_id === null || payload.discount_group_id === "") {
+            updates.discount_group_id = null;
+          } else {
+            const discountGroupId = Number(payload.discount_group_id);
+            if (discountGroupId) {
+              const discountGroup = await database.queryOne(
+                "SELECT id FROM discount_groups WHERE id = ?",
+                [discountGroupId],
+              );
+              if (!discountGroup) {
+                throw new Error("Grup diskon tidak ditemukan");
+              }
+              updates.discount_group_id = discountGroupId;
+            } else {
+              updates.discount_group_id = null;
+            }
+          }
+        }
 
         if (payload.is_active !== undefined) {
           updates.is_active =

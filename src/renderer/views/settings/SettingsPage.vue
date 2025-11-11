@@ -113,12 +113,14 @@
           <div class="select-group">
             <label>Printer Receipt</label>
             <select v-model="settings.printer" class="form-select">
+              <option value="">Pilih Printer</option>
               <option
                 v-for="printer in printers"
-                :key="printer"
-                :value="printer"
+                :key="typeof printer === 'string' ? printer : printer.name"
+                :value="typeof printer === 'string' ? printer : printer.name"
               >
-                {{ printer }}
+                {{ typeof printer === 'string' ? printer : (printer.displayName || printer.name) }}
+                <span v-if="typeof printer === 'object' && printer.isDefault"> (Default)</span>
               </option>
             </select>
           </div>

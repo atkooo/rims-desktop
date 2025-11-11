@@ -49,6 +49,23 @@ function setupAccessoryHandlers() {
 
       const now = new Date().toISOString();
 
+      // Validate discount_group_id if provided
+      let discountGroupId = null;
+      if (payload.discount_group_id !== undefined && payload.discount_group_id !== null && payload.discount_group_id !== "") {
+        discountGroupId = Number(payload.discount_group_id);
+        if (discountGroupId) {
+          const discountGroup = await database.queryOne(
+            "SELECT id FROM discount_groups WHERE id = ?",
+            [discountGroupId],
+          );
+          if (!discountGroup) {
+            throw new Error("Grup diskon tidak ditemukan");
+          }
+        } else {
+          discountGroupId = null;
+        }
+      }
+
       const insertSql = `
         INSERT INTO accessories (
           code,
@@ -63,9 +80,10 @@ function setupAccessoryHandlers() {
           is_available_for_rent,
           is_available_for_sale,
           is_active,
+          discount_group_id,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const result = await database.execute(insertSql, [
@@ -81,6 +99,7 @@ function setupAccessoryHandlers() {
         toBoolean(payload.is_available_for_rent) ? 1 : 0,
         toBoolean(payload.is_available_for_sale) ? 1 : 0,
         toBoolean(payload.is_active) ? 1 : 0,
+        discountGroupId,
         now,
         now,
       ]);
@@ -177,6 +196,27 @@ function setupAccessoryHandlers() {
           0,
           toInteger(payload.min_stock_alert),
         );
+      }
+
+      // Validate discount_group_id if provided
+      if (payload.discount_group_id !== undefined) {
+        if (payload.discount_group_id === null || payload.discount_group_id === "") {
+          updates.discount_group_id = null;
+        } else {
+          const discountGroupId = Number(payload.discount_group_id);
+          if (discountGroupId) {
+            const discountGroup = await database.queryOne(
+              "SELECT id FROM discount_groups WHERE id = ?",
+              [discountGroupId],
+            );
+            if (!discountGroup) {
+              throw new Error("Grup diskon tidak ditemukan");
+            }
+            updates.discount_group_id = discountGroupId;
+          } else {
+            updates.discount_group_id = null;
+          }
+        }
       }
 
       const booleanFields = [

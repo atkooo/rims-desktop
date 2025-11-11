@@ -46,10 +46,51 @@ function setupSettingsHandlers() {
   });
 
   // Get printer list
-  ipcMain.handle("printer:list", (event) => {
-    // In real implementation, this would get the list of system printers
-    // For now, return dummy data
-    return ["Default Printer", "PDF Printer", "Receipt Printer"];
+  ipcMain.handle("printer:list", async (event) => {
+    try {
+      // Use event.sender to get webContents from the renderer process
+      const webContents = event.sender;
+      
+      if (!webContents) {
+        logger.warn("No webContents available to get printer list");
+        return [];
+      }
+
+      // Get system printers using webContents.getPrintersAsync() (Electron 20+)
+      try {
+        // Try async method first (Electron 20+)
+        if (typeof webContents.getPrintersAsync === "function") {
+          const printers = await webContents.getPrintersAsync();
+          return printers.map((printer) => ({
+            name: printer.name,
+            displayName: printer.displayName || printer.name,
+            description: printer.description || "",
+            status: printer.status || 0,
+            isDefault: printer.isDefault || false,
+          }));
+        } else if (typeof webContents.getPrinters === "function") {
+          // Fallback for older Electron versions
+          const printers = webContents.getPrinters();
+          return printers.map((printer) => ({
+            name: printer.name,
+            displayName: printer.displayName || printer.name,
+            description: printer.description || "",
+            status: printer.status || 0,
+            isDefault: printer.isDefault || false,
+          }));
+        } else {
+          // Fallback: return empty array
+          logger.warn("getPrinters method not available");
+          return [];
+        }
+      } catch (printerError) {
+        logger.error("Error getting printer list:", printerError);
+        return [];
+      }
+    } catch (error) {
+      logger.error("Error in printer:list handler:", error);
+      return [];
+    }
   });
 
   // Get backup list

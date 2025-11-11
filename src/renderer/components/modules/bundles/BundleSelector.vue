@@ -20,7 +20,10 @@
         <div class="item-info">
           <span class="item-name">{{ bundle.name }}</span>
           <span class="item-price">
-            {{ formatCurrency(bundle.price) }}
+            {{ formatCurrency(calculateBundlePrice(bundle)) }}
+            <span v-if="bundle.discount_percentage > 0 || bundle.discount_amount > 0" class="discount-badge">
+              (Diskon: {{ bundle.discount_percentage > 0 ? bundle.discount_percentage + '%' : formatCurrency(bundle.discount_amount) }})
+            </span>
           </span>
         </div>
         <div class="item-actions">
@@ -89,9 +92,24 @@ export default {
       },
     );
 
+    // Calculate price after bundle discount
+    const calculateBundlePrice = (bundle) => {
+      const basePrice = bundle.price || 0;
+      
+      // Apply bundle discount if bundle has discount_group
+      if (bundle.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
+      } else if (bundle.discount_amount > 0) {
+        return Math.max(0, basePrice - bundle.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
     const total = computed(() =>
       selectedBundles.value.reduce((sum, bundle) => {
-        return sum + (bundle.price || 0) * (bundle.quantity || 1);
+        const price = calculateBundlePrice(bundle);
+        return sum + price * (bundle.quantity || 1);
       }, 0),
     );
 
@@ -116,7 +134,8 @@ export default {
       if (Number.isNaN(value) || value < 1) {
         selectedBundles.value[index].quantity = 1;
       } else {
-        selectedBundles.value[index].quantity = value;
+        // Ensure quantity is a valid integer
+        selectedBundles.value[index].quantity = Math.max(1, Math.floor(value));
       }
       emit("update:modelValue", selectedBundles.value);
     };
@@ -135,6 +154,7 @@ export default {
       selectedBundles,
       total,
       formatCurrency,
+      calculateBundlePrice,
       selectBundle,
       updateQuantity,
       removeBundle,
@@ -249,5 +269,11 @@ export default {
   border-radius: 4px;
   text-align: center;
   color: #6b7280;
+}
+
+.discount-badge {
+  font-size: 0.75rem;
+  color: #16a34a;
+  margin-left: 0.5rem;
 }
 </style>

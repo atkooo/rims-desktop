@@ -11,6 +11,7 @@ import BundlesDetailView from "./views/master/BundlesDetailView.vue";
 import BundleDetailPageView from "./views/master/BundleDetailPageView.vue";
 import ItemDetailView from "./views/master/ItemDetailView.vue";
 import CustomersView from "./views/master/CustomersView.vue";
+import DiscountGroupsView from "./views/master/DiscountGroupsView.vue";
 import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
 import ReportsPage from "./views/reports/ReportsPage.vue";
@@ -72,6 +73,7 @@ const routes = [
     component: ItemDetailView,
   },
   { path: "/master/customers", name: "customers", component: CustomersView },
+  { path: "/master/discount-groups", name: "discount-groups", component: DiscountGroupsView },
   { path: "/master/roles", name: "roles", component: RolesView },
   { path: "/master/users", name: "users", component: UsersView },
   // Transactions (read-only views)
@@ -104,6 +106,11 @@ const routes = [
     path: "/transactions/sales/:code",
     name: "transaction-sale-detail",
     component: SaleTransactionDetailView,
+  },
+  {
+    path: "/transactions/sales/:id/payment",
+    name: "transaction-sale-payment",
+    component: () => import("./views/transaction/SaleTransactionPaymentView.vue"),
   },
   {
     path: "/transactions/bookings",

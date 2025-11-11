@@ -20,6 +20,8 @@ const setupReportHandlers = require("./handlers/reportHandlers");
 const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers");
 const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
 const setupCashierHandlers = require("./handlers/cashierHandlers");
+const setupDiscountGroupHandlers = require("./handlers/discountGroupHandlers");
+const setupInvoiceHandlers = require("./handlers/invoiceHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
@@ -41,6 +43,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
+      plugins: true, // Enable plugins for PDF support
     },
   });
 
@@ -117,6 +120,8 @@ app.whenReady().then(async () => {
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();
   setupCashierHandlers();
+  setupDiscountGroupHandlers();
+  setupInvoiceHandlers();
   createWindow();
 
   // Global shortcuts to toggle/exit fullscreen

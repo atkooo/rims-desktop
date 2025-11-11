@@ -14,7 +14,7 @@
           v-model="form.code"
           :error="errors.code"
           maxlength="50"
-          required
+          :hint="!isEdit ? 'Kosongkan untuk generate otomatis' : ''"
         />
         <FormInput
           id="customerName"
@@ -46,6 +46,29 @@
           :error="errors.id_card_number"
           maxlength="50"
         />
+        <div class="form-group">
+          <label class="form-label" for="customerDiscountGroup">Grup Diskon</label>
+          <select
+            id="customerDiscountGroup"
+            v-model="form.discount_group_id"
+            class="form-select"
+          >
+            <option value="">Tidak Ada</option>
+              <option
+                v-for="group in discountGroups"
+                :key="group.id"
+                :value="group.id"
+              >
+                {{ group.name }}
+                <template v-if="group.discount_percentage > 0">
+                  ({{ group.discount_percentage }}%)
+                </template>
+                <template v-else-if="group.discount_amount > 0">
+                  ({{ formatCurrency(group.discount_amount) }})
+                </template>
+              </option>
+          </select>
+        </div>
         <div class="form-group">
           <label class="form-label" for="customerStatus">Status</label>
           <select
@@ -164,13 +187,14 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import {
   createCustomer,
   updateCustomer,
   fetchCustomerDocument,
+  fetchDiscountGroups,
 } from "@/services/masterData";
 
 const defaultForm = () => ({
@@ -181,6 +205,7 @@ const defaultForm = () => ({
   address: "",
   id_card_number: "",
   notes: "",
+  discount_group_id: "",
   is_active: true,
 });
 
@@ -212,6 +237,7 @@ export default {
     const errors = ref({});
     const submitError = ref("");
     const documentErrors = ref({ photo: "", idCard: "" });
+    const discountGroups = ref([]);
 
     const photoPayload = ref(null);
     const idCardPayload = ref(null);
@@ -225,6 +251,13 @@ export default {
     const existingIdCardPath = ref(null);
     const removePhoto = ref(false);
     const removeIdCard = ref(false);
+
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(value || 0);
+    };
 
     const showDialog = computed({
       get: () => props.modelValue,
@@ -278,12 +311,21 @@ export default {
         form.value = {
           ...form.value,
           ...props.editData,
+          discount_group_id: props.editData.discount_group_id || "",
           is_active:
             props.editData.is_active === true ||
             props.editData.is_active === 1 ||
             props.editData.is_active === "1",
         };
         loadExistingDocuments();
+      }
+    };
+
+    const loadDiscountGroups = async () => {
+      try {
+        discountGroups.value = await fetchDiscountGroups();
+      } catch (error) {
+        console.error("Gagal memuat discount groups:", error);
       }
     };
 
@@ -316,9 +358,8 @@ export default {
     const validate = () => {
       const validationErrors = {};
 
-      if (!form.value.code || !form.value.code.trim()) {
-        validationErrors.code = "Kode pelanggan wajib diisi";
-      }
+      // Code is optional - will be auto-generated if empty
+      // No validation needed for code
 
       if (!form.value.name || !form.value.name.trim()) {
         validationErrors.name = "Nama pelanggan wajib diisi";
@@ -409,13 +450,15 @@ export default {
       submitError.value = "";
 
       const payload = {
-        code: form.value.code.trim(),
+        // Code will be auto-generated if empty (for new customers)
+        code: form.value.code?.trim() || "",
         name: form.value.name.trim(),
         phone: form.value.phone?.trim() || "",
         email: form.value.email?.trim() || "",
         address: form.value.address?.trim() || "",
         id_card_number: form.value.id_card_number?.trim() || "",
         notes: form.value.notes?.trim() || "",
+        discount_group_id: form.value.discount_group_id || null,
         is_active: !!form.value.is_active,
       };
 
@@ -479,6 +522,21 @@ export default {
       },
     );
 
+    watch(
+      () => props.modelValue,
+      (value) => {
+        if (value) {
+          loadDiscountGroups();
+        }
+      },
+    );
+
+    onMounted(() => {
+      if (props.modelValue) {
+        loadDiscountGroups();
+      }
+    });
+
     return {
       showDialog,
       isEdit,
@@ -495,6 +553,8 @@ export default {
       existingIdCardPath,
       removePhoto,
       removeIdCard,
+      discountGroups,
+      formatCurrency,
       handleSubmit,
       handleFileSelect,
       clearDocument,

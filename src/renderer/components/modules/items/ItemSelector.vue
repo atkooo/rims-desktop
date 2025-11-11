@@ -20,7 +20,12 @@
       >
         <div class="item-info">
           <span class="item-name">{{ item.name }}</span>
-          <span class="item-price">{{ formatCurrency(item.price) }}</span>
+          <span class="item-price">
+            {{ formatCurrency(calculateItemPrice(item)) }}
+            <span v-if="item.discount_percentage > 0 || item.discount_amount > 0" class="discount-badge">
+              (Diskon: {{ item.discount_percentage > 0 ? item.discount_percentage + '%' : formatCurrency(item.discount_amount) }})
+            </span>
+          </span>
         </div>
         <div class="item-actions">
           <input
@@ -78,9 +83,25 @@ export default {
     const pickerOpen = ref(false);
     const selectedItems = ref(props.modelValue);
 
+    // Calculate price after item discount
+    const calculateItemPrice = (item) => {
+      // Use sale_price for sale transactions, fallback to price
+      const basePrice = item.sale_price ?? item.price ?? 0;
+      
+      // Apply item discount if item has discount_group
+      if (item.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - item.discount_percentage / 100));
+      } else if (item.discount_amount > 0) {
+        return Math.max(0, basePrice - item.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
     const total = computed(() => {
       return selectedItems.value.reduce((sum, item) => {
-        return sum + item.price * (item.quantity || 1);
+        const price = calculateItemPrice(item);
+        return sum + price * (item.quantity || 1);
       }, 0);
     });
 
@@ -103,11 +124,12 @@ export default {
     };
 
     const updateQuantity = (index, event) => {
-      const value = parseInt(event.target.value);
+      const value = parseInt(event.target.value, 10);
       if (Number.isNaN(value) || value < 1) {
         selectedItems.value[index].quantity = 1;
       } else {
-        selectedItems.value[index].quantity = value;
+        // Ensure quantity is a valid integer
+        selectedItems.value[index].quantity = Math.max(1, Math.floor(value));
       }
       emit("update:modelValue", selectedItems.value);
     };
@@ -128,6 +150,7 @@ export default {
       selectedItems,
       total,
       formatCurrency,
+      calculateItemPrice,
       selectItem,
       updateQuantity,
       removeItem,
@@ -218,5 +241,11 @@ export default {
 .total-amount {
   font-size: 1.25rem;
   color: #111827;
+}
+
+.discount-badge {
+  font-size: 0.75rem;
+  color: #16a34a;
+  margin-left: 0.5rem;
 }
 </style>

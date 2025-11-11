@@ -63,6 +63,25 @@
           v-model="form.available_quantity"
           :error="errors.available_quantity"
         />
+        <div class="form-group">
+          <label class="form-label">Grup Diskon (Opsional)</label>
+          <select v-model.number="form.discount_group_id" class="form-select">
+            <option :value="null">Tidak ada diskon</option>
+            <option
+              v-for="discountGroup in discountGroups"
+              :key="discountGroup.id"
+              :value="discountGroup.id"
+            >
+              {{ discountGroup.name }}
+              <template v-if="discountGroup.discount_percentage > 0">
+                ({{ discountGroup.discount_percentage }}%)
+              </template>
+              <template v-else-if="discountGroup.discount_amount > 0">
+                (Rp {{ formatCurrency(discountGroup.discount_amount) }})
+              </template>
+            </option>
+          </select>
+        </div>
       </div>
 
       <div class="form-group">
@@ -86,10 +105,10 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import { createBundle, updateBundle } from "@/services/masterData";
+import { createBundle, updateBundle, fetchDiscountGroups } from "@/services/masterData";
 
 const defaultForm = () => ({
   code: "",
@@ -100,6 +119,7 @@ const defaultForm = () => ({
   rental_price_per_day: "",
   stock_quantity: "",
   available_quantity: "",
+  discount_group_id: null,
   is_active: true,
 });
 
@@ -126,6 +146,7 @@ export default {
     const errors = ref({});
     const submitError = ref("");
     const loading = ref(false);
+    const discountGroups = ref([]);
 
     const showDialog = computed({
       get: () => props.modelValue,
@@ -140,6 +161,7 @@ export default {
           ...defaultForm(),
           ...props.editData,
           bundle_type: props.editData.bundle_type || "rental",
+          discount_group_id: props.editData.discount_group_id ?? null,
           is_active:
             props.editData.is_active === 1 || props.editData.is_active === true,
         };
@@ -202,6 +224,7 @@ export default {
         rental_price_per_day: toNumber(form.value.rental_price_per_day),
         stock_quantity: stockQty,
         available_quantity: availableQty,
+        discount_group_id: form.value.discount_group_id || null,
         is_active: !!form.value.is_active,
       };
     };
@@ -250,6 +273,28 @@ export default {
       },
     );
 
+    const loadDiscountGroups = async () => {
+      try {
+        const data = await fetchDiscountGroups();
+        discountGroups.value = data.filter(dg => dg.is_active);
+      } catch (error) {
+        console.error("Gagal memuat grup diskon:", error);
+      }
+    };
+
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value || 0);
+    };
+
+    onMounted(() => {
+      loadDiscountGroups();
+    });
+
     return {
       form,
       errors,
@@ -258,6 +303,8 @@ export default {
       isEdit,
       showDialog,
       handleSubmit,
+      discountGroups,
+      formatCurrency,
     };
   },
 };

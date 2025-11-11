@@ -24,12 +24,29 @@ const sanitizeAvailable = (stock, available) => {
   return Math.min(stockQty, availableQty);
 };
 
-function buildPayload(raw) {
+async function buildPayload(raw) {
   const stockQty = Math.max(0, toInteger(raw.stock_quantity));
   const requestedAvailable =
     raw.available_quantity === undefined || raw.available_quantity === ""
       ? stockQty
       : Math.max(0, toInteger(raw.available_quantity));
+
+  // Validate discount_group_id if provided
+  let discountGroupId = null;
+  if (raw.discount_group_id !== undefined && raw.discount_group_id !== null && raw.discount_group_id !== "") {
+    discountGroupId = Number(raw.discount_group_id);
+    if (discountGroupId) {
+      const discountGroup = await database.queryOne(
+        "SELECT id FROM discount_groups WHERE id = ?",
+        [discountGroupId],
+      );
+      if (!discountGroup) {
+        throw new Error("Grup diskon tidak ditemukan");
+      }
+    } else {
+      discountGroupId = null;
+    }
+  }
 
   return {
     code: (raw.code ?? "").toString().trim(),
@@ -40,6 +57,7 @@ function buildPayload(raw) {
     rental_price_per_day: toNumber(raw.rental_price_per_day),
     stock_quantity: stockQty,
     available_quantity: sanitizeAvailable(stockQty, requestedAvailable),
+    discount_group_id: discountGroupId,
     is_active: raw.is_active ? 1 : 0,
   };
 }
@@ -146,7 +164,7 @@ const fetchDetailRow = (id) => database.queryOne(detailSelectSql, [id]);
 function setupBundleHandlers() {
   ipcMain.handle("bundles:create", async (_event, rawPayload = {}) => {
     try {
-      const payload = buildPayload(rawPayload);
+      const payload = await buildPayload(rawPayload);
       validatePayload(payload);
 
       const now = new Date().toISOString();
@@ -160,10 +178,11 @@ function setupBundleHandlers() {
           rental_price_per_day,
           stock_quantity,
           available_quantity,
+          discount_group_id,
           is_active,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const result = await database.execute(sql, [
@@ -175,6 +194,7 @@ function setupBundleHandlers() {
         payload.rental_price_per_day,
         payload.stock_quantity,
         payload.available_quantity,
+        payload.discount_group_id,
         payload.is_active,
         now,
         now,
@@ -192,22 +212,49 @@ function setupBundleHandlers() {
   ipcMain.handle("bundles:update", async (_event, id, rawPayload = {}) => {
     try {
       if (!id) throw new Error("ID paket tidak ditemukan");
-      const payload = buildPayload(rawPayload);
-
+      
       const existing = await database.queryOne(
         "SELECT * FROM bundles WHERE id = ?",
         [id],
       );
       if (!existing) throw new Error("Paket tidak ditemukan");
 
+      // Merge with existing data and build payload
+      const payload = await buildPayload({ ...existing, ...rawPayload });
+      
       // Only validate when fields provided
-      const merged = { ...existing, ...payload };
-      validatePayload(merged);
+      validatePayload(payload);
 
       const fields = [];
       const values = [];
-      Object.entries(payload).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+      
+      // Process discount_group_id separately
+      if (rawPayload.discount_group_id !== undefined) {
+        if (rawPayload.discount_group_id === null || rawPayload.discount_group_id === "") {
+          fields.push("discount_group_id = ?");
+          values.push(null);
+        } else {
+          const discountGroupId = Number(rawPayload.discount_group_id);
+          if (discountGroupId) {
+            const discountGroup = await database.queryOne(
+              "SELECT id FROM discount_groups WHERE id = ?",
+              [discountGroupId],
+            );
+            if (!discountGroup) {
+              throw new Error("Grup diskon tidak ditemukan");
+            }
+            fields.push("discount_group_id = ?");
+            values.push(discountGroupId);
+          } else {
+            fields.push("discount_group_id = ?");
+            values.push(null);
+          }
+        }
+      }
+      
+      // Process other fields
+      Object.entries(rawPayload).forEach(([key, value]) => {
+        if (key !== 'discount_group_id' && value !== undefined && value !== null) {
           fields.push(`${key} = ?`);
           values.push(value);
         }

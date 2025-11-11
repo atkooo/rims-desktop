@@ -268,6 +268,26 @@ function setupTransactionHandlers() {
           }
         } else {
           // Insert sales transaction
+          // Convert empty string to null for customer_id (customer is optional for sales)
+          const customerId = transactionData.customerId && transactionData.customerId.toString().trim() !== "" 
+            ? transactionData.customerId 
+            : null;
+          
+          // Determine payment status based on paid amount
+          const paidAmount = transactionData.paidAmount || 0;
+          const totalAmount = transactionData.totalAmount || 0;
+          let paymentStatus = transactionData.paymentStatus;
+          
+          if (!paymentStatus) {
+            if (paidAmount >= totalAmount && paidAmount > 0) {
+              paymentStatus = "paid";
+            } else if (paidAmount > 0) {
+              paymentStatus = "partial";
+            } else {
+              paymentStatus = "unpaid";
+            }
+          }
+
           result = await database.execute(
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
@@ -276,16 +296,16 @@ function setupTransactionHandlers() {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
-              transactionData.customerId,
+              customerId,
               transactionData.userId,
               transactionData.saleDate,
               transactionData.subtotal,
               transactionData.discount || 0,
               transactionData.tax || 0,
-              transactionData.totalAmount,
+              totalAmount,
               transactionData.paymentMethod || "cash",
-              transactionData.paymentStatus || "paid",
-              transactionData.paidAmount || transactionData.totalAmount,
+              paymentStatus,
+              paidAmount,
               transactionData.notes,
               cashierSessionId,
             ],
@@ -533,8 +553,12 @@ function setupTransactionHandlers() {
           const updateValues = [];
 
           if (transactionData.customerId !== undefined) {
+            // Convert empty string to null for customer_id (customer is optional for sales)
+            const customerId = transactionData.customerId && transactionData.customerId.toString().trim() !== "" 
+              ? transactionData.customerId 
+              : null;
             updateFields.push("customer_id = ?");
-            updateValues.push(transactionData.customerId);
+            updateValues.push(customerId);
           }
           if (transactionData.saleDate !== undefined) {
             updateFields.push("sale_date = ?");
@@ -845,6 +869,67 @@ function setupPaymentHandlers() {
          WHERE p.id = ?`,
         [result.id],
       );
+
+      // Update transaction payment status and paid amount
+      if (paymentData.transactionType === "sale") {
+        // Get current transaction
+        const transaction = await database.queryOne(
+          "SELECT paid_amount, total_amount FROM sales_transactions WHERE id = ?",
+          [paymentData.transactionId]
+        );
+
+        if (transaction) {
+          const newPaidAmount = (transaction.paid_amount || 0) + paymentData.amount;
+          const totalAmount = transaction.total_amount || 0;
+          
+          // Determine payment status
+          let paymentStatus = "partial";
+          if (newPaidAmount >= totalAmount) {
+            paymentStatus = "paid";
+          } else if (newPaidAmount > 0) {
+            paymentStatus = "partial";
+          } else {
+            paymentStatus = "unpaid";
+          }
+
+          // Update transaction
+          await database.execute(
+            `UPDATE sales_transactions 
+             SET paid_amount = ?, payment_status = ?
+             WHERE id = ?`,
+            [newPaidAmount, paymentStatus, paymentData.transactionId]
+          );
+        }
+      } else if (paymentData.transactionType === "rental") {
+        // Get current transaction
+        const transaction = await database.queryOne(
+          "SELECT paid_amount, total_amount FROM rental_transactions WHERE id = ?",
+          [paymentData.transactionId]
+        );
+
+        if (transaction) {
+          const newPaidAmount = (transaction.paid_amount || 0) + paymentData.amount;
+          const totalAmount = transaction.total_amount || 0;
+          
+          // Determine payment status
+          let paymentStatus = "partial";
+          if (newPaidAmount >= totalAmount) {
+            paymentStatus = "paid";
+          } else if (newPaidAmount > 0) {
+            paymentStatus = "partial";
+          } else {
+            paymentStatus = "unpaid";
+          }
+
+          // Update transaction
+          await database.execute(
+            `UPDATE rental_transactions 
+             SET paid_amount = ?, payment_status = ?
+             WHERE id = ?`,
+            [newPaidAmount, paymentStatus, paymentData.transactionId]
+          );
+        }
+      }
 
       return newPayment;
     } catch (error) {

@@ -36,7 +36,10 @@
             <div>
               <div class="picker-name">{{ item.name }}</div>
               <div class="picker-detail">
-                {{ item.type || "General" }} · {{ formatCurrency(item.price) }}
+                {{ item.type || "General" }} · {{ formatCurrency(item.sale_price ?? item.price ?? 0) }}
+                <span v-if="item.sale_price && item.sale_price !== item.price" class="price-note">
+                  (Harga: {{ formatCurrency(item.price) }})
+                </span>
               </div>
             </div>
           </div>
@@ -249,5 +252,11 @@ export default {
   padding: 1rem;
   color: #6b7280;
   text-align: center;
+}
+
+.price-note {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-left: 0.25rem;
 }
 </style>

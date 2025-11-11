@@ -25,9 +25,13 @@ function setupItemHandlers() {
         SELECT
           i.*,
           s.name AS size_name,
-          s.code AS size_code
+          s.code AS size_code,
+          dg.name AS discount_group_name,
+          dg.discount_percentage,
+          dg.discount_amount
         FROM items i
         LEFT JOIN item_sizes s ON i.size_id = s.id
+        LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
         ORDER BY i.id DESC
       `);
       return items;
@@ -54,6 +58,26 @@ function setupItemHandlers() {
         throw new Error("Kategori harus dipilih");
       }
 
+      // Map dailyRate to rental_price_per_day
+      const rentalPricePerDay = itemData.dailyRate ?? itemData.rental_price_per_day ?? 0;
+
+      // Validate discount_group_id if provided
+      let discountGroupId = null;
+      if (itemData.discount_group_id !== undefined && itemData.discount_group_id !== null && itemData.discount_group_id !== "") {
+        discountGroupId = Number(itemData.discount_group_id);
+        if (discountGroupId) {
+          const discountGroup = await database.queryOne(
+            "SELECT id FROM discount_groups WHERE id = ?",
+            [discountGroupId],
+          );
+          if (!discountGroup) {
+            throw new Error("Grup diskon tidak ditemukan");
+          }
+        } else {
+          discountGroupId = null;
+        }
+      }
+
       const result = await database.execute(
         `INSERT INTO items (
             code,
@@ -63,8 +87,10 @@ function setupItemHandlers() {
             type,
             status,
             size_id,
-            category_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            category_id,
+            rental_price_per_day,
+            discount_group_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
@@ -74,6 +100,8 @@ function setupItemHandlers() {
           itemData.status ?? "AVAILABLE",
           itemData.size_id ?? null,
           itemData.category_id,
+          rentalPricePerDay,
+          discountGroupId,
         ],
       );
 
@@ -102,10 +130,14 @@ function setupItemHandlers() {
           i.*,
           s.name AS size_name,
           s.code AS size_code,
-          c.name AS category_name
+          c.name AS category_name,
+          dg.name AS discount_group_name,
+          dg.discount_percentage,
+          dg.discount_amount
         FROM items i
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
         WHERE i.id = ?
       `,
         [id],
@@ -139,10 +171,63 @@ function setupItemHandlers() {
         throw new Error("Kategori harus dipilih");
       }
 
-      const normalizedUpdates = { ...updates };
-      if (updates.code !== undefined) {
-        normalizedUpdates.code = normalizeCode(updates.code);
+      // Map form fields to database columns and filter out invalid fields
+      const validColumns = [
+        'code', 'name', 'description', 'price', 'type', 'status',
+        'size_id', 'category_id', 'purchase_price', 'rental_price_per_day',
+        'sale_price', 'stock_quantity', 'available_quantity', 'min_stock_alert',
+        'image_path', 'is_available_for_rent', 'is_available_for_sale', 'is_active',
+        'discount_group_id'
+      ];
+
+      const normalizedUpdates = {};
+      
+      // Map dailyRate to rental_price_per_day
+      if (updates.dailyRate !== undefined) {
+        normalizedUpdates.rental_price_per_day = updates.dailyRate;
       }
+      
+      // Validate discount_group_id if provided
+      if (updates.discount_group_id !== undefined) {
+        if (updates.discount_group_id === null || updates.discount_group_id === "") {
+          normalizedUpdates.discount_group_id = null;
+        } else {
+          const discountGroupId = Number(updates.discount_group_id);
+          if (discountGroupId) {
+            const discountGroup = await database.queryOne(
+              "SELECT id FROM discount_groups WHERE id = ?",
+              [discountGroupId],
+            );
+            if (!discountGroup) {
+              throw new Error("Grup diskon tidak ditemukan");
+            }
+            normalizedUpdates.discount_group_id = discountGroupId;
+          } else {
+            normalizedUpdates.discount_group_id = null;
+          }
+        }
+      }
+
+      // Copy other valid fields
+      for (const [key, value] of Object.entries(updates)) {
+        // Skip fields that don't exist in database
+        if (key === 'dailyRate' || key === 'weeklyRate' || key === 'deposit' || key === 'discount_group_id') {
+          continue;
+        }
+        if (validColumns.includes(key)) {
+          normalizedUpdates[key] = value;
+        }
+      }
+      
+      // Normalize code if provided
+      if (normalizedUpdates.code !== undefined) {
+        normalizedUpdates.code = normalizeCode(normalizedUpdates.code);
+      }
+      
+      if (Object.keys(normalizedUpdates).length === 0) {
+        throw new Error("Tidak ada field yang valid untuk diupdate");
+      }
+      
       const fields = Object.keys(normalizedUpdates);
       const values = Object.values(normalizedUpdates);
       const sql = `UPDATE items SET ${fields.map((f) => `${f} = ?`).join(", ")} WHERE id = ?`;

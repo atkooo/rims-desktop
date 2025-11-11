@@ -1,5 +1,5 @@
 {
-  "companyName": "RIMS",
-  "address": "-",
-  "phone": "08123456789"
+  "printer": "Microsoft Print to PDF",
+  "paperWidth": 80,
+  "autoPrint": true
 }

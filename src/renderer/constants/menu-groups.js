@@ -56,6 +56,7 @@ export const menuGroups = [
       },
       { to: "/master/bundles", label: "Paket & Koleksi", icon: "clipboard" },
       { to: "/master/customers", label: "Pelanggan", icon: "users" },
+      { to: "/master/discount-groups", label: "Grup Diskon", icon: "tag" },
     ],
   },
   {

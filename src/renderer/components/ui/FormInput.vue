@@ -10,6 +10,9 @@
       :class="{ 'is-invalid': !!error }"
       v-bind="$attrs"
     />
+    <div v-if="hint" class="form-hint">
+      {{ hint }}
+    </div>
     <div v-if="error" class="invalid-feedback">
       {{ error }}
     </div>
@@ -37,6 +40,10 @@ export default {
       default: "text",
     },
     error: {
+      type: String,
+      default: "",
+    },
+    hint: {
       type: String,
       default: "",
     },
@@ -72,8 +79,26 @@ export default {
   box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
+.form-input[readonly] {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+  border-color: #d1d5db;
+}
+
+.form-input[readonly]:focus {
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+
 .is-invalid {
   border-color: #dc2626;
+}
+
+.form-hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
 }
 
 .invalid-feedback {

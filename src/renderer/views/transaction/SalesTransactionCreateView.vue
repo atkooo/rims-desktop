@@ -64,14 +64,14 @@
           <h3 class="section-title">Detail Customer & Jadwal</h3>
           <div class="form-grid">
             <div class="field-group">
-              <label for="customerId">Customer</label>
+              <label for="customerId">Customer <span class="optional-label">(Opsional)</span></label>
               <select
                 id="customerId"
                 v-model="form.customerId"
                 class="form-select"
                 :class="{ error: errors.customerId }"
               >
-                <option value="">Pilih Customer</option>
+                <option value="">Tanpa Customer</option>
                 <option
                   v-for="customer in customers"
                   :key="customer.id"
@@ -145,6 +145,8 @@
                 type="number"
                 min="0"
                 v-model.number="form.discount"
+                :hint="getDiscountHint()"
+                :readonly="isDiscountReadonly"
               />
             </div>
             <div class="field-group">
@@ -222,7 +224,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
@@ -292,16 +294,45 @@ export default {
 
     const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
+    // Calculate item price after discount
+    const calculateItemPrice = (item) => {
+      const basePrice = item.sale_price ?? item.price ?? 0;
+      
+      // Apply item discount if item has discount_group
+      if (item.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - item.discount_percentage / 100));
+      } else if (item.discount_amount > 0) {
+        return Math.max(0, basePrice - item.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
+    // Calculate bundle price after discount
+    const calculateBundlePrice = (bundle) => {
+      const basePrice = bundle.price || 0;
+      
+      // Apply bundle discount if bundle has discount_group
+      if (bundle.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
+      } else if (bundle.discount_amount > 0) {
+        return Math.max(0, basePrice - bundle.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
     const baseSubtotal = computed(() =>
       form.value.items.reduce((sum, item) => {
-        const price = item.sale_price ?? item.price ?? 0;
+        const price = calculateItemPrice(item);
         return sum + price * (item.quantity || 1);
       }, 0),
     );
 
     const bundleSubtotal = computed(() =>
       form.value.bundles.reduce((sum, bundle) => {
-        return sum + (Number(bundle.price) || 0) * (bundle.quantity || 0);
+        const price = calculateBundlePrice(bundle);
+        return sum + price * (bundle.quantity || 0);
       }, 0),
     );
 
@@ -325,13 +356,13 @@ export default {
     const normalizedItems = computed(() =>
       form.value.items.map((item) => {
         const quantity = item.quantity || 1;
-        const basePrice = item.sale_price ?? item.price ?? 0;
+        const price = calculateItemPrice(item);
         return {
           itemId: item.id,
           quantity,
           rentalPrice: 0,
-          salePrice: basePrice,
-          subtotal: basePrice * quantity,
+          salePrice: price,
+          subtotal: price * quantity,
         };
       }),
     );
@@ -350,6 +381,33 @@ export default {
       return match ? match.label : "";
     });
 
+    const getDiscountHint = () => {
+      if (form.value.customerId) {
+        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        if (customer && customer.discount_group_name) {
+          if (customer.discount_percentage > 0) {
+            return `Dari grup: ${customer.discount_group_name} (${customer.discount_percentage}%)`;
+          } else if (customer.discount_amount > 0) {
+            return `Dari grup: ${customer.discount_group_name} (${formatCurrency(customer.discount_amount)})`;
+          }
+        }
+      }
+      return "Diskon diatur dari grup diskon customer (jika ada)";
+    };
+
+    const isDiscountReadonly = computed(() => {
+      // Jika customer dipilih dan memiliki discount_group, maka diskon readonly
+      if (form.value.customerId) {
+        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        if (customer && customer.discount_group_id) {
+          return true;
+        }
+      }
+      // Jika tidak ada customer atau customer tidak punya discount_group, diskon tetap readonly
+      // karena diskon hanya dari konfigurasi
+      return true;
+    });
+
     const loadCustomers = async () => {
       try {
         customers.value = await fetchCustomers();
@@ -358,18 +416,74 @@ export default {
       }
     };
 
+    const lastAutoAppliedDiscount = ref(null);
+
+    // Watch for customer changes and auto-apply discount from discount group
+    watch(
+      () => form.value.customerId,
+      (customerId, oldCustomerId) => {
+        if (customerId) {
+          const customer = customers.value.find((c) => c.id === customerId);
+          if (customer && customer.discount_group_id) {
+            // Customer has a discount group, apply the discount automatically
+            if (customer.discount_percentage > 0) {
+              // Apply percentage discount to subtotal
+              const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+              form.value.discount = Math.round(calculatedDiscount);
+              lastAutoAppliedDiscount.value = { type: 'percentage', customerId };
+            } else if (customer.discount_amount > 0) {
+              // Apply fixed amount discount
+              form.value.discount = customer.discount_amount;
+              lastAutoAppliedDiscount.value = { type: 'amount', customerId };
+            } else {
+              // Discount group exists but no discount configured
+              form.value.discount = 0;
+              lastAutoAppliedDiscount.value = { type: 'none', customerId };
+            }
+          } else {
+            // Customer doesn't have discount group, reset discount to 0
+            form.value.discount = 0;
+            lastAutoAppliedDiscount.value = null;
+          }
+        } else {
+          // No customer selected, reset discount to 0
+          form.value.discount = 0;
+          lastAutoAppliedDiscount.value = null;
+        }
+      },
+    );
+
+    // Also watch subtotal to recalculate percentage-based discounts (only if discount was auto-applied)
+    watch(
+      () => subtotal.value,
+      () => {
+        if (form.value.customerId && lastAutoAppliedDiscount.value) {
+          const customer = customers.value.find((c) => c.id === form.value.customerId);
+          if (customer && customer.discount_group_id && customer.discount_percentage > 0 && 
+              lastAutoAppliedDiscount.value.type === 'percentage' && 
+              lastAutoAppliedDiscount.value.customerId === form.value.customerId) {
+            // Recalculate percentage discount when subtotal changes (only if it was auto-applied)
+            const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+            form.value.discount = Math.round(calculatedDiscount);
+          }
+        } else if (!form.value.customerId || !lastAutoAppliedDiscount.value) {
+          // If no customer or no auto-applied discount, ensure discount is 0
+          form.value.discount = 0;
+        }
+      },
+    );
+
     const resetForm = () => {
       form.value = createDefaultForm();
       errors.value = {};
       successMessage.value = "";
       submissionError.value = "";
+      lastAutoAppliedDiscount.value = null;
     };
 
     const validateForm = () => {
       const newErrors = {};
-      if (!form.value.customerId) {
-        newErrors.customerId = "Customer harus dipilih";
-      }
+      // Customer is optional for sales transactions
       if (!form.value.saleDate) {
         newErrors.saleDate = "Tanggal penjualan harus diisi";
       }
@@ -391,9 +505,9 @@ export default {
       successMessage.value = "";
       try {
         const user = getStoredUser();
-        await transactionStore.createTransaction({
+        const newTransaction = await transactionStore.createTransaction({
           type: TRANSACTION_TYPE.SALE,
-          customerId: form.value.customerId,
+          customerId: form.value.customerId || null,
           userId: user?.id || 1,
           paymentMethod: form.value.paymentMethod,
           paymentStatus: form.value.paymentStatus,
@@ -404,16 +518,26 @@ export default {
           subtotal: subtotal.value,
           discount: Number(form.value.discount) || 0,
           tax: Number(form.value.tax) || 0,
-          paidAmount:
-            Number(form.value.paidAmount) || Number(totalAmount.value),
+          paidAmount: Number(form.value.paidAmount) || 0,
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
         });
-        successMessage.value = "Penjualan berhasil disimpan. Formulir kembali kosong.";
-        form.value = createDefaultForm();
-        errors.value = {};
+        
         // Refresh cashier status after transaction
         await loadCashierStatus();
+        
+        // Redirect to payment page
+        if (newTransaction && newTransaction.id) {
+          router.push({
+            name: "transaction-sale-payment",
+            params: { id: newTransaction.id },
+          });
+        } else {
+          // Fallback: show success message
+          successMessage.value = "Penjualan berhasil disimpan.";
+          form.value = createDefaultForm();
+          errors.value = {};
+        }
       } catch (error) {
         console.error("Gagal menyimpan penjualan:", error);
         submissionError.value =
@@ -462,6 +586,8 @@ export default {
       totalBundles,
       paymentStatusLabel,
       cashierStatus,
+      getDiscountHint,
+      isDiscountReadonly,
       handleSubmit,
       resetForm,
       goBack,
@@ -740,6 +866,12 @@ export default {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+}
+
+.optional-label {
+  color: #6b7280;
+  font-weight: normal;
+  font-size: 0.85em;
 }
 
 @media (max-width: 1080px) {

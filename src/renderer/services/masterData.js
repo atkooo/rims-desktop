@@ -103,3 +103,23 @@ export function fetchItemSizes() {
 export function fetchItemById(id) {
   return ipcRenderer.invoke("items:getById", id);
 }
+
+export function fetchDiscountGroups() {
+  return ipcRenderer.invoke("master:getDiscountGroups");
+}
+
+export function createDiscountGroup(payload) {
+  return ipcRenderer.invoke("discountGroups:create", payload);
+}
+
+export function updateDiscountGroup(id, payload) {
+  return ipcRenderer.invoke("discountGroups:update", id, payload);
+}
+
+export function deleteDiscountGroup(id) {
+  return ipcRenderer.invoke("discountGroups:delete", id);
+}
+
+export function fetchDiscountGroupById(id) {
+  return ipcRenderer.invoke("discountGroups:getById", id);
+}

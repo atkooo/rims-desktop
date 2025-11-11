@@ -67,6 +67,25 @@
           v-model="form.min_stock_alert"
           :error="errors.min_stock_alert"
         />
+        <div class="form-group">
+          <label class="form-label">Grup Diskon (Opsional)</label>
+          <select v-model.number="form.discount_group_id" class="form-select" style="width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 0.55rem 0.65rem; font-size: 0.95rem;">
+            <option :value="null">Tidak ada diskon</option>
+            <option
+              v-for="discountGroup in discountGroups"
+              :key="discountGroup.id"
+              :value="discountGroup.id"
+            >
+              {{ discountGroup.name }}
+              <template v-if="discountGroup.discount_percentage > 0">
+                ({{ discountGroup.discount_percentage }}%)
+              </template>
+              <template v-else-if="discountGroup.discount_amount > 0">
+                (Rp {{ formatCurrency(discountGroup.discount_amount) }})
+              </template>
+            </option>
+          </select>
+        </div>
       </div>
 
       <div class="form-group">
@@ -100,10 +119,10 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import { createAccessory, updateAccessory } from "@/services/masterData";
+import { createAccessory, updateAccessory, fetchDiscountGroups } from "@/services/masterData";
 
 const defaultForm = () => ({
   code: "",
@@ -115,6 +134,7 @@ const defaultForm = () => ({
   stock_quantity: "",
   available_quantity: "",
   min_stock_alert: "",
+  discount_group_id: null,
   is_available_for_rent: true,
   is_available_for_sale: true,
   is_active: true,
@@ -149,6 +169,7 @@ export default {
     const errors = ref({});
     const submitError = ref("");
     const form = ref(defaultForm());
+    const discountGroups = ref([]);
 
     const showDialog = computed({
       get: () => props.modelValue,
@@ -241,6 +262,7 @@ export default {
         stock_quantity: stockQty,
         available_quantity: availableQty,
         min_stock_alert: Math.max(0, toInteger(form.value.min_stock_alert)),
+        discount_group_id: form.value.discount_group_id || null,
         is_available_for_rent: !!form.value.is_available_for_rent,
         is_available_for_sale: !!form.value.is_available_for_sale,
         is_active: !!form.value.is_active,
@@ -301,6 +323,28 @@ export default {
       },
     );
 
+    const loadDiscountGroups = async () => {
+      try {
+        const data = await fetchDiscountGroups();
+        discountGroups.value = data.filter(dg => dg.is_active);
+      } catch (error) {
+        console.error("Gagal memuat grup diskon:", error);
+      }
+    };
+
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value || 0);
+    };
+
+    onMounted(() => {
+      loadDiscountGroups();
+    });
+
     return {
       form,
       errors,
@@ -309,6 +353,8 @@ export default {
       isEdit,
       showDialog,
       handleSubmit,
+      discountGroups,
+      formatCurrency,
     };
   },
 };

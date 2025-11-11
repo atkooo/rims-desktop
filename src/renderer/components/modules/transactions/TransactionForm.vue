@@ -36,14 +36,17 @@
           </div>
         </div>
           <div class="field-group">
-            <label for="customerId">Customer</label>
+            <label for="customerId">
+              Customer
+              <span v-if="!isRental" class="optional-label">(Opsional)</span>
+            </label>
             <select
               id="customerId"
               v-model="form.customerId"
               :class="{ error: errors.customerId }"
               class="form-select"
             >
-              <option value="">Pilih Customer</option>
+              <option value="">{{ isRental ? "Pilih Customer" : "Tanpa Customer" }}</option>
               <option
                 v-for="customer in customers"
                 :key="customer.id"
@@ -201,6 +204,8 @@
               type="number"
               min="0"
               v-model.number="form.discount"
+              :hint="getDiscountHint()"
+              :readonly="isDiscountReadonly"
             />
           </div>
           <div class="field-group" v-if="!isRental">
@@ -350,12 +355,42 @@ export default {
       return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     });
 
+    // Calculate item price after discount (for sales)
+    const calculateItemPrice = (item) => {
+      if (isRental.value) {
+        return item.rental_price_per_day ?? item.price ?? 0;
+      }
+      
+      // For sales, use sale_price and apply item discount
+      const basePrice = item.sale_price ?? item.price ?? 0;
+      
+      // Apply item discount if item has discount_group
+      if (item.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - item.discount_percentage / 100));
+      } else if (item.discount_amount > 0) {
+        return Math.max(0, basePrice - item.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
+    // Calculate bundle price after discount (for sales)
+    const calculateBundlePrice = (bundle) => {
+      const basePrice = bundle.price || 0;
+      
+      // Apply bundle discount if bundle has discount_group
+      if (bundle.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
+      } else if (bundle.discount_amount > 0) {
+        return Math.max(0, basePrice - bundle.discount_amount);
+      }
+      
+      return basePrice;
+    };
+
     const baseSubtotal = computed(() => {
       return form.value.items.reduce((sum, item) => {
-        const price =
-          isRental.value
-            ? item.rental_price_per_day ?? item.price ?? 0
-            : item.sale_price ?? item.price ?? 0;
+        const price = calculateItemPrice(item);
         return sum + price * (item.quantity || 1);
       }, 0);
     });
@@ -365,8 +400,10 @@ export default {
     });
 
     const bundleSubtotal = computed(() => {
+      if (isRental.value) return 0; // Bundles are only for sales
       return form.value.bundles.reduce((sum, bundle) => {
-        return sum + (Number(bundle.price) || 0) * (bundle.quantity || 0);
+        const price = calculateBundlePrice(bundle);
+        return sum + price * (bundle.quantity || 0);
       }, 0);
     });
 
@@ -410,19 +447,41 @@ export default {
       form.value.items.reduce((sum, item) => sum + (item.quantity || 0), 0),
     );
 
+    const getDiscountHint = () => {
+      if (!isRental.value && form.value.customerId) {
+        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        if (customer && customer.discount_group_name) {
+          if (customer.discount_percentage > 0) {
+            return `Dari grup: ${customer.discount_group_name} (${customer.discount_percentage}%)`;
+          } else if (customer.discount_amount > 0) {
+            return `Dari grup: ${customer.discount_group_name} (${formatCurrency(customer.discount_amount)})`;
+          }
+        }
+      }
+      if (!isRental.value) {
+        return "Diskon diatur dari grup diskon customer (jika ada)";
+      }
+      return "";
+    };
+
+    const isDiscountReadonly = computed(() => {
+      // Untuk sale transaction, diskon selalu readonly (hanya dari konfigurasi)
+      if (!isRental.value) {
+        return true;
+      }
+      return false;
+    });
+
     const normalizedItems = computed(() => {
       const multiplier = isRental.value ? totalDays.value : 1;
       return form.value.items.map((item) => {
-        const basePrice =
-          isRental.value
-            ? item.rental_price_per_day ?? item.price ?? 0
-            : item.sale_price ?? item.price ?? 0;
+        const price = calculateItemPrice(item);
         return {
           itemId: item.id,
           quantity: item.quantity || 1,
-          rentalPrice: isRental.value ? basePrice : 0,
-          salePrice: isRental.value ? 0 : basePrice,
-          subtotal: basePrice * (item.quantity || 1) * multiplier,
+          rentalPrice: isRental.value ? price : 0,
+          salePrice: isRental.value ? 0 : price,
+          subtotal: price * (item.quantity || 1) * multiplier,
         };
       });
     });
@@ -448,6 +507,63 @@ export default {
         console.error("Gagal memuat customer:", error);
       }
     };
+
+    const lastAutoAppliedDiscount = ref(null);
+
+    // Watch for customer changes and auto-apply discount from discount group (for sales only)
+    watch(
+      () => [form.value.customerId, isRental.value],
+      ([customerId, isRental], [oldCustomerId]) => {
+        if (!isRental && customerId) {
+          const customer = customers.value.find((c) => c.id === customerId);
+          if (customer && customer.discount_group_id) {
+            // Customer has a discount group, apply the discount automatically
+            if (customer.discount_percentage > 0) {
+              // Apply percentage discount to subtotal
+              const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+              form.value.discount = Math.round(calculatedDiscount);
+              lastAutoAppliedDiscount.value = { type: 'percentage', customerId };
+            } else if (customer.discount_amount > 0) {
+              // Apply fixed amount discount
+              form.value.discount = customer.discount_amount;
+              lastAutoAppliedDiscount.value = { type: 'amount', customerId };
+            } else {
+              // Discount group exists but no discount configured
+              form.value.discount = 0;
+              lastAutoAppliedDiscount.value = { type: 'none', customerId };
+            }
+          } else {
+            // Customer doesn't have discount group, reset discount to 0
+            form.value.discount = 0;
+            lastAutoAppliedDiscount.value = null;
+          }
+        } else if (!isRental && !customerId) {
+          // No customer selected, reset discount to 0
+          form.value.discount = 0;
+          lastAutoAppliedDiscount.value = null;
+        }
+      },
+    );
+
+    // Also watch subtotal to recalculate percentage-based discounts (for sales only, only if auto-applied)
+    watch(
+      () => [subtotal.value, isRental.value, form.value.customerId],
+      ([newSubtotal, isRental, customerId]) => {
+        if (!isRental && customerId && lastAutoAppliedDiscount.value) {
+          const customer = customers.value.find((c) => c.id === customerId);
+          if (customer && customer.discount_group_id && customer.discount_percentage > 0 && 
+              lastAutoAppliedDiscount.value.type === 'percentage' && 
+              lastAutoAppliedDiscount.value.customerId === customerId) {
+            // Recalculate percentage discount when subtotal changes (only if it was auto-applied)
+            const calculatedDiscount = (newSubtotal * customer.discount_percentage) / 100;
+            form.value.discount = Math.round(calculatedDiscount);
+          }
+        } else if (!isRental && (!customerId || !lastAutoAppliedDiscount.value)) {
+          // If no customer or no auto-applied discount, ensure discount is 0
+          form.value.discount = 0;
+        }
+      },
+    );
 
     const mapEditData = () => {
       if (!props.editData) return createDefaultForm();
@@ -513,6 +629,23 @@ export default {
         .filter(Boolean);
     };
 
+    const recalculateDiscountForEdit = () => {
+      // Recalculate discount if customer has discount_group (for sale transactions in edit mode)
+      if (!isRental.value && form.value.customerId && customers.value.length > 0) {
+        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        if (customer && customer.discount_group_id) {
+          if (customer.discount_percentage > 0) {
+            const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+            form.value.discount = Math.round(calculatedDiscount);
+            lastAutoAppliedDiscount.value = { type: 'percentage', customerId: form.value.customerId };
+          } else if (customer.discount_amount > 0) {
+            form.value.discount = customer.discount_amount;
+            lastAutoAppliedDiscount.value = { type: 'amount', customerId: form.value.customerId };
+          }
+        }
+      }
+    };
+
     const loadItemsForEdit = () => {
       if (!props.editData) return;
       const ensureItems = itemStore.items.length
@@ -521,17 +654,36 @@ export default {
       ensureItems
         .then(() => {
           form.value.items = buildEditItems();
+          // After items are loaded, recalculate discount if customer has discount_group
+          // Delay to ensure subtotal is calculated
+          setTimeout(() => {
+            recalculateDiscountForEdit();
+          }, 50);
         })
         .catch((error) => {
           console.error("Gagal memuat item untuk edit transaksi:", error);
         });
     };
 
+    // Watch customers to recalculate discount when customers are loaded (for edit mode)
+    watch(
+      () => customers.value.length,
+      () => {
+        if (isEdit.value && !isRental.value && form.value.customerId && customers.value.length > 0) {
+          // Delay to ensure items are loaded first
+          setTimeout(() => {
+            recalculateDiscountForEdit();
+          }, 100);
+        }
+      },
+    );
+
     const resetForm = () => {
       form.value = props.editData
         ? mapEditData()
         : createDefaultForm(defaultType.value);
       errors.value = {};
+      lastAutoAppliedDiscount.value = null;
     };
 
     watch(
@@ -561,7 +713,8 @@ export default {
 
     const validateForm = () => {
       const newErrors = {};
-      if (!form.value.customerId) {
+      // Customer is required for rental transactions, optional for sales
+      if (isRental.value && !form.value.customerId) {
         newErrors.customerId = "Customer harus dipilih";
       }
       if (isRental.value) {
@@ -604,7 +757,7 @@ export default {
 
         if (isEdit.value && props.editData) {
           const payload = {
-            customerId: form.value.customerId,
+            customerId: form.value.customerId || null,
             notes: form.value.notes,
             totalAmount:
               Number(totalAmount.value) ||
@@ -621,7 +774,7 @@ export default {
         } else {
           const basePayload = {
             type: form.value.transactionType,
-            customerId: form.value.customerId,
+            customerId: form.value.customerId || null,
             userId: user?.id || 1,
             paymentMethod: form.value.paymentMethod,
             paymentStatus: form.value.paymentStatus,
@@ -682,6 +835,8 @@ export default {
       bundleCount,
       fixedTypeLabel,
       formatCurrency,
+      getDiscountHint,
+      isDiscountReadonly,
       handleSubmit,
     };
   },
@@ -782,5 +937,11 @@ export default {
 .error-message {
   color: #dc2626;
   font-size: 0.85rem;
+}
+
+.optional-label {
+  color: #6b7280;
+  font-weight: normal;
+  font-size: 0.85em;
 }
 </style>
