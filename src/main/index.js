@@ -19,6 +19,7 @@ const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");
 const setupReportHandlers = require("./handlers/reportHandlers");
 const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers");
 const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
+const setupCashierHandlers = require("./handlers/cashierHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
@@ -115,6 +116,7 @@ app.whenReady().then(async () => {
   setupReportHandlers();
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();
+  setupCashierHandlers();
   createWindow();
 
   // Global shortcuts to toggle/exit fullscreen

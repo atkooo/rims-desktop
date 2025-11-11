@@ -24,6 +24,11 @@ export const menuGroups = [
         label: "Pembayaran & Invoice",
         icon: "credit-card",
       },
+      {
+        to: "/transactions/cashier",
+        label: "Buka Kasir",
+        icon: "money",
+      },
     ],
   },
   {

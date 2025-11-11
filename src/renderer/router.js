@@ -26,6 +26,7 @@ import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue
 import BookingsView from "./views/transaction/BookingsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
 import PaymentsView from "./views/transaction/PaymentsView.vue";
+import CashierView from "./views/transaction/CashierView.vue";
 import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
 import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
 import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
@@ -118,6 +119,11 @@ const routes = [
     path: "/transactions/payments",
     name: "transactions-payments",
     component: PaymentsView,
+  },
+  {
+    path: "/transactions/cashier",
+    name: "transactions-cashier",
+    component: CashierView,
   },
   // Reports
   {
