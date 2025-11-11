@@ -1,5 +1,5 @@
 <template>
-  <div class="data-page cashier-page">
+  <div class="data-page transaction-page">
     <div class="page-header">
       <div class="header-content">
         <div>
@@ -17,99 +17,95 @@
     </div>
 
     <!-- Current Session Card -->
-    <section v-if="currentSession" class="card-section">
-      <div class="session-card open-session">
-        <div class="session-header">
-          <div>
-            <h2>Sesi Kasir Aktif</h2>
-            <p class="session-code">Kode: {{ currentSession.session_code }}</p>
-          </div>
-          <div class="session-status">
-            <span class="status-badge open">Terbuka</span>
-          </div>
+    <section v-if="currentSession" class="card-section session-active">
+      <div class="session-header">
+        <div>
+          <h2>Sesi Kasir Aktif</h2>
+          <p class="session-code">Kode: {{ currentSession.session_code }}</p>
         </div>
+        <div class="session-status">
+          <span class="status-badge open">Terbuka</span>
+        </div>
+      </div>
 
-        <div class="session-details">
-          <div class="detail-row">
-            <span>Dibuka oleh:</span>
-            <strong>{{ currentSession.full_name || currentSession.username }}</strong>
-          </div>
-          <div class="detail-row">
-            <span>Tanggal Buka:</span>
-            <strong>{{ formatDateTime(currentSession.opening_date) }}</strong>
-          </div>
-          <div class="detail-row">
-            <span>Saldo Awal:</span>
-            <strong>{{ formatCurrency(currentSession.opening_balance) }}</strong>
-          </div>
-          <div class="detail-row">
-            <span>Saldo Diharapkan:</span>
-            <strong>{{ formatCurrency(currentSession.expected_balance || 0) }}</strong>
-          </div>
+      <div class="session-details">
+        <div class="detail-row">
+          <span>Dibuka oleh:</span>
+          <strong>{{ currentSession.full_name || currentSession.username }}</strong>
         </div>
+        <div class="detail-row">
+          <span>Tanggal Buka:</span>
+          <strong>{{ formatDateTime(currentSession.opening_date) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Saldo Awal:</span>
+          <strong>{{ formatCurrency(currentSession.opening_balance) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Saldo Diharapkan:</span>
+          <strong>{{ formatCurrency(currentSession.expected_balance || 0) }}</strong>
+        </div>
+      </div>
 
-        <div class="session-actions">
-          <AppButton variant="danger" :loading="closing" @click="showCloseDialog = true">
-            Tutup Kasir
-          </AppButton>
-        </div>
+      <div class="session-actions">
+        <AppButton variant="danger" :loading="closing" @click="showCloseDialog = true">
+          Tutup Kasir
+        </AppButton>
       </div>
     </section>
 
     <!-- Open Session Form -->
     <section v-else class="card-section">
-      <div class="session-card">
-        <h2>Buka Sesi Kasir Baru</h2>
-        <p class="form-description">
-          Masukkan saldo awal kasir untuk memulai sesi baru.
-        </p>
+      <h2>Buka Sesi Kasir Baru</h2>
+      <p class="form-description">
+        Masukkan saldo awal kasir untuk memulai sesi baru.
+      </p>
 
-        <div v-if="error" class="error-banner">
-          {{ error }}
+      <div v-if="error" class="error-banner">
+        {{ error }}
+      </div>
+
+      <form @submit.prevent="handleOpenSession" class="cashier-form">
+        <div class="form-group">
+          <label for="openingBalance">Saldo Awal (Rp)</label>
+          <input
+            id="openingBalance"
+            v-model.number="openForm.openingBalance"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-input"
+            :class="{ error: errors.openingBalance }"
+            placeholder="Masukkan saldo awal kasir"
+            required
+          />
+          <div v-if="errors.openingBalance" class="error-message">
+            {{ errors.openingBalance }}
+          </div>
         </div>
 
-        <form @submit.prevent="handleOpenSession" class="cashier-form">
-          <div class="form-group">
-            <label for="openingBalance">Saldo Awal (Rp)</label>
-            <input
-              id="openingBalance"
-              v-model.number="openForm.openingBalance"
-              type="number"
-              step="0.01"
-              min="0"
-              class="form-input"
-              :class="{ error: errors.openingBalance }"
-              placeholder="Masukkan saldo awal kasir"
-              required
-            />
-            <div v-if="errors.openingBalance" class="error-message">
-              {{ errors.openingBalance }}
-            </div>
-          </div>
+        <div class="form-group">
+          <label for="notes">Catatan (Opsional)</label>
+          <textarea
+            id="notes"
+            v-model="openForm.notes"
+            class="form-textarea"
+            rows="3"
+            placeholder="Catatan tambahan untuk sesi kasir ini"
+          ></textarea>
+        </div>
 
-          <div class="form-group">
-            <label for="notes">Catatan (Opsional)</label>
-            <textarea
-              id="notes"
-              v-model="openForm.notes"
-              class="form-textarea"
-              rows="3"
-              placeholder="Catatan tambahan untuk sesi kasir ini"
-            ></textarea>
-          </div>
-
-          <div class="form-actions">
-            <AppButton
-              type="submit"
-              variant="primary"
-              :loading="opening"
-              :disabled="!openForm.openingBalance || openForm.openingBalance <= 0"
-            >
-              Buka Kasir
-            </AppButton>
-          </div>
-        </form>
-      </div>
+        <div class="form-actions">
+          <AppButton
+            type="submit"
+            variant="primary"
+            :loading="opening"
+            :disabled="!openForm.openingBalance || openForm.openingBalance <= 0"
+          >
+            Buka Kasir
+          </AppButton>
+        </div>
+      </form>
     </section>
 
     <!-- Close Session Dialog -->
@@ -433,46 +429,42 @@ export default {
 </script>
 
 <style scoped>
-.cashier-page {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.session-card {
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.session-card.open-session {
-  border-left: 4px solid #10b981;
+.session-active {
+  border-left: 4px solid #16a34a;
 }
 
 .session-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
+}
+
+.session-header h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  color: #111827;
+  font-weight: 600;
 }
 
 .session-code {
   color: #6b7280;
-  font-size: 14px;
-  margin-top: 4px;
+  font-size: 0.875rem;
+  margin: 0;
 }
 
 .status-badge {
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .status-badge.open {
-  background: #d1fae5;
-  color: #065f46;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .status-badge.closed {
@@ -481,48 +473,62 @@ export default {
 }
 
 .session-details {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
 }
 
 .detail-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
 }
 
-.detail-row:last-child {
-  border-bottom: none;
+.detail-row span {
+  color: #6b7280;
+}
+
+.detail-row strong {
+  color: #111827;
+  font-weight: 600;
 }
 
 .session-actions {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .form-description {
   color: #6b7280;
-  margin-bottom: 24px;
+  font-size: 0.875rem;
+  margin: 0 0 1.5rem 0;
 }
 
 .cashier-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .form-group label {
   font-weight: 600;
   color: #374151;
+  font-size: 0.875rem;
 }
 
 .form-input,
@@ -552,9 +558,9 @@ export default {
 
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: 0.5rem;
 }
 
 .error-message {
@@ -624,16 +630,26 @@ export default {
 
 .close-session-info {
   background: #f9fafb;
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 24px;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.info-row span {
+  color: #6b7280;
+}
+
+.info-row strong {
+  color: #111827;
+  font-weight: 600;
 }
 
 .info-row:last-child {
@@ -642,8 +658,8 @@ export default {
 
 .info-row.highlight {
   font-weight: 600;
-  padding-top: 12px;
-  margin-top: 8px;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
   border-top: 2px solid #e5e7eb;
 }
 
@@ -658,7 +674,14 @@ export default {
 .close-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
+}
+
+.card-section h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: #111827;
+  font-weight: 600;
 }
 </style>
 

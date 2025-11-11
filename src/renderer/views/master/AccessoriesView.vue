@@ -49,16 +49,66 @@
         :loading="loading"
         :searchable-keys="['code', 'name', 'description']"
         row-key="id"
+        class="compact-table"
       >
+        <template #cell-code="{ row }">
+          <a
+            href="#"
+            class="row-link"
+            @click.prevent="handleViewDetail(row)"
+          >
+            {{ row.code }}
+          </a>
+        </template>
+        <template #cell-name="{ row }">
+          <a
+            href="#"
+            class="row-link"
+            @click.prevent="handleViewDetail(row)"
+          >
+            {{ row.name }}
+          </a>
+        </template>
+        <template #cell-available_quantity="{ row }">
+          <span
+            class="stock-badge"
+            :class="{
+              'stock-low': row.available_quantity <= row.min_stock_alert,
+              'stock-empty': row.available_quantity === 0,
+            }"
+          >
+            {{ row.available_quantity }}
+          </span>
+        </template>
+        <template #cell-is_active="{ row }">
+          <span
+            class="status-badge"
+            :class="row.is_active ? 'active' : 'inactive'"
+          >
+            {{ row.is_active ? "Aktif" : "Nonaktif" }}
+          </span>
+        </template>
         <template #actions="{ row }">
           <div class="action-buttons">
-            <AppButton variant="primary" @click="handleViewDetail(row)">
+            <AppButton
+              variant="primary"
+              size="small"
+              @click.stop="handleViewDetail(row)"
+            >
               Detail
             </AppButton>
-            <AppButton variant="secondary" @click="handleEdit(row)">
+            <AppButton
+              variant="secondary"
+              size="small"
+              @click.stop="handleEdit(row)"
+            >
               Edit
             </AppButton>
-            <AppButton variant="danger" @click="promptDelete(row)">
+            <AppButton
+              variant="danger"
+              size="small"
+              @click.stop="promptDelete(row)"
+            >
               Hapus
             </AppButton>
           </div>
@@ -122,18 +172,7 @@ export default {
     const columns = [
       { key: "code", label: "Kode" },
       { key: "name", label: "Nama" },
-      {
-        key: "rental_price_per_day",
-        label: "Harga Sewa/Hari",
-        format: formatCurrency,
-      },
-      {
-        key: "sale_price",
-        label: "Harga Jual",
-        format: formatCurrency,
-      },
-      { key: "stock_quantity", label: "Total Stok" },
-      { key: "available_quantity", label: "Tersedia" },
+      { key: "available_quantity", label: "Stok" },
       {
         key: "is_active",
         label: "Status",
@@ -183,7 +222,7 @@ export default {
     };
 
     const handleViewDetail = (item) => {
-      router.push(`/master/accessories/${item.id}`);
+      router.push({ name: "accessory-detail", params: { id: item.id } });
     };
 
     const handleEdit = (item) => {
@@ -257,5 +296,74 @@ export default {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.compact-table :deep(table) {
+  font-size: 0.875rem;
+}
+
+.compact-table :deep(th),
+.compact-table :deep(td) {
+  padding: 0.5rem 0.75rem;
+}
+
+.compact-table :deep(tbody tr) {
+  transition: background-color 0.15s ease;
+}
+
+.compact-table :deep(tbody tr:hover) {
+  background-color: #f9fafb;
+}
+
+.row-link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.row-link:hover {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.stock-badge.stock-low {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.stock-badge.stock-empty {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 </style>
