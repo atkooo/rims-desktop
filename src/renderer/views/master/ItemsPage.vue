@@ -135,6 +135,14 @@
                     <Icon name="eye" :size="16" />
                     <span>Detail</span>
                   </button>
+                  <button
+                    type="button"
+                    class="action-menu-item danger"
+                    @click="promptDelete(row)"
+                  >
+                    <Icon name="trash" :size="16" />
+                    <span>Hapus</span>
+                  </button>
                 </div>
               </transition>
             </Teleport>
@@ -144,6 +152,22 @@
       </div>
     </section>
 
+    <AppDialog
+      v-model="showDeleteConfirm"
+      title="Hapus Item"
+      confirm-text="Hapus"
+      confirm-variant="danger"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+    >
+      <p>
+        Yakin ingin menghapus item
+        <strong>{{ itemToDelete?.name }}</strong> ({{ itemToDelete?.code }})?
+      </p>
+      <p class="delete-hint">
+        Aksi ini tidak dapat dibatalkan. Pastikan item tidak digunakan dalam transaksi aktif.
+      </p>
+    </AppDialog>
   </div>
 </template>
 
@@ -154,6 +178,7 @@ import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 
 export default {
@@ -162,6 +187,7 @@ export default {
   components: {
     AppButton,
     AppTable,
+    AppDialog,
     Icon,
   },
 
@@ -171,6 +197,9 @@ export default {
     const loading = ref(false);
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const showDeleteConfirm = ref(false);
+    const deleteLoading = ref(false);
+    const itemToDelete = ref(null);
 
     // Filter state
     const filters = ref({
@@ -294,6 +323,26 @@ export default {
       }
     };
 
+    const promptDelete = (item) => {
+      openMenuId.value = null;
+      itemToDelete.value = item;
+      showDeleteConfirm.value = true;
+    };
+
+    const confirmDelete = async () => {
+      if (!itemToDelete.value) return;
+      deleteLoading.value = true;
+      try {
+        await itemStore.deleteItem(itemToDelete.value.id);
+        showDeleteConfirm.value = false;
+        itemToDelete.value = null;
+      } catch (err) {
+        alert(err.message || "Gagal menghapus item. Pastikan item tidak digunakan dalam transaksi.");
+      } finally {
+        deleteLoading.value = false;
+      }
+    };
+
     // Load data
     const loadCategories = async () => {
       try {
@@ -342,10 +391,15 @@ export default {
       categories,
       sizes,
       openMenuId,
+      showDeleteConfirm,
+      deleteLoading,
+      itemToDelete,
       formatCurrency,
       handleViewDetail,
       toggleActionMenu,
       getMenuPosition,
+      promptDelete,
+      confirmDelete,
     };
   },
 };
@@ -523,5 +577,11 @@ export default {
 .fade-scale-leave-to {
   opacity: 0;
   transform: scale(0.95) translateY(-4px);
+}
+
+.delete-hint {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 </style>

@@ -267,6 +267,42 @@ function setupItemHandlers() {
   // Delete item
   ipcMain.handle("items:delete", async (event, id) => {
     try {
+      // Check if item is used in rental transactions
+      const rentalCheck = await database.queryOne(
+        "SELECT COUNT(*) as count FROM rental_transaction_details WHERE item_id = ?",
+        [id],
+      );
+      if (rentalCheck && rentalCheck.count > 0) {
+        throw new Error("Tidak dapat menghapus item yang digunakan dalam transaksi sewa");
+      }
+
+      // Check if item is used in sales transactions
+      const salesCheck = await database.queryOne(
+        "SELECT COUNT(*) as count FROM sales_transaction_details WHERE item_id = ?",
+        [id],
+      );
+      if (salesCheck && salesCheck.count > 0) {
+        throw new Error("Tidak dapat menghapus item yang digunakan dalam transaksi penjualan");
+      }
+
+      // Check if item is used in bookings
+      const bookingCheck = await database.queryOne(
+        "SELECT COUNT(*) as count FROM bookings WHERE item_id = ?",
+        [id],
+      );
+      if (bookingCheck && bookingCheck.count > 0) {
+        throw new Error("Tidak dapat menghapus item yang digunakan dalam booking");
+      }
+
+      // Check if item is used in stock movements
+      const stockMovementCheck = await database.queryOne(
+        "SELECT COUNT(*) as count FROM stock_movements WHERE item_id = ?",
+        [id],
+      );
+      if (stockMovementCheck && stockMovementCheck.count > 0) {
+        throw new Error("Tidak dapat menghapus item yang memiliki riwayat pergerakan stok");
+      }
+
       await database.execute("DELETE FROM items WHERE id = ?", [id]);
       return true;
     } catch (error) {

@@ -2,7 +2,7 @@
   <div class="data-page receipt-settings-page admin-page">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Pengaturan</p>
+
         <h1>Pengaturan Printer & Struk</h1>
         <p class="subtitle">
           Kelola pengaturan printer dan tampilan struk transaksi. Preview akan diperbarui secara otomatis.

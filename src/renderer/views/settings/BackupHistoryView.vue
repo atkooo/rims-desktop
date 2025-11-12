@@ -2,27 +2,20 @@
   <div class="data-page backup-history-page admin-page">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Pengaturan</p>
+    
         <h1>Riwayat Backup</h1>
         <p class="subtitle">
           Daftar backup database yang pernah dibuat. Lakukan backup secara rutin untuk menjaga keamanan data.
         </p>
       </div>
-      <div class="header-actions">
-        <AppButton variant="secondary" :loading="loading" @click="loadHistory">
-          <i class="fas fa-sync-alt"></i> Refresh Data
-        </AppButton>
-        <AppButton variant="primary" @click="$router.push('/settings/system')">
-          <i class="fas fa-arrow-left"></i> Kembali
-        </AppButton>
-      </div>
+     
     </div>
 
-    <section class="card-section stats-section">
+    <section class="card-section">
       <div class="summary-grid">
         <div class="summary-card">
           <div class="summary-icon">
-            <i class="fas fa-file-archive"></i>
+            <Icon name="file" :size="24" />
           </div>
           <div class="summary-content">
             <span>Total Backup</span>
@@ -31,7 +24,7 @@
         </div>
         <div class="summary-card">
           <div class="summary-icon automatic">
-            <i class="fas fa-robot"></i>
+            <Icon name="settings" :size="24" />
           </div>
           <div class="summary-content">
             <span>Backup Otomatis</span>
@@ -40,7 +33,7 @@
         </div>
         <div class="summary-card">
           <div class="summary-icon manual">
-            <i class="fas fa-user"></i>
+            <Icon name="user" :size="24" />
           </div>
           <div class="summary-content">
             <span>Backup Manual</span>
@@ -49,7 +42,7 @@
         </div>
         <div class="summary-card">
           <div class="summary-icon size">
-            <i class="fas fa-hdd"></i>
+            <Icon name="box" :size="24" />
           </div>
           <div class="summary-content">
             <span>Total Ukuran</span>
@@ -57,14 +50,22 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <section class="card-section">
       <div v-if="error" class="error-banner">
-        <i class="fas fa-exclamation-circle"></i>
+        <Icon name="bell" :size="18" />
         <span>{{ error }}</span>
       </div>
-      <DataTable :columns="columns" :items="history" :loading="loading" />
+
+      <div class="table-container">
+      <AppTable
+        :columns="columns"
+        :rows="history"
+        :loading="loading"
+        :searchable-keys="['backup_file', 'backup_type', 'status', 'user_name']"
+        row-key="id"
+        default-page-size="10"
+      />
+      </div>
     </section>
   </div>
 </template>
@@ -72,12 +73,13 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { fetchBackupHistory } from "@/services/settings";
 
 export default {
   name: "BackupHistoryView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable, Icon },
   setup() {
     const history = ref([]);
     const loading = ref(false);
@@ -94,19 +96,22 @@ export default {
       value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const columns = [
-      { key: "backup_file", label: "Nama File" },
-      { key: "backup_type", label: "Tipe" },
+      { key: "backup_file", label: "Nama File", sortable: true },
+      { key: "backup_type", label: "Tipe", sortable: true },
       {
         key: "file_size",
         label: "Ukuran",
         format: (value) => formatSize(value),
+        sortable: true,
+        align: "right",
       },
-      { key: "status", label: "Status" },
-      { key: "user_name", label: "Dibuat Oleh" },
+      { key: "status", label: "Status", sortable: true },
+      { key: "user_name", label: "Dibuat Oleh", sortable: true },
       {
         key: "created_at",
         label: "Tanggal",
         format: formatDateTime,
+        sortable: true,
       },
     ];
 
@@ -181,14 +186,11 @@ export default {
   flex-wrap: wrap;
 }
 
-.stats-section {
-  margin-bottom: 1.5rem;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .summary-card {
@@ -216,8 +218,16 @@ export default {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.25rem;
   flex-shrink: 0;
+}
+
+.summary-icon .icon {
+  color: white;
+}
+
+.summary-icon .icon svg {
+  color: white;
+  stroke: white;
 }
 
 .summary-icon.automatic {
@@ -265,14 +275,20 @@ export default {
   color: #991b1b;
 }
 
-.error-banner i {
-  font-size: 1.1rem;
+.error-banner .icon {
   flex-shrink: 0;
+  color: #991b1b;
 }
 
 .error-banner span {
   flex: 1;
   font-weight: 500;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 @media (max-width: 768px) {

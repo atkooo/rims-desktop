@@ -2,27 +2,20 @@
   <div class="data-page activity-logs-page admin-page">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Pengaturan</p>
+
         <h1>Log Aktivitas</h1>
         <p class="subtitle">
           Catatan aktivitas pengguna pada aplikasi. Pantau semua aktivitas untuk keamanan dan audit.
         </p>
       </div>
-      <div class="header-actions">
-        <AppButton variant="secondary" :loading="loading" @click="loadLogs">
-          <i class="fas fa-sync-alt"></i> Refresh Data
-        </AppButton>
-        <AppButton variant="primary" @click="$router.push('/settings/system')">
-          <i class="fas fa-arrow-left"></i> Kembali
-        </AppButton>
-      </div>
+    
     </div>
 
-    <section class="card-section stats-section">
+    <section class="card-section">
       <div class="summary-grid">
         <div class="summary-card">
           <div class="summary-icon">
-            <i class="fas fa-clipboard-list"></i>
+            <Icon name="clipboard" :size="24" />
           </div>
           <div class="summary-content">
             <span>Total Log</span>
@@ -31,7 +24,7 @@
         </div>
         <div class="summary-card">
           <div class="summary-icon modules">
-            <i class="fas fa-cubes"></i>
+            <Icon name="layers" :size="24" />
           </div>
           <div class="summary-content">
             <span>Modul Unik</span>
@@ -40,7 +33,7 @@
         </div>
         <div class="summary-card">
           <div class="summary-icon users">
-            <i class="fas fa-users"></i>
+            <Icon name="users" :size="24" />
           </div>
           <div class="summary-content">
             <span>Pengguna Aktif</span>
@@ -48,14 +41,22 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <section class="card-section">
       <div v-if="error" class="error-banner">
-        <i class="fas fa-exclamation-circle"></i>
+        <Icon name="bell" :size="18" />
         <span>{{ error }}</span>
       </div>
-      <DataTable :columns="columns" :items="logs" :loading="loading" />
+
+      <div class="table-container">
+      <AppTable
+        :columns="columns"
+        :rows="logs"
+        :loading="loading"
+        :searchable-keys="['user_name', 'action', 'module', 'description', 'ip_address']"
+        row-key="id"
+        default-page-size="10"
+      />
+      </div>
     </section>
   </div>
 </template>
@@ -63,12 +64,13 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { fetchActivityLogs } from "@/services/settings";
 
 export default {
   name: "ActivityLogsView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppTable, Icon },
   setup() {
     const logs = ref([]);
     const loading = ref(false);
@@ -78,15 +80,16 @@ export default {
       value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const columns = [
-      { key: "user_name", label: "Pengguna" },
-      { key: "action", label: "Aksi" },
-      { key: "module", label: "Modul" },
-      { key: "description", label: "Deskripsi" },
-      { key: "ip_address", label: "IP" },
+      { key: "user_name", label: "Pengguna", sortable: true },
+      { key: "action", label: "Aksi", sortable: true },
+      { key: "module", label: "Modul", sortable: true },
+      { key: "description", label: "Deskripsi", sortable: true },
+      { key: "ip_address", label: "IP", sortable: true },
       {
         key: "created_at",
         label: "Waktu",
         format: formatDateTime,
+        sortable: true,
       },
     ];
 
@@ -149,14 +152,11 @@ export default {
   flex-wrap: wrap;
 }
 
-.stats-section {
-  margin-bottom: 1.5rem;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .summary-card {
@@ -184,8 +184,16 @@ export default {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.25rem;
   flex-shrink: 0;
+}
+
+.summary-icon .icon {
+  color: white;
+}
+
+.summary-icon .icon svg {
+  color: white;
+  stroke: white;
 }
 
 .summary-icon.modules {
@@ -229,14 +237,20 @@ export default {
   color: #991b1b;
 }
 
-.error-banner i {
-  font-size: 1.1rem;
+.error-banner .icon {
   flex-shrink: 0;
+  color: #991b1b;
 }
 
 .error-banner span {
   flex: 1;
   font-weight: 500;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 @media (max-width: 768px) {

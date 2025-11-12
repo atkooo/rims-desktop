@@ -25,19 +25,19 @@
           <strong>{{ stats.lastLogin }}</strong>
         </div>
       </div>
-    </section>
 
-    <section class="card-section">
       <div v-if="error" class="error-banner">
         {{ error }}
       </div>
 
+      <div class="table-container">
       <AppTable
         :columns="columns"
         :rows="users"
         :loading="loading"
         :searchable-keys="['username', 'full_name', 'email', 'role_name']"
         row-key="id"
+        default-page-size="10"
       >
         <template #cell-is_active="{ row }">
           {{ row.is_active ? "Aktif" : "Nonaktif" }}
@@ -50,6 +50,7 @@
           }}
         </template>
       </AppTable>
+      </div>
     </section>
   </div>
 </template>
@@ -69,20 +70,22 @@ export default {
     const error = ref("");
 
     const columns = [
-      { key: "username", label: "Username" },
-      { key: "full_name", label: "Nama Lengkap" },
-      { key: "email", label: "Email" },
-      { key: "role_name", label: "Peran" },
+      { key: "username", label: "Username", sortable: true },
+      { key: "full_name", label: "Nama Lengkap", sortable: true },
+      { key: "email", label: "Email", sortable: true },
+      { key: "role_name", label: "Peran", sortable: true },
       {
         key: "is_active",
         label: "Status",
         format: (value) => (value ? "Aktif" : "Nonaktif"),
+        sortable: true,
       },
       {
         key: "last_login",
         label: "Terakhir Login",
         format: (value) =>
           value ? new Date(value).toLocaleString("id-ID") : "-",
+        sortable: true,
       },
     ];
 
@@ -124,3 +127,48 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background-color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+</style>

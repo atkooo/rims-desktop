@@ -2,7 +2,7 @@
   <div class="data-page settings-page admin-page">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Pengaturan</p>
+
         <h1>Pengaturan Aplikasi</h1>
         <p class="subtitle">
           Kelola profil toko, backup database, dan pengaturan printer agar operasional tetap lancar.
@@ -10,7 +10,7 @@
       </div>
       <div class="header-meta">
         <div class="meta-chip" v-if="lastBackupDate">
-          <i class="fas fa-clock"></i>
+          <Icon name="calendar" :size="18" />
           <div>
             <span>Backup terakhir</span>
             <strong>{{ lastBackupDate }}</strong>
@@ -21,28 +21,28 @@
 
     <!-- Success Message -->
     <div v-if="successMessage" class="success-message">
-      <i class="fas fa-check-circle"></i>
+      <Icon name="eye" :size="18" />
       <span>{{ successMessage }}</span>
       <button @click="successMessage = ''" class="close-btn">
-        <i class="fas fa-times"></i>
+        ×
       </button>
     </div>
 
     <!-- Error Message -->
     <div v-if="errorMessage" class="error-message">
-      <i class="fas fa-exclamation-circle"></i>
+      <Icon name="bell" :size="18" />
       <span>{{ errorMessage }}</span>
       <button @click="errorMessage = ''" class="close-btn">
-        <i class="fas fa-times"></i>
+        ×
       </button>
     </div>
 
-    <div class="settings-grid">
-      <!-- Profil Toko Card -->
-      <section class="settings-card card-section">
+    <section class="card-section">
+      <!-- Profil Toko Section -->
+      <div class="settings-section">
         <header class="section-header">
           <div class="section-icon">
-            <i class="fas fa-store"></i>
+            <Icon name="box" :size="24" />
           </div>
           <div>
             <h2>Profil Toko</h2>
@@ -80,16 +80,16 @@
             :loading="loading"
             @click="saveCompanyProfile"
           >
-            <i class="fas fa-save"></i> Simpan Profil
+            <Icon name="save" :size="16" /> Simpan Profil
           </AppButton>
         </div>
-      </section>
+      </div>
 
-      <!-- Database Backup Card -->
-      <section class="settings-card card-section accent-card">
+      <!-- Database Backup Section -->
+      <div class="settings-section">
         <header class="section-header">
           <div class="section-icon">
-            <i class="fas fa-database"></i>
+            <Icon name="file" :size="24" />
           </div>
           <div>
             <h2>Database Backup</h2>
@@ -101,14 +101,14 @@
         <div class="backup-panel">
           <div class="backup-stats">
             <div class="stat">
-              <i class="fas fa-file-archive"></i>
+              <Icon name="file" :size="20" />
               <div>
                 <span>File tersimpan</span>
                 <strong>{{ backupFiles.length }}</strong>
               </div>
             </div>
             <div class="stat">
-              <i class="fas fa-clock"></i>
+              <Icon name="calendar" :size="20" />
               <div>
                 <span>Backup terakhir</span>
                 <strong>{{ lastBackupDate || "Belum ada" }}</strong>
@@ -121,24 +121,24 @@
               :loading="backupLoading"
               @click="createBackup"
             >
-              <i class="fas fa-save"></i> Backup Sekarang
+              <Icon name="save" :size="16" /> Backup Sekarang
             </AppButton>
             <AppButton
               variant="secondary"
               :disabled="backupFiles.length === 0"
               @click="showRestoreDialog = true"
             >
-              <i class="fas fa-upload"></i> Restore Backup
+              <Icon name="file" :size="16" /> Restore Backup
             </AppButton>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Printer & Struk Card -->
-      <section class="settings-card card-section">
+      <!-- Printer & Struk Section -->
+      <div class="settings-section">
         <header class="section-header">
           <div class="section-icon">
-            <i class="fas fa-print"></i>
+            <Icon name="file" :size="24" />
           </div>
           <div>
             <h2>Pengaturan Printer & Struk</h2>
@@ -152,11 +152,11 @@
             variant="primary"
             @click="$router.push('/settings/receipt')"
           >
-            <i class="fas fa-cog"></i> Buka Pengaturan Printer & Struk
+            <Icon name="settings" :size="16" /> Buka Pengaturan Printer & Struk
           </AppButton>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
 
     <!-- Restore Backup Dialog -->
     <AppDialog
@@ -169,7 +169,7 @@
     >
       <div class="restore-dialog">
         <div class="warning-banner">
-          <i class="fas fa-exclamation-triangle"></i>
+          <Icon name="bell" :size="20" />
           <p>
             Restore akan mengganti data saat ini dengan data dari backup. Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum melanjutkan.
           </p>
@@ -198,6 +198,7 @@ import { ipcRenderer } from "@/services/ipc";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import Icon from "@/components/ui/Icon.vue";
 
 export default {
   name: "SettingsPage",
@@ -206,6 +207,7 @@ export default {
     AppButton,
     AppDialog,
     FormInput,
+    Icon,
   },
 
   setup() {
@@ -402,9 +404,8 @@ export default {
   min-width: 180px;
 }
 
-.meta-chip i {
+.meta-chip .icon {
   color: #7c3aed;
-  font-size: 1.1rem;
 }
 
 .meta-chip > div {
@@ -429,23 +430,21 @@ export default {
   border-color: #c7d2fe;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.settings-card {
-  padding: 1.75rem;
+.settings-section {
+  padding: 1.75rem 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.settings-card.accent-card {
-  background: linear-gradient(135deg, #f9fafc 0%, #f3f4f6 100%);
-  border-color: #c7d2fe;
+.settings-section:first-child {
+  padding-top: 0;
+}
+
+.settings-section:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.75rem;
 }
 
 .section-header {
@@ -463,8 +462,16 @@ export default {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.25rem;
   flex-shrink: 0;
+}
+
+.section-icon .icon {
+  color: white;
+}
+
+.section-icon .icon svg {
+  color: white;
+  stroke: white;
 }
 
 .section-header h2 {
@@ -536,7 +543,7 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.stat i {
+.stat .icon {
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -545,8 +552,12 @@ export default {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+.stat .icon svg {
+  color: white;
+  stroke: white;
 }
 
 .stat > div {
@@ -597,9 +608,8 @@ export default {
   gap: 0.75rem;
 }
 
-.warning-banner i {
+.warning-banner .icon {
   color: #d97706;
-  font-size: 1.25rem;
   flex-shrink: 0;
   margin-top: 0.125rem;
 }
@@ -670,10 +680,10 @@ export default {
   color: #991b1b;
 }
 
-.success-message i,
-.error-message i {
-  font-size: 1.1rem;
+.success-message .icon,
+.error-message .icon {
   flex-shrink: 0;
+  color: inherit;
 }
 
 .success-message span,
@@ -714,10 +724,6 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-
   .header-meta {
     flex-direction: column;
     align-items: flex-start;

@@ -34,19 +34,21 @@
           <strong>{{ stats.outbound }}</strong>
         </div>
       </div>
-    </section>
 
-    <section class="card-section">
       <div v-if="error" class="error-banner">
         {{ error }}
       </div>
 
-      <DataTable
+      <div class="table-container">
+      <AppTable
         :columns="columns"
-        :items="movements"
+        :rows="movements"
         :loading="loading"
-        :actions="false"
+        :searchable-keys="['item_name', 'movement_type', 'reference_type', 'user_name', 'notes']"
+        row-key="id"
+        default-page-size="10"
       />
+      </div>
     </section>
 
     <!-- Stock Movement Form Dialog -->
@@ -57,7 +59,7 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import StockMovementForm from "@/components/modules/stock/StockMovementForm.vue";
 import {
   fetchStockMovements,
@@ -66,7 +68,7 @@ import {
 
 export default {
   name: "StockMovementsView",
-  components: { AppButton, DataTable, StockMovementForm },
+  components: { AppButton, AppTable, StockMovementForm },
   setup() {
     const movements = ref([]);
     const loading = ref(false);
@@ -77,16 +79,16 @@ export default {
       value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const columns = [
-      { key: "item_name", label: "Item" },
-      { key: "movement_type", label: "Jenis" },
-      { key: "reference_type", label: "Referensi" },
-      { key: "reference_id", label: "Ref ID" },
-      { key: "quantity", label: "Qty" },
-      { key: "stock_before", label: "Sebelum" },
-      { key: "stock_after", label: "Sesudah" },
-      { key: "user_name", label: "Petugas" },
-      { key: "notes", label: "Catatan" },
-      { key: "created_at", label: "Tanggal", format: formatDate },
+      { key: "item_name", label: "Item", sortable: true },
+      { key: "movement_type", label: "Jenis", sortable: true },
+      { key: "reference_type", label: "Referensi", sortable: true },
+      { key: "reference_id", label: "Ref ID", sortable: true },
+      { key: "quantity", label: "Qty", sortable: true, align: "center" },
+      { key: "stock_before", label: "Sebelum", sortable: true, align: "center" },
+      { key: "stock_after", label: "Sesudah", sortable: true, align: "center" },
+      { key: "user_name", label: "Petugas", sortable: true },
+      { key: "notes", label: "Catatan", sortable: true },
+      { key: "created_at", label: "Tanggal", format: formatDate, sortable: true },
     ];
 
     const stats = computed(() => {
@@ -134,3 +136,48 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background-color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+</style>
