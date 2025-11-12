@@ -27,23 +27,215 @@
       </form>
     </div>
     <div class="topbar__right">
-      <button
-        class="icon-btn"
-        type="button"
-        aria-label="Refresh notifikasi"
-        @click="refreshTransactions"
-      >
-        <Icon name="bell" :size="20" />
-        <span v-if="pendingTransactions" class="icon-badge">
-          {{ pendingTransactions }}
-        </span>
-      </button>
-      <button class="icon-btn" type="button" aria-label="Tagihan menunggu">
-        <Icon name="message" :size="20" />
-        <span v-if="awaitingPayments" class="icon-badge">
-          {{ awaitingPayments }}
-        </span>
-      </button>
+      <div class="notification-shell" ref="notificationMenuRef">
+        <button
+          class="icon-btn"
+          type="button"
+          aria-label="Notifikasi"
+          :aria-expanded="notificationMenuOpen"
+          @click="toggleNotificationMenu"
+          ref="notificationButtonRef"
+        >
+          <Icon name="bell" :size="20" />
+          <span v-if="pendingTransactions" class="icon-badge">
+            {{ pendingTransactions }}
+          </span>
+        </button>
+        <Teleport to="body">
+          <transition name="fade-scale">
+            <div
+              v-if="notificationMenuOpen"
+              class="notification-menu"
+              ref="notificationMenuDropdownRef"
+              :style="{
+                top: notificationMenuPosition.top + 'px',
+                left: notificationMenuPosition.left + 'px',
+              }"
+            >
+              <div class="notification-menu-header">
+                <h3>Notifikasi</h3>
+                <button
+                  type="button"
+                  class="notification-refresh-btn"
+                  @click="refreshTransactions"
+                  :disabled="transactionStore.loading"
+                  aria-label="Refresh"
+                >
+                  <Icon name="refresh-cw" :size="16" />
+                </button>
+              </div>
+              <div class="notification-menu-content">
+                <div v-if="transactionStore.loading" class="notification-loading">
+                  Memuat...
+                </div>
+                <div
+                  v-else-if="pendingTransactionsList.length === 0"
+                  class="notification-empty"
+                >
+                  <Icon name="check-circle" :size="24" />
+                  <p>Tidak ada notifikasi</p>
+                </div>
+                <div v-else class="notification-list">
+                  <button
+                    v-for="transaction in pendingTransactionsList"
+                    :key="transaction.id"
+                    type="button"
+                    class="notification-item"
+                    @click="handleNotificationClick(transaction)"
+                  >
+                    <div class="notification-item-icon">
+                      <Icon
+                        :name="
+                          transaction.transactionType === 'RENTAL'
+                            ? 'package'
+                            : 'shopping-cart'
+                        "
+                        :size="16"
+                      />
+                    </div>
+                    <div class="notification-item-content">
+                      <div class="notification-item-title">
+                        {{
+                          transaction.transactionType === "RENTAL"
+                            ? "Transaksi Rental"
+                            : "Transaksi Penjualan"
+                        }}
+                      </div>
+                      <div class="notification-item-message">
+                        {{ transaction.customerName || "Tanpa nama" }} -
+                        {{ transaction.transaction_code }}
+                      </div>
+                      <div class="notification-item-meta">
+                        {{ formatDate(transaction.transactionDate) }} •
+                        {{ formatCurrency(transaction.totalAmount) }}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </Teleport>
+      </div>
+      <div class="payment-notification-shell" ref="paymentMenuRef">
+        <button
+          class="icon-btn"
+          type="button"
+          aria-label="Tagihan menunggu"
+          :aria-expanded="paymentMenuOpen"
+          @click="togglePaymentMenu"
+          ref="paymentButtonRef"
+        >
+          <Icon name="message" :size="20" />
+          <span v-if="awaitingPayments" class="icon-badge">
+            {{ awaitingPayments }}
+          </span>
+        </button>
+        <Teleport to="body">
+          <transition name="fade-scale">
+            <div
+              v-if="paymentMenuOpen"
+              class="payment-notification-menu"
+              ref="paymentMenuDropdownRef"
+              :style="{
+                top: paymentMenuPosition.top + 'px',
+                left: paymentMenuPosition.left + 'px',
+              }"
+            >
+              <div class="payment-notification-menu-header">
+                <h3>Tagihan Menunggu</h3>
+                <button
+                  type="button"
+                  class="payment-refresh-btn"
+                  @click="refreshTransactions"
+                  :disabled="transactionStore.loading"
+                  aria-label="Refresh"
+                >
+                  <Icon name="refresh-cw" :size="16" />
+                </button>
+              </div>
+              <div class="payment-notification-menu-content">
+                <div v-if="transactionStore.loading" class="payment-loading">
+                  Memuat...
+                </div>
+                <div
+                  v-else-if="awaitingPaymentsList.length === 0"
+                  class="payment-empty"
+                >
+                  <Icon name="check-circle" :size="24" />
+                  <p>Tidak ada tagihan menunggu</p>
+                </div>
+                <div v-else class="payment-list">
+                  <button
+                    v-for="transaction in awaitingPaymentsList"
+                    :key="transaction.id"
+                    type="button"
+                    class="payment-item"
+                    @click="handlePaymentClick(transaction)"
+                  >
+                    <div class="payment-item-icon">
+                      <Icon name="credit-card" :size="16" />
+                    </div>
+                    <div class="payment-item-content">
+                      <div class="payment-item-title">
+                        {{
+                          transaction.transactionType === "RENTAL"
+                            ? "Transaksi Rental"
+                            : "Transaksi Penjualan"
+                        }}
+                      </div>
+                      <div class="payment-item-message">
+                        {{ transaction.customerName || "Tanpa nama" }} -
+                        {{ transaction.transaction_code }}
+                      </div>
+                      <div class="payment-item-meta">
+                        <span class="payment-amount">
+                          Total: {{ formatCurrency(transaction.totalAmount) }}
+                        </span>
+                        <span
+                          v-if="transaction.paid_amount"
+                          class="payment-paid"
+                        >
+                          Dibayar: {{ formatCurrency(transaction.paid_amount) }}
+                        </span>
+                        <span
+                          v-if="
+                            transaction.totalAmount &&
+                            transaction.paid_amount &&
+                            transaction.totalAmount > transaction.paid_amount
+                          "
+                          class="payment-remaining"
+                        >
+                          Sisa: {{
+                            formatCurrency(
+                              transaction.totalAmount - transaction.paid_amount
+                            )
+                          }}
+                        </span>
+                      </div>
+                      <div class="payment-item-status">
+                        <span
+                          :class="[
+                            'payment-status-badge',
+                            `payment-status--${getPaymentStatusClass(
+                              transaction.payment_status
+                            )}`,
+                          ]"
+                        >
+                          {{ getPaymentStatusLabel(transaction.payment_status) }}
+                        </span>
+                        <span class="payment-date">
+                          {{ formatDate(transaction.transactionDate) }}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </Teleport>
+      </div>
       <div class="profile-shell" ref="profileMenuRef">
         <button
           type="button"
@@ -127,10 +319,35 @@ const profileButtonRef = ref(null);
 const profileMenuPosition = ref({ top: 0, left: 0 });
 let dropdownListenersAttached = false;
 
+const notificationMenuOpen = ref(false);
+const notificationMenuRef = ref(null);
+const notificationMenuDropdownRef = ref(null);
+const notificationButtonRef = ref(null);
+const notificationMenuPosition = ref({ top: 0, left: 0 });
+let notificationListenersAttached = false;
+
+const paymentMenuOpen = ref(false);
+const paymentMenuRef = ref(null);
+const paymentMenuDropdownRef = ref(null);
+const paymentButtonRef = ref(null);
+const paymentMenuPosition = ref({ top: 0, left: 0 });
+let paymentListenersAttached = false;
+
 const pendingTransactions = computed(() => {
   return (transactionStore.transactions || []).filter(
     (t) => t.status !== TRANSACTION_STATUS.COMPLETED,
   ).length;
+});
+
+const pendingTransactionsList = computed(() => {
+  return (transactionStore.transactions || [])
+    .filter((t) => t.status !== TRANSACTION_STATUS.COMPLETED)
+    .slice(0, 10)
+    .sort((a, b) => {
+      const dateA = new Date(a.transactionDate || a.created_at || 0);
+      const dateB = new Date(b.transactionDate || b.created_at || 0);
+      return dateB - dateA;
+    });
 });
 
 const awaitingPayments = computed(() => {
@@ -138,6 +355,20 @@ const awaitingPayments = computed(() => {
     const pay = (t.payment_status || t.status || "").toString().toLowerCase();
     return ["pending", "partial", "unpaid"].includes(pay);
   }).length;
+});
+
+const awaitingPaymentsList = computed(() => {
+  return (transactionStore.transactions || [])
+    .filter((t) => {
+      const pay = (t.payment_status || t.status || "").toString().toLowerCase();
+      return ["pending", "partial", "unpaid"].includes(pay);
+    })
+    .slice(0, 10)
+    .sort((a, b) => {
+      const dateA = new Date(a.transactionDate || a.created_at || 0);
+      const dateB = new Date(b.transactionDate || b.created_at || 0);
+      return dateB - dateA;
+    });
 });
 
 const roleLabel = computed(() => currentUser.value?.role || "User");
@@ -168,6 +399,70 @@ const refreshTransactions = () => {
   }
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return "Hari ini";
+  } else if (diffDays === 1) {
+    return "Kemarin";
+  } else if (diffDays < 7) {
+    return `${diffDays} hari lalu`;
+  } else {
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+};
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount || 0);
+};
+
+const handleNotificationClick = (transaction) => {
+  closeNotificationMenu();
+  if (transaction.transactionType === "RENTAL") {
+    router.push("/transactions/rentals");
+  } else {
+    router.push("/transactions/sales");
+  }
+};
+
+const handlePaymentClick = (transaction) => {
+  closePaymentMenu();
+  if (transaction.transactionType === "RENTAL") {
+    router.push("/transactions/rentals");
+  } else {
+    router.push("/transactions/sales");
+  }
+};
+
+const getPaymentStatusLabel = (status) => {
+  const statusLower = (status || "").toString().toLowerCase();
+  if (statusLower === "unpaid") return "Belum Dibayar";
+  if (statusLower === "partial") return "Pembayaran Parsial";
+  if (statusLower === "pending") return "Menunggu";
+  return "Belum Dibayar";
+};
+
+const getPaymentStatusClass = (status) => {
+  const statusLower = (status || "").toString().toLowerCase();
+  if (statusLower === "unpaid") return "unpaid";
+  if (statusLower === "partial") return "partial";
+  if (statusLower === "pending") return "pending";
+  return "unpaid";
+};
+
 const updateProfileMenuPosition = () => {
   const anchor = profileButtonRef.value;
   if (!anchor) return;
@@ -180,6 +475,34 @@ const updateProfileMenuPosition = () => {
   const left = Math.max(padding, Math.min(desiredLeft, maxLeft));
   const top = rect.bottom + 8;
   profileMenuPosition.value = { top, left };
+};
+
+const updateNotificationMenuPosition = () => {
+  const anchor = notificationButtonRef.value;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const dropdownWidth =
+    notificationMenuDropdownRef.value?.offsetWidth || 380;
+  const padding = 16;
+  const desiredLeft = rect.right - dropdownWidth;
+  const maxLeft = window.innerWidth - dropdownWidth - padding;
+  const left = Math.max(padding, Math.min(desiredLeft, maxLeft));
+  const top = rect.bottom + 8;
+  notificationMenuPosition.value = { top, left };
+};
+
+const updatePaymentMenuPosition = () => {
+  const anchor = paymentButtonRef.value;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const dropdownWidth =
+    paymentMenuDropdownRef.value?.offsetWidth || 400;
+  const padding = 16;
+  const desiredLeft = rect.right - dropdownWidth;
+  const maxLeft = window.innerWidth - dropdownWidth - padding;
+  const left = Math.max(padding, Math.min(desiredLeft, maxLeft));
+  const top = rect.bottom + 8;
+  paymentMenuPosition.value = { top, left };
 };
 
 const attachDropdownListeners = () => {
@@ -196,12 +519,69 @@ const detachDropdownListeners = () => {
   window.removeEventListener("scroll", updateProfileMenuPosition, true);
 };
 
+const attachNotificationListeners = () => {
+  if (notificationListenersAttached) return;
+  notificationListenersAttached = true;
+  window.addEventListener("resize", updateNotificationMenuPosition);
+  window.addEventListener("scroll", updateNotificationMenuPosition, true);
+};
+
+const detachNotificationListeners = () => {
+  if (!notificationListenersAttached) return;
+  notificationListenersAttached = false;
+  window.removeEventListener("resize", updateNotificationMenuPosition);
+  window.removeEventListener("scroll", updateNotificationMenuPosition, true);
+};
+
+const attachPaymentListeners = () => {
+  if (paymentListenersAttached) return;
+  paymentListenersAttached = true;
+  window.addEventListener("resize", updatePaymentMenuPosition);
+  window.addEventListener("scroll", updatePaymentMenuPosition, true);
+};
+
+const detachPaymentListeners = () => {
+  if (!paymentListenersAttached) return;
+  paymentListenersAttached = false;
+  window.removeEventListener("resize", updatePaymentMenuPosition);
+  window.removeEventListener("scroll", updatePaymentMenuPosition, true);
+};
+
 const toggleProfileMenu = () => {
   profileMenuOpen.value = !profileMenuOpen.value;
+  if (profileMenuOpen.value) {
+    notificationMenuOpen.value = false;
+  }
 };
 
 const closeProfileMenu = () => {
   profileMenuOpen.value = false;
+};
+
+const toggleNotificationMenu = () => {
+  notificationMenuOpen.value = !notificationMenuOpen.value;
+  if (notificationMenuOpen.value) {
+    profileMenuOpen.value = false;
+    paymentMenuOpen.value = false;
+    refreshTransactions();
+  }
+};
+
+const closeNotificationMenu = () => {
+  notificationMenuOpen.value = false;
+};
+
+const togglePaymentMenu = () => {
+  paymentMenuOpen.value = !paymentMenuOpen.value;
+  if (paymentMenuOpen.value) {
+    profileMenuOpen.value = false;
+    notificationMenuOpen.value = false;
+    refreshTransactions();
+  }
+};
+
+const closePaymentMenu = () => {
+  paymentMenuOpen.value = false;
 };
 
 const goToProfile = () => {
@@ -248,13 +628,35 @@ const handleStorage = (event) => {
 };
 
 const handleClickOutside = (event) => {
-  const clickedTrigger =
+  const clickedProfileTrigger =
     profileMenuRef.value && profileMenuRef.value.contains(event.target);
-  const clickedDropdown =
+  const clickedProfileDropdown =
     profileMenuDropdownRef.value &&
     profileMenuDropdownRef.value.contains(event.target);
-  if (clickedTrigger || clickedDropdown) return;
+  if (clickedProfileTrigger || clickedProfileDropdown) {
+    return;
+  }
   profileMenuOpen.value = false;
+
+  const clickedNotificationTrigger =
+    notificationMenuRef.value && notificationMenuRef.value.contains(event.target);
+  const clickedNotificationDropdown =
+    notificationMenuDropdownRef.value &&
+    notificationMenuDropdownRef.value.contains(event.target);
+  if (clickedNotificationTrigger || clickedNotificationDropdown) {
+    return;
+  }
+  notificationMenuOpen.value = false;
+
+  const clickedPaymentTrigger =
+    paymentMenuRef.value && paymentMenuRef.value.contains(event.target);
+  const clickedPaymentDropdown =
+    paymentMenuDropdownRef.value &&
+    paymentMenuDropdownRef.value.contains(event.target);
+  if (clickedPaymentTrigger || clickedPaymentDropdown) {
+    return;
+  }
+  paymentMenuOpen.value = false;
 };
 
 onMounted(() => {
@@ -276,6 +678,8 @@ onBeforeUnmount(() => {
   }
   document.removeEventListener("click", handleClickOutside);
   detachDropdownListeners();
+  detachNotificationListeners();
+  detachPaymentListeners();
 });
 
 watch(profileMenuOpen, async (isOpen) => {
@@ -285,6 +689,26 @@ watch(profileMenuOpen, async (isOpen) => {
     attachDropdownListeners();
   } else {
     detachDropdownListeners();
+  }
+});
+
+watch(notificationMenuOpen, async (isOpen) => {
+  if (isOpen) {
+    await nextTick();
+    updateNotificationMenuPosition();
+    attachNotificationListeners();
+  } else {
+    detachNotificationListeners();
+  }
+});
+
+watch(paymentMenuOpen, async (isOpen) => {
+  if (isOpen) {
+    await nextTick();
+    updatePaymentMenuPosition();
+    attachPaymentListeners();
+  } else {
+    detachPaymentListeners();
   }
 });
 </script>
@@ -555,6 +979,354 @@ watch(profileMenuOpen, async (isOpen) => {
 .fade-scale-leave-to {
   opacity: 0;
   transform: translateY(-6px) scale(0.98);
+}
+
+.notification-shell {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notification-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 380px;
+  max-height: 500px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow:
+    0 20px 45px rgba(15, 23, 42, 0.15),
+    0 2px 12px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 1200;
+  overflow: hidden;
+}
+
+.notification-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.notification-menu-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.notification-refresh-btn {
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.notification-refresh-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.notification-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notification-menu-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.notification-loading,
+.notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.notification-empty p {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item:hover {
+  background: #f8fafc;
+}
+
+.notification-item-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.notification-item-message {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-item-meta {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.payment-notification-shell {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.payment-notification-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 400px;
+  max-height: 500px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow:
+    0 20px 45px rgba(15, 23, 42, 0.15),
+    0 2px 12px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 1200;
+  overflow: hidden;
+}
+
+.payment-notification-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.payment-notification-menu-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.payment-refresh-btn {
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.payment-refresh-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.payment-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.payment-notification-menu-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.payment-loading,
+.payment-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.payment-empty p {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.payment-item:last-child {
+  border-bottom: none;
+}
+
+.payment-item:hover {
+  background: #f8fafc;
+}
+
+.payment-item-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.payment-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.payment-item-message {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payment-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.payment-amount {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.payment-paid {
+  color: #059669;
+}
+
+.payment-remaining {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.payment-item-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.payment-status-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.payment-status--unpaid {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.payment-status--partial {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.payment-status--pending {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.payment-date {
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 /* Keep layout identical across window sizes; rely on horizontal scroll if space is tight. */

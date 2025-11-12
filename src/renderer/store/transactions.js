@@ -89,6 +89,7 @@ export const useTransactionStore = defineStore("transactions", {
           }
 
           const transactionType = isRental ? "RENTAL" : "SALE";
+          const paidAmount = Number(t.paid_amount ?? t.actual_paid_amount ?? 0) || 0;
 
           return {
             ...t,
@@ -97,6 +98,7 @@ export const useTransactionStore = defineStore("transactions", {
             totalAmount,
             customerName,
             status,
+            paid_amount: paidAmount,
           };
         });
         this.error = null;
