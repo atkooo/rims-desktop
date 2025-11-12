@@ -103,9 +103,6 @@
         <template #cell-category_name="{ row }">
           {{ row.category_name || '-' }}
         </template>
-        <template #cell-size_name="{ row }">
-          {{ row.size_name || '-' }}
-        </template>
         <template #cell-status="{ row }">
           <span class="status-badge" :class="(row.status || '').toLowerCase()">
             {{ row.status || 'AVAILABLE' }}
@@ -138,22 +135,6 @@
                     <Icon name="eye" :size="16" />
                     <span>Detail</span>
                   </button>
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="handleEdit(row)"
-                  >
-                    <Icon name="edit" :size="16" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item danger"
-                    @click="handleDelete(row)"
-                  >
-                    <Icon name="trash" :size="16" />
-                    <span>Hapus</span>
-                  </button>
                 </div>
               </transition>
             </Teleport>
@@ -163,24 +144,6 @@
       </div>
     </section>
 
-    <!-- Item Form Dialog -->
-    <ItemForm
-      v-model="showForm"
-      :edit-data="editingItem"
-      @saved="handleSaved"
-    />
-
-    <!-- Delete Confirmation Dialog -->
-    <AppDialog
-      v-model="showDeleteConfirm"
-      title="Hapus Item"
-      confirm-text="Hapus"
-      confirm-variant="danger"
-      :loading="deleteLoading"
-      @confirm="confirmDelete"
-    >
-      Apakah Anda yakin ingin menghapus item ini?
-    </AppDialog>
   </div>
 </template>
 
@@ -190,9 +153,7 @@ import { useRouter } from "vue-router";
 import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppButton from "@/components/ui/AppButton.vue";
-import AppDialog from "@/components/ui/AppDialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
-import ItemForm from "@/components/modules/items/ItemForm.vue";
 import Icon from "@/components/ui/Icon.vue";
 
 export default {
@@ -200,9 +161,7 @@ export default {
 
   components: {
     AppButton,
-    AppDialog,
     AppTable,
-    ItemForm,
     Icon,
   },
 
@@ -210,11 +169,6 @@ export default {
     const router = useRouter();
     const itemStore = useItemStore();
     const loading = ref(false);
-    const showForm = ref(false);
-    const editingItem = ref(null);
-    const showDeleteConfirm = ref(false);
-    const deleteLoading = ref(false);
-    const itemToDelete = ref(null);
     const openMenuId = ref(null);
     const menuPositions = ref({});
 
@@ -241,36 +195,14 @@ export default {
     // Format helper
     const formatText = (value) => value || "-";
 
-    // Table columns
+    // Table columns - simplified
     const columns = [
       { key: "code", label: "Kode", sortable: true },
       { key: "name", label: "Nama Item", sortable: true },
       { key: "category_name", label: "Kategori", sortable: true, format: formatText },
-      { key: "size_name", label: "Ukuran", sortable: true, format: formatText },
-      { key: "type", label: "Tipe", sortable: true },
-      {
-        key: "price",
-        label: "Harga",
-        format: formatCurrency,
-        sortable: true,
-        align: "right",
-      },
-      {
-        key: "rental_price_per_day",
-        label: "Harga Sewa/Hari",
-        format: formatCurrency,
-        sortable: true,
-        align: "right",
-      },
       {
         key: "stock_quantity",
         label: "Stok",
-        sortable: true,
-        align: "center",
-      },
-      {
-        key: "available_quantity",
-        label: "Tersedia",
         sortable: true,
         align: "center",
       },
@@ -327,40 +259,6 @@ export default {
     const handleViewDetail = (item) => {
       openMenuId.value = null;
       router.push(`/master/items/${item.id}`);
-    };
-
-    const handleEdit = (item) => {
-      openMenuId.value = null;
-      editingItem.value = item;
-      showForm.value = true;
-    };
-
-    const handleDelete = (item) => {
-      openMenuId.value = null;
-      itemToDelete.value = item;
-      showDeleteConfirm.value = true;
-    };
-
-    const confirmDelete = async () => {
-      if (!itemToDelete.value) return;
-
-      deleteLoading.value = true;
-      try {
-        await itemStore.deleteItem(itemToDelete.value.id);
-        showDeleteConfirm.value = false;
-      } catch (error) {
-        console.error("Error deleting item:", error);
-      } finally {
-        deleteLoading.value = false;
-        itemToDelete.value = null;
-      }
-    };
-
-    const handleSaved = async () => {
-      editingItem.value = null;
-      showForm.value = false;
-      // Refresh items to get updated category_name and size_name
-      await itemStore.fetchItems();
     };
 
     const toggleActionMenu = async (itemId) => {
@@ -434,10 +332,6 @@ export default {
 
     return {
       loading,
-      showForm,
-      editingItem,
-      showDeleteConfirm,
-      deleteLoading,
       filters,
       columns,
       filteredItems,
@@ -450,10 +344,6 @@ export default {
       openMenuId,
       formatCurrency,
       handleViewDetail,
-      handleEdit,
-      handleDelete,
-      confirmDelete,
-      handleSaved,
       toggleActionMenu,
       getMenuPosition,
     };

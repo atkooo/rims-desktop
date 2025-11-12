@@ -83,13 +83,37 @@
             {{ row.available_quantity }}
           </span>
         </template>
-        <template #cell-is_active="{ row }">
-          <span
-            class="status-badge"
-            :class="row.is_active ? 'active' : 'inactive'"
-          >
-            {{ row.is_active ? "Aktif" : "Tidak Aktif" }}
-          </span>
+        <template #actions="{ row }">
+          <div class="action-menu-wrapper">
+            <button
+              type="button"
+              class="action-menu-trigger"
+              :data-item-id="row.id"
+              @click.stop="toggleActionMenu(row.id)"
+              :aria-expanded="openMenuId === row.id"
+            >
+              <Icon name="more-vertical" :size="18" />
+            </button>
+            <Teleport to="body">
+              <transition name="fade-scale">
+                <div
+                  v-if="openMenuId === row.id"
+                  class="action-menu"
+                  :style="getMenuPosition(row.id)"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleViewDetail(row)"
+                  >
+                    <Icon name="eye" :size="16" />
+                    <span>Detail</span>
+                  </button>
+                </div>
+              </transition>
+            </Teleport>
+          </div>
         </template>
       </AppTable>
       </div>
@@ -98,19 +122,24 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { fetchItemsWithStock } from "@/services/reports";
 
 export default {
   name: "ItemsWithStockView",
-  components: { AppButton, AppTable },
+  components: { AppButton, AppTable, Icon },
   setup() {
+    const router = useRouter();
     const items = ref([]);
     const loading = ref(false);
     const error = ref("");
     const categories = ref([]);
+    const openMenuId = ref(null);
+    const menuPositions = ref({});
 
     // Filter state
     const filters = ref({
@@ -141,31 +170,6 @@ export default {
         label: "Tersedia",
         sortable: true,
         align: "center",
-      },
-      {
-        key: "rented_quantity",
-        label: "Dipinjam",
-        sortable: true,
-        align: "center",
-      },
-      {
-        key: "rental_price_per_day",
-        label: "Harga Sewa / Hari",
-        format: formatCurrency,
-        sortable: true,
-        align: "right",
-      },
-      {
-        key: "sale_price",
-        label: "Harga Jual",
-        format: formatCurrency,
-        sortable: true,
-        align: "right",
-      },
-      {
-        key: "is_active",
-        label: "Status",
-        sortable: true,
       },
     ];
 
@@ -230,6 +234,44 @@ export default {
       }
     };
 
+    const handleViewDetail = (item) => {
+      openMenuId.value = null;
+      router.push(`/master/items/${item.id}`);
+    };
+
+    const toggleActionMenu = async (itemId) => {
+      if (openMenuId.value === itemId) {
+        openMenuId.value = null;
+      } else {
+        openMenuId.value = itemId;
+        await nextTick();
+        updateMenuPosition(itemId);
+      }
+    };
+
+    const updateMenuPosition = (itemId) => {
+      const trigger = document.querySelector(
+        `[data-item-id="${itemId}"]`,
+      );
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      menuPositions.value[itemId] = {
+        top: rect.bottom + 4 + "px",
+        left: rect.right - 120 + "px",
+      };
+    };
+
+    const getMenuPosition = (itemId) => {
+      return menuPositions.value[itemId] || { top: "0px", left: "0px" };
+    };
+
+    const closeActionMenu = (event) => {
+      if (!event.target.closest(".action-menu-wrapper")) {
+        openMenuId.value = null;
+      }
+    };
+
     const loadData = async () => {
       loading.value = true;
       error.value = "";
@@ -247,7 +289,14 @@ export default {
       }
     };
 
-    onMounted(loadData);
+    onMounted(() => {
+      document.addEventListener("click", closeActionMenu);
+      loadData();
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener("click", closeActionMenu);
+    });
 
     return {
       columns,
@@ -259,6 +308,10 @@ export default {
       filters,
       categories,
       loadData,
+      openMenuId,
+      handleViewDetail,
+      toggleActionMenu,
+      getMenuPosition,
     };
   },
 };
@@ -367,5 +420,76 @@ export default {
   padding: 0.75rem 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
+}
+
+.action-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-menu-trigger:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.action-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 180px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.action-menu-item:hover {
+  background: #f9fafb;
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.15s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
 }
 </style>
