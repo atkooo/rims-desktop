@@ -2,5 +2,5 @@
   "printer": "Microsoft Print to PDF",
   "paperWidth": 80,
   "autoPrint": true,
-  "taxPercentage": 0
+  "taxPercentage": 12
 }

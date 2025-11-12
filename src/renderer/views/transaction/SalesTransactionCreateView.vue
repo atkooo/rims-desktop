@@ -617,6 +617,7 @@ export default {
       cashierStatus,
       getDiscountHint,
       isDiscountReadonly,
+      calculatedTax,
       taxHint,
       handleSubmit,
       resetForm,

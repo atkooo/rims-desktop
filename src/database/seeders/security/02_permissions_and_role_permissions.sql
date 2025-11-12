@@ -161,3 +161,13 @@ AND p.slug IN (
     'transactions.cashier.manage'
 );
 
+-- TAX: Role management permissions (if role exists)
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'tax'
+AND p.slug IN (
+    'roles.view', 'roles.create', 'roles.update', 'roles.delete', 'roles.permissions.manage'
+);
+
