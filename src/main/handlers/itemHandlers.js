@@ -167,7 +167,7 @@ function setupItemHandlers() {
   ipcMain.handle("items:update", async (event, id, updates) => {
     try {
       // Validasi input
-      if (updates.name && !validator.isNotEmpty(updates.name)) {
+      if (updates.name !== undefined && !validator.isNotEmpty(updates.name)) {
         throw new Error("Nama item harus diisi");
       }
       if (updates.price && !validator.isPositiveNumber(updates.price)) {

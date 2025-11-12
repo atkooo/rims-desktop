@@ -130,37 +130,59 @@ async function runMigrations(providedDb = null) {
         if (!statement || !statement.trim()) {
           continue;
         }
-        try {
-          await runAsync(statement);
-        } catch (error) {
-          // If error is about duplicate column, it means column already exists
-          // This is acceptable for ALTER TABLE ADD COLUMN operations
-          const errorMsg = error.message || String(error);
-          if (
-            errorMsg.includes("duplicate column") ||
-            errorMsg.includes("already exists") ||
-            errorMsg.includes("SQLITE_MISUSE")
-          ) {
-            // Check if it's a column already exists error by trying to query the table schema
-            try {
-              const tableInfo = await allAsync(
-                "PRAGMA table_info(rental_transactions)",
-              );
-              const hasTaxColumn = tableInfo.some(
-                (col) => col.name === "tax",
-              );
-              if (hasTaxColumn) {
-                console.log(
-                  `Warning: Column 'tax' already exists in rental_transactions. Skipping ALTER TABLE statement.`,
-                );
-                continue;
-              }
-            } catch (pragmaError) {
-              // If we can't check, re-throw the original error
+        
+        // Retry logic for SQLITE_BUSY errors
+        let retries = 5;
+        let executed = false;
+        while (retries > 0 && !executed) {
+          try {
+            await runAsync(statement);
+            executed = true;
+          } catch (error) {
+            const errorMsg = error.message || String(error);
+            
+            // Retry for SQLITE_BUSY errors
+            if (errorMsg.includes("SQLITE_BUSY") && retries > 1) {
+              // Wait and retry for busy database
+              retries--;
+              await new Promise(resolve => setTimeout(resolve, 100 * (6 - retries)));
+              continue;
             }
+            
+            // If error is about duplicate column, it means column already exists
+            // This is acceptable for ALTER TABLE ADD COLUMN operations
+            if (
+              errorMsg.includes("duplicate column") ||
+              errorMsg.includes("already exists") ||
+              errorMsg.includes("SQLITE_MISUSE")
+            ) {
+              // Check if it's a column already exists error by trying to query the table schema
+              try {
+                const tableInfo = await allAsync(
+                  "PRAGMA table_info(rental_transactions)",
+                );
+                const hasTaxColumn = tableInfo.some(
+                  (col) => col.name === "tax",
+                );
+                if (hasTaxColumn) {
+                  console.log(
+                    `Warning: Column 'tax' already exists in rental_transactions. Skipping ALTER TABLE statement.`,
+                  );
+                  executed = true; // Mark as executed to skip
+                  break;
+                }
+              } catch (pragmaError) {
+                // If we can't check, re-throw the original error
+              }
+            }
+            
+            // Re-throw other errors if no more retries
+            if (retries === 1) {
+              throw error;
+            }
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
-          // Re-throw other errors
-          throw error;
         }
       }
 
