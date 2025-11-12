@@ -11,11 +11,11 @@ const dbConfig = require("../../main/config/database");
 function createDatabaseConnection(dbPath = null) {
   const targetPath = dbPath || dbConfig.path;
   const dataDir = path.dirname(targetPath);
-  
+
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-  
+
   return new sqlite3.Database(targetPath);
 }
 
@@ -29,7 +29,7 @@ function promisifyDb(db) {
         });
       });
     },
-    
+
     allAsync(sql, params = []) {
       return new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
@@ -38,7 +38,7 @@ function promisifyDb(db) {
         });
       });
     },
-    
+
     getAsync(sql, params = []) {
       return new Promise((resolve, reject) => {
         db.get(sql, params, (err, row) => {
@@ -59,7 +59,7 @@ function collectSqlFiles(dir) {
   if (!fs.existsSync(dir)) {
     return [];
   }
-  
+
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const files = [];
 
@@ -117,7 +117,7 @@ function parseSqlStatements(sqlContent) {
 
     // Track BEGIN/END blocks and CASE/END statements (case-insensitive)
     const remaining = sqlContent.substring(i).toUpperCase();
-    
+
     // Check for CASE statement
     if (remaining.startsWith("CASE") && !/\w/.test(sqlContent[i + 4] || "")) {
       inCase = true;
@@ -125,7 +125,7 @@ function parseSqlStatements(sqlContent) {
       i += 4;
       continue;
     }
-    
+
     // Check for BEGIN block
     if (remaining.startsWith("BEGIN") && !/\w/.test(sqlContent[i + 5] || "")) {
       depth++;
@@ -133,7 +133,7 @@ function parseSqlStatements(sqlContent) {
       i += 5;
       continue;
     }
-    
+
     // Check for END
     if (remaining.startsWith("END") && !/\w/.test(sqlContent[i + 3] || "")) {
       // If we're inside a CASE statement, close it
@@ -148,7 +148,7 @@ function parseSqlStatements(sqlContent) {
         }
         continue;
       }
-      
+
       // Otherwise, it's closing a BEGIN block
       depth--;
       currentStatement += sqlContent.substring(i, i + 3);
@@ -201,7 +201,11 @@ function parseSqlStatements(sqlContent) {
  * @param {Array<string>} statements - Array of SQL statements
  * @param {Function} onStatement - Optional callback for each statement
  */
-async function executeStatements(dbPromisified, statements, onStatement = null) {
+async function executeStatements(
+  dbPromisified,
+  statements,
+  onStatement = null,
+) {
   for (const statement of statements) {
     if (onStatement) {
       onStatement(statement);
@@ -217,4 +221,3 @@ module.exports = {
   parseSqlStatements,
   executeStatements,
 };
-

@@ -12,7 +12,7 @@
       <p class="dialog-description">
         Pilih printer yang akan digunakan untuk mencetak struk.
       </p>
-      
+
       <div class="printer-list" v-if="!loading && printers.length > 0">
         <div
           v-for="printer in printers"
@@ -24,7 +24,9 @@
           <div class="printer-info">
             <div class="printer-name">
               {{ printer.displayName || printer.name }}
-              <span v-if="printer.isDefault" class="default-badge">Default</span>
+              <span v-if="printer.isDefault" class="default-badge"
+                >Default</span
+              >
             </div>
             <div v-if="printer.description" class="printer-description">
               {{ printer.description }}
@@ -40,14 +42,12 @@
           </div>
         </div>
       </div>
-      
+
       <div v-else-if="loading" class="loading-state">
         Memuat daftar printer...
       </div>
-      
-      <div v-else class="empty-state">
-        Tidak ada printer yang tersedia.
-      </div>
+
+      <div v-else class="empty-state">Tidak ada printer yang tersedia.</div>
     </div>
   </AppDialog>
 </template>
@@ -85,7 +85,7 @@ export default {
       try {
         const printerList = await ipcRenderer.invoke("printer:list");
         printers.value = printerList;
-        
+
         // Select default printer if available
         const defaultPrinter = printerList.find((p) => p.isDefault);
         if (defaultPrinter) {
@@ -242,4 +242,3 @@ export default {
   color: #6b7280;
 }
 </style>
-

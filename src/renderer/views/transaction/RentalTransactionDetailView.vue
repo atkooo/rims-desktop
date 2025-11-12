@@ -5,7 +5,11 @@
         <div>
           <h1>Detail Transaksi Sewa</h1>
           <p class="subtitle">
-            {{ code ? `Kode transaksi ${code}` : "Detail transaksi tidak tersedia." }}
+            {{
+              code
+                ? `Kode transaksi ${code}`
+                : "Detail transaksi tidak tersedia."
+            }}
           </p>
         </div>
         <div class="header-actions">
@@ -18,9 +22,7 @@
     </div>
 
     <section class="card-section">
-      <div v-if="loading" class="detail-state">
-        Memuat detail transaksi...
-      </div>
+      <div v-if="loading" class="detail-state">Memuat detail transaksi...</div>
       <div v-else-if="error" class="error-banner">
         {{ error }}
       </div>
@@ -63,7 +65,11 @@
           </div>
           <div class="detail-item">
             <span>Sisa</span>
-            <strong>{{ formatCurrency((rental.total_amount || 0) - (rental.paid_amount || 0)) }}</strong>
+            <strong>{{
+              formatCurrency(
+                (rental.total_amount || 0) - (rental.paid_amount || 0),
+              )
+            }}</strong>
           </div>
           <div v-if="rental.cashier_session_code" class="detail-item">
             <span>Sesi Kasir</span>

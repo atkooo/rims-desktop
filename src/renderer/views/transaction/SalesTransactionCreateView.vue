@@ -5,7 +5,8 @@
         <div>
           <h1>Transaksi Penjualan Baru</h1>
           <p class="subtitle">
-            Form untuk kasir atau admin yang perlu mencatat penjualan toko dengan cepat.
+            Form untuk kasir atau admin yang perlu mencatat penjualan toko
+            dengan cepat.
           </p>
         </div>
         <div class="header-actions">
@@ -19,28 +20,45 @@
 
     <!-- Cashier Status Banner -->
     <section v-if="cashierStatus" class="cashier-status-section">
-      <div :class="['cashier-status-banner', cashierStatus.status === 'open' ? 'open' : 'closed']">
+      <div
+        :class="[
+          'cashier-status-banner',
+          cashierStatus.status === 'open' ? 'open' : 'closed',
+        ]"
+      >
         <div class="cashier-status-content">
           <div class="cashier-status-info">
             <div class="cashier-status-label">
-              <span class="status-indicator" :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"></span>
-              <strong>Sesi Kasir: {{ cashierStatus.status === 'open' ? 'Aktif' : 'Tidak Aktif' }}</strong>
+              <span
+                class="status-indicator"
+                :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"
+              ></span>
+              <strong
+                >Sesi Kasir:
+                {{
+                  cashierStatus.status === "open" ? "Aktif" : "Tidak Aktif"
+                }}</strong
+              >
             </div>
             <div v-if="cashierStatus.status === 'open'" class="cashier-details">
               <span class="detail-item">
                 <span class="detail-label">Saldo Awal:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.opening_balance) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.opening_balance)
+                }}</span>
               </span>
               <span class="detail-item">
                 <span class="detail-label">Saldo Diharapkan:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.expected_balance || 0) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.expected_balance || 0)
+                }}</span>
               </span>
             </div>
           </div>
           <div class="cashier-status-action">
-            <AppButton 
-              v-if="cashierStatus.status !== 'open'" 
-              variant="primary" 
+            <AppButton
+              v-if="cashierStatus.status !== 'open'"
+              variant="primary"
               size="small"
               @click="$router.push('/transactions/cashier')"
             >
@@ -64,7 +82,9 @@
           <h3 class="section-title">Detail Customer & Jadwal</h3>
           <div class="form-grid">
             <div class="field-group">
-              <label for="customerId">Customer <span class="optional-label">(Opsional)</span></label>
+              <label for="customerId"
+                >Customer <span class="optional-label">(Opsional)</span></label
+              >
               <select
                 id="customerId"
                 v-model="form.customerId"
@@ -77,7 +97,8 @@
                   :key="customer.id"
                   :value="customer.id"
                 >
-                  {{ customer.name }} {{ customer.code ? `(${customer.code})` : "" }}
+                  {{ customer.name }}
+                  {{ customer.code ? `(${customer.code})` : "" }}
                 </option>
               </select>
               <div v-if="errors.customerId" class="error-message">
@@ -124,14 +145,25 @@
               />
             </div>
             <div class="field-group">
-              <FormInput id="tax" label="Pajak" type="number" min="0" v-model.number="form.tax" />
+              <FormInput
+                id="tax"
+                label="Pajak"
+                type="number"
+                min="0"
+                v-model.number="form.tax"
+              />
             </div>
           </div>
         </div>
 
         <div class="form-section">
           <h3 class="section-title">Catatan</h3>
-          <FormInput id="notes" label="Catatan" type="textarea" v-model="form.notes" />
+          <FormInput
+            id="notes"
+            label="Catatan"
+            type="textarea"
+            v-model="form.notes"
+          />
         </div>
 
         <div class="form-actions">
@@ -177,7 +209,9 @@
             <li>Periksa kembali jumlah bundle sebelum menyimpan.</li>
             <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
           </ul>
-          <AppButton variant="success" @click="goBack">Lihat Daftar Penjualan</AppButton>
+          <AppButton variant="success" @click="goBack"
+            >Lihat Daftar Penjualan</AppButton
+          >
         </div>
       </aside>
     </section>
@@ -243,28 +277,28 @@ export default {
     // Calculate item price after discount
     const calculateItemPrice = (item) => {
       const basePrice = item.sale_price ?? item.price ?? 0;
-      
+
       // Apply item discount if item has discount_group
       if (item.discount_percentage > 0) {
         return Math.round(basePrice * (1 - item.discount_percentage / 100));
       } else if (item.discount_amount > 0) {
         return Math.max(0, basePrice - item.discount_amount);
       }
-      
+
       return basePrice;
     };
 
     // Calculate bundle price after discount
     const calculateBundlePrice = (bundle) => {
       const basePrice = bundle.price || 0;
-      
+
       // Apply bundle discount if bundle has discount_group
       if (bundle.discount_percentage > 0) {
         return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
       } else if (bundle.discount_amount > 0) {
         return Math.max(0, basePrice - bundle.discount_amount);
       }
-      
+
       return basePrice;
     };
 
@@ -296,7 +330,10 @@ export default {
     );
 
     const totalBundles = computed(() =>
-      form.value.bundles.reduce((sum, bundle) => sum + (bundle.quantity || 0), 0),
+      form.value.bundles.reduce(
+        (sum, bundle) => sum + (bundle.quantity || 0),
+        0,
+      ),
     );
 
     const normalizedItems = computed(() =>
@@ -322,7 +359,9 @@ export default {
 
     const getDiscountHint = () => {
       if (form.value.customerId) {
-        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        const customer = customers.value.find(
+          (c) => c.id === form.value.customerId,
+        );
         if (customer && customer.discount_group_name) {
           if (customer.discount_percentage > 0) {
             return `Dari grup: ${customer.discount_group_name} (${customer.discount_percentage}%)`;
@@ -337,7 +376,9 @@ export default {
     const isDiscountReadonly = computed(() => {
       // Jika customer dipilih dan memiliki discount_group, maka diskon readonly
       if (form.value.customerId) {
-        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        const customer = customers.value.find(
+          (c) => c.id === form.value.customerId,
+        );
         if (customer && customer.discount_group_id) {
           return true;
         }
@@ -367,17 +408,21 @@ export default {
             // Customer has a discount group, apply the discount automatically
             if (customer.discount_percentage > 0) {
               // Apply percentage discount to subtotal
-              const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+              const calculatedDiscount =
+                (subtotal.value * customer.discount_percentage) / 100;
               form.value.discount = Math.round(calculatedDiscount);
-              lastAutoAppliedDiscount.value = { type: 'percentage', customerId };
+              lastAutoAppliedDiscount.value = {
+                type: "percentage",
+                customerId,
+              };
             } else if (customer.discount_amount > 0) {
               // Apply fixed amount discount
               form.value.discount = customer.discount_amount;
-              lastAutoAppliedDiscount.value = { type: 'amount', customerId };
+              lastAutoAppliedDiscount.value = { type: "amount", customerId };
             } else {
               // Discount group exists but no discount configured
               form.value.discount = 0;
-              lastAutoAppliedDiscount.value = { type: 'none', customerId };
+              lastAutoAppliedDiscount.value = { type: "none", customerId };
             }
           } else {
             // Customer doesn't have discount group, reset discount to 0
@@ -397,12 +442,19 @@ export default {
       () => subtotal.value,
       () => {
         if (form.value.customerId && lastAutoAppliedDiscount.value) {
-          const customer = customers.value.find((c) => c.id === form.value.customerId);
-          if (customer && customer.discount_group_id && customer.discount_percentage > 0 && 
-              lastAutoAppliedDiscount.value.type === 'percentage' && 
-              lastAutoAppliedDiscount.value.customerId === form.value.customerId) {
+          const customer = customers.value.find(
+            (c) => c.id === form.value.customerId,
+          );
+          if (
+            customer &&
+            customer.discount_group_id &&
+            customer.discount_percentage > 0 &&
+            lastAutoAppliedDiscount.value.type === "percentage" &&
+            lastAutoAppliedDiscount.value.customerId === form.value.customerId
+          ) {
             // Recalculate percentage discount when subtotal changes (only if it was auto-applied)
-            const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+            const calculatedDiscount =
+              (subtotal.value * customer.discount_percentage) / 100;
             form.value.discount = Math.round(calculatedDiscount);
           }
         } else if (!form.value.customerId || !lastAutoAppliedDiscount.value) {
@@ -458,10 +510,10 @@ export default {
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
         });
-        
+
         // Refresh cashier status after transaction
         await loadCashierStatus();
-        
+
         // Redirect to payment page
         if (newTransaction && newTransaction.id) {
           router.push({
@@ -537,7 +589,9 @@ export default {
 .cashier-status-banner {
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #d1d5db;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -584,12 +638,16 @@ export default {
 
 .status-indicator.active {
   background-color: #16a34a;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15), 0 0 0 8px rgba(22, 163, 74, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(22, 163, 74, 0.15),
+    0 0 0 8px rgba(22, 163, 74, 0.08);
 }
 
 .status-indicator.inactive {
   background-color: #ef4444;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 0 0 8px rgba(239, 68, 68, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.15),
+    0 0 0 8px rgba(239, 68, 68, 0.08);
 }
 
 .cashier-status-label strong {

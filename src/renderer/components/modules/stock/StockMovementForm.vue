@@ -24,11 +24,7 @@
               required
             >
               <option value="">Pilih Item</option>
-              <option
-                v-for="item in items"
-                :key="item.id"
-                :value="item.id"
-              >
+              <option v-for="item in items" :key="item.id" :value="item.id">
                 {{ item.name }} - Stok: {{ item.available_quantity || 0 }}
               </option>
             </select>
@@ -120,7 +116,6 @@
         </div>
       </section>
     </form>
-
   </AppDialog>
 </template>
 
@@ -217,7 +212,8 @@ export default {
         showDialog.value = false;
       } catch (error) {
         console.error("Error saving stock movement:", error);
-        errors.value.submit = error.message || "Gagal menyimpan pergerakan stok";
+        errors.value.submit =
+          error.message || "Gagal menyimpan pergerakan stok";
       } finally {
         loading.value = false;
       }
@@ -345,6 +341,3 @@ export default {
   font-size: 0.875rem;
 }
 </style>
-
-
-

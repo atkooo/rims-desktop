@@ -68,7 +68,7 @@ function setupRoleHandlers() {
       // Check if role already exists
       const existing = await database.queryOne(
         "SELECT id FROM roles WHERE name = ?",
-        [name.trim().toLowerCase()]
+        [name.trim().toLowerCase()],
       );
       if (existing) {
         throw new Error("Role dengan nama tersebut sudah ada");
@@ -77,11 +77,11 @@ function setupRoleHandlers() {
       // Insert role
       const result = await database.execute(
         "INSERT INTO roles (name, description) VALUES (?, ?)",
-        [name.trim().toLowerCase(), description || null]
+        [name.trim().toLowerCase(), description || null],
       );
 
       const currentUser = getCurrentUserSafely();
-      
+
       await logActivity({
         userId: currentUser?.id || null,
         action: "CREATE",
@@ -110,7 +110,7 @@ function setupRoleHandlers() {
       // Check if role exists
       const existing = await database.queryOne(
         "SELECT id, name FROM roles WHERE id = ?",
-        [id]
+        [id],
       );
       if (!existing) {
         throw new Error("Role tidak ditemukan");
@@ -119,7 +119,7 @@ function setupRoleHandlers() {
       // Check if name is already taken by another role
       const nameExists = await database.queryOne(
         "SELECT id FROM roles WHERE name = ? AND id != ?",
-        [name.trim().toLowerCase(), id]
+        [name.trim().toLowerCase(), id],
       );
       if (nameExists) {
         throw new Error("Role dengan nama tersebut sudah ada");
@@ -128,11 +128,11 @@ function setupRoleHandlers() {
       // Update role
       await database.execute(
         "UPDATE roles SET name = ?, description = ? WHERE id = ?",
-        [name.trim().toLowerCase(), description || null, id]
+        [name.trim().toLowerCase(), description || null, id],
       );
 
       const currentUser = getCurrentUserSafely();
-      
+
       await logActivity({
         userId: currentUser?.id || null,
         action: "UPDATE",
@@ -157,7 +157,7 @@ function setupRoleHandlers() {
       // Check if role exists
       const role = await database.queryOne(
         "SELECT name FROM roles WHERE id = ?",
-        [id]
+        [id],
       );
       if (!role) {
         throw new Error("Role tidak ditemukan");
@@ -166,25 +166,24 @@ function setupRoleHandlers() {
       // Check if role is used by users
       const userCount = await database.queryOne(
         "SELECT COUNT(*) as count FROM users WHERE role_id = ?",
-        [id]
+        [id],
       );
       if (userCount && userCount.count > 0) {
         throw new Error(
-          `Role tidak dapat dihapus karena masih digunakan oleh ${userCount.count} user`
+          `Role tidak dapat dihapus karena masih digunakan oleh ${userCount.count} user`,
         );
       }
 
       // Delete role permissions first
-      await database.execute(
-        "DELETE FROM role_permissions WHERE role_id = ?",
-        [id]
-      );
+      await database.execute("DELETE FROM role_permissions WHERE role_id = ?", [
+        id,
+      ]);
 
       // Delete role
       await database.execute("DELETE FROM roles WHERE id = ?", [id]);
 
       const currentUser = getCurrentUserSafely();
-      
+
       await logActivity({
         userId: currentUser?.id || null,
         action: "DELETE",
@@ -275,7 +274,7 @@ function setupRoleHandlers() {
         // Check if role exists
         const role = await database.queryOne(
           "SELECT name FROM roles WHERE id = ?",
-          [roleId]
+          [roleId],
         );
         if (!role) {
           throw new Error("Role tidak ditemukan");
@@ -293,7 +292,7 @@ function setupRoleHandlers() {
           // Delete existing role permissions
           await database.execute(
             "DELETE FROM role_permissions WHERE role_id = ?",
-            [roleId]
+            [roleId],
           );
 
           // Insert new role permissions
@@ -302,7 +301,7 @@ function setupRoleHandlers() {
             const values = permissionIds.flatMap((permId) => [roleId, permId]);
             await database.execute(
               `INSERT INTO role_permissions (role_id, permission_id) VALUES ${placeholders}`,
-              values
+              values,
             );
           }
 
@@ -310,7 +309,7 @@ function setupRoleHandlers() {
           await database.execute("COMMIT");
 
           const currentUser = getCurrentUserSafely();
-          
+
           await logActivity({
             userId: currentUser?.id || null,
             action: "UPDATE",
@@ -328,7 +327,7 @@ function setupRoleHandlers() {
         logger.error("Error updating role permissions:", error);
         throw error;
       }
-    }
+    },
   );
 
   // Get permission by ID
@@ -355,4 +354,3 @@ function setupRoleHandlers() {
 }
 
 module.exports = setupRoleHandlers;
-

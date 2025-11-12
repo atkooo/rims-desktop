@@ -3,7 +3,9 @@
     <div class="picker-header">
       <div>
         <div class="picker-label">Pilih Item</div>
-        <p class="picker-description">Buka katalog untuk memilih barang tersedia</p>
+        <p class="picker-description">
+          Buka katalog untuk memilih barang tersedia
+        </p>
       </div>
       <AppButton variant="secondary" class="picker-button" @click="openPicker">
         <Icon name="search" :size="16" />
@@ -22,8 +24,16 @@
           <span class="item-name">{{ item.name }}</span>
           <span class="item-price">
             {{ formatCurrency(calculateItemPrice(item)) }}
-            <span v-if="item.discount_percentage > 0 || item.discount_amount > 0" class="discount-badge">
-              (Diskon: {{ item.discount_percentage > 0 ? item.discount_percentage + '%' : formatCurrency(item.discount_amount) }})
+            <span
+              v-if="item.discount_percentage > 0 || item.discount_amount > 0"
+              class="discount-badge"
+            >
+              (Diskon:
+              {{
+                item.discount_percentage > 0
+                  ? item.discount_percentage + "%"
+                  : formatCurrency(item.discount_amount)
+              }})
             </span>
           </span>
         </div>
@@ -87,14 +97,14 @@ export default {
     const calculateItemPrice = (item) => {
       // Use sale_price for sale transactions, fallback to price
       const basePrice = item.sale_price ?? item.price ?? 0;
-      
+
       // Apply item discount if item has discount_group
       if (item.discount_percentage > 0) {
         return Math.round(basePrice * (1 - item.discount_percentage / 100));
       } else if (item.discount_amount > 0) {
         return Math.max(0, basePrice - item.discount_amount);
       }
-      
+
       return basePrice;
     };
 

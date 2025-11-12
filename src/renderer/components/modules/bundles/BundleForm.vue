@@ -101,7 +101,11 @@
 import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import { createBundle, updateBundle, fetchDiscountGroups } from "@/services/masterData";
+import {
+  createBundle,
+  updateBundle,
+  fetchDiscountGroups,
+} from "@/services/masterData";
 
 const defaultForm = () => ({
   code: "",
@@ -267,7 +271,7 @@ export default {
     const loadDiscountGroups = async () => {
       try {
         const data = await fetchDiscountGroups();
-        discountGroups.value = data.filter(dg => dg.is_active);
+        discountGroups.value = data.filter((dg) => dg.is_active);
       } catch (error) {
         console.error("Gagal memuat grup diskon:", error);
       }

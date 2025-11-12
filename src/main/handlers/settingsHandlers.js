@@ -51,7 +51,7 @@ function setupSettingsHandlers() {
 
       // Merge new settings with existing settings
       const mergedSettings = { ...existingSettings, ...newSettings };
-      
+
       // If receiptSettings is being updated, merge it properly
       if (newSettings.receiptSettings && existingSettings.receiptSettings) {
         mergedSettings.receiptSettings = {
@@ -60,7 +60,10 @@ function setupSettingsHandlers() {
         };
       }
 
-      await fs.writeFile(SETTINGS_FILE, JSON.stringify(mergedSettings, null, 2));
+      await fs.writeFile(
+        SETTINGS_FILE,
+        JSON.stringify(mergedSettings, null, 2),
+      );
       logger.info("Settings saved successfully");
       return true;
     } catch (error) {
@@ -74,7 +77,7 @@ function setupSettingsHandlers() {
     try {
       // Use event.sender to get webContents from the renderer process
       const webContents = event.sender;
-      
+
       if (!webContents) {
         logger.warn("No webContents available to get printer list");
         return [];

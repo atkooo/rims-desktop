@@ -49,11 +49,7 @@
 
         <select v-model="filters.size" class="filter-select">
           <option value="">Semua Ukuran</option>
-          <option
-            v-for="size in sizes"
-            :key="size.id"
-            :value="size.id"
-          >
+          <option v-for="size in sizes" :key="size.id" :value="size.id">
             {{ size.name }}
           </option>
         </select>
@@ -74,81 +70,82 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="filteredItems"
-        :loading="loading"
-        :searchable-keys="['code', 'name', 'description', 'category_name', 'size_name']"
-        row-key="id"
-        default-page-size="10"
-      >
-        <template #cell-code="{ row }">
-          <a
-            href="#"
-            class="row-link"
-            @click.prevent="handleViewDetail(row)"
-          >
-            {{ row.code }}
-          </a>
-        </template>
-        <template #cell-name="{ row }">
-          <a
-            href="#"
-            class="row-link"
-            @click.prevent="handleViewDetail(row)"
-          >
-            {{ row.name }}
-          </a>
-        </template>
-        <template #cell-category_name="{ row }">
-          {{ row.category_name || '-' }}
-        </template>
-        <template #cell-status="{ row }">
-          <span class="status-badge" :class="(row.status || '').toLowerCase()">
-            {{ row.status || 'AVAILABLE' }}
-          </span>
-        </template>
-        <template #actions="{ row }">
-          <div class="action-menu-wrapper">
-            <button
-              type="button"
-              class="action-menu-trigger"
-              :data-item-id="row.id"
-              @click.stop="toggleActionMenu(row.id)"
-              :aria-expanded="openMenuId === row.id"
+        <AppTable
+          :columns="columns"
+          :rows="filteredItems"
+          :loading="loading"
+          :searchable-keys="[
+            'code',
+            'name',
+            'description',
+            'category_name',
+            'size_name',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        >
+          <template #cell-code="{ row }">
+            <a href="#" class="row-link" @click.prevent="handleViewDetail(row)">
+              {{ row.code }}
+            </a>
+          </template>
+          <template #cell-name="{ row }">
+            <a href="#" class="row-link" @click.prevent="handleViewDetail(row)">
+              {{ row.name }}
+            </a>
+          </template>
+          <template #cell-category_name="{ row }">
+            {{ row.category_name || "-" }}
+          </template>
+          <template #cell-status="{ row }">
+            <span
+              class="status-badge"
+              :class="(row.status || '').toLowerCase()"
             >
-              <Icon name="more-vertical" :size="18" />
-            </button>
-            <Teleport to="body">
-              <transition name="fade-scale">
-                <div
-                  v-if="openMenuId === row.id"
-                  class="action-menu"
-                  :style="getMenuPosition(row.id)"
-                  @click.stop
-                >
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="handleViewDetail(row)"
+              {{ row.status || "AVAILABLE" }}
+            </span>
+          </template>
+          <template #actions="{ row }">
+            <div class="action-menu-wrapper">
+              <button
+                type="button"
+                class="action-menu-trigger"
+                :data-item-id="row.id"
+                @click.stop="toggleActionMenu(row.id)"
+                :aria-expanded="openMenuId === row.id"
+              >
+                <Icon name="more-vertical" :size="18" />
+              </button>
+              <Teleport to="body">
+                <transition name="fade-scale">
+                  <div
+                    v-if="openMenuId === row.id"
+                    class="action-menu"
+                    :style="getMenuPosition(row.id)"
+                    @click.stop
                   >
-                    <Icon name="eye" :size="16" />
-                    <span>Detail</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item danger"
-                    @click="promptDelete(row)"
-                  >
-                    <Icon name="trash" :size="16" />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </transition>
-            </Teleport>
-          </div>
-        </template>
-      </AppTable>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="handleViewDetail(row)"
+                    >
+                      <Icon name="eye" :size="16" />
+                      <span>Detail</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="action-menu-item danger"
+                      @click="promptDelete(row)"
+                    >
+                      <Icon name="trash" :size="16" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </transition>
+              </Teleport>
+            </div>
+          </template>
+        </AppTable>
       </div>
     </section>
 
@@ -165,7 +162,8 @@
         <strong>{{ itemToDelete?.name }}</strong> ({{ itemToDelete?.code }})?
       </p>
       <p class="delete-hint">
-        Aksi ini tidak dapat dibatalkan. Pastikan item tidak digunakan dalam transaksi aktif.
+        Aksi ini tidak dapat dibatalkan. Pastikan item tidak digunakan dalam
+        transaksi aktif.
       </p>
     </AppDialog>
   </div>
@@ -228,7 +226,12 @@ export default {
     const columns = [
       { key: "code", label: "Kode", sortable: true },
       { key: "name", label: "Nama Item", sortable: true },
-      { key: "category_name", label: "Kategori", sortable: true, format: formatText },
+      {
+        key: "category_name",
+        label: "Kategori",
+        sortable: true,
+        format: formatText,
+      },
       {
         key: "stock_quantity",
         label: "Stok",
@@ -301,9 +304,7 @@ export default {
     };
 
     const updateMenuPosition = (itemId) => {
-      const trigger = document.querySelector(
-        `[data-item-id="${itemId}"]`,
-      );
+      const trigger = document.querySelector(`[data-item-id="${itemId}"]`);
       if (!trigger) return;
 
       const rect = trigger.getBoundingClientRect();
@@ -337,7 +338,10 @@ export default {
         showDeleteConfirm.value = false;
         itemToDelete.value = null;
       } catch (err) {
-        alert(err.message || "Gagal menghapus item. Pastikan item tidak digunakan dalam transaksi.");
+        alert(
+          err.message ||
+            "Gagal menghapus item. Pastikan item tidak digunakan dalam transaksi.",
+        );
       } finally {
         deleteLoading.value = false;
       }
@@ -525,7 +529,8 @@ export default {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   min-width: 140px;
   z-index: 1000;

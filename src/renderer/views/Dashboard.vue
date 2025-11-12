@@ -12,40 +12,59 @@
 
     <!-- Cashier Status Card -->
     <section v-if="cashierStatus" class="cashier-status-section">
-      <div :class="['cashier-status-banner', cashierStatus.status === 'open' ? 'open' : 'closed']">
+      <div
+        :class="[
+          'cashier-status-banner',
+          cashierStatus.status === 'open' ? 'open' : 'closed',
+        ]"
+      >
         <div class="cashier-status-content">
           <div class="cashier-status-info">
             <div class="cashier-status-label">
-              <span class="status-indicator" :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"></span>
-              <strong>Sesi Kasir: {{ cashierStatus.status === 'open' ? 'Aktif' : 'Tidak Aktif' }}</strong>
+              <span
+                class="status-indicator"
+                :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"
+              ></span>
+              <strong
+                >Sesi Kasir:
+                {{
+                  cashierStatus.status === "open" ? "Aktif" : "Tidak Aktif"
+                }}</strong
+              >
             </div>
             <div v-if="cashierStatus.status === 'open'" class="cashier-details">
               <span class="detail-item">
                 <span class="detail-label">Kode:</span>
-                <span class="detail-value">{{ cashierStatus.session_code }}</span>
+                <span class="detail-value">{{
+                  cashierStatus.session_code
+                }}</span>
               </span>
               <span class="detail-item">
                 <span class="detail-label">Saldo Awal:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.opening_balance) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.opening_balance)
+                }}</span>
               </span>
               <span class="detail-item">
                 <span class="detail-label">Saldo Diharapkan:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.expected_balance || 0) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.expected_balance || 0)
+                }}</span>
               </span>
             </div>
           </div>
           <div class="cashier-status-action">
-            <AppButton 
-              v-if="cashierStatus.status !== 'open'" 
-              variant="primary" 
+            <AppButton
+              v-if="cashierStatus.status !== 'open'"
+              variant="primary"
               size="small"
               @click="$router.push('/transactions/cashier')"
             >
               Buka Kasir
             </AppButton>
-            <AppButton 
+            <AppButton
               v-else
-              variant="secondary" 
+              variant="secondary"
               size="small"
               @click="$router.push('/transactions/cashier')"
             >
@@ -254,13 +273,17 @@ export default {
   background-color: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
   transition: all 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   transform: translateY(-2px);
 }
 
@@ -285,7 +308,9 @@ export default {
   background-color: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
   margin-bottom: 1.5rem;
 }
@@ -310,7 +335,9 @@ export default {
 .cashier-status-banner {
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #d1d5db;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -357,12 +384,16 @@ export default {
 
 .status-indicator.active {
   background-color: #16a34a;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15), 0 0 0 8px rgba(22, 163, 74, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(22, 163, 74, 0.15),
+    0 0 0 8px rgba(22, 163, 74, 0.08);
 }
 
 .status-indicator.inactive {
   background-color: #ef4444;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 0 0 8px rgba(239, 68, 68, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.15),
+    0 0 0 8px rgba(239, 68, 68, 0.08);
 }
 
 .cashier-status-label strong {

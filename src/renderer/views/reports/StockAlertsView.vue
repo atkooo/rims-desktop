@@ -37,14 +37,14 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="alerts"
-        :loading="loading"
-        :searchable-keys="['code', 'name']"
-        row-key="id"
-        default-page-size="10"
-      />
+        <AppTable
+          :columns="columns"
+          :rows="alerts"
+          :loading="loading"
+          :searchable-keys="['code', 'name']"
+          row-key="id"
+          default-page-size="10"
+        />
       </div>
     </section>
   </div>
@@ -67,8 +67,18 @@ export default {
     const columns = [
       { key: "code", label: "Kode Item", sortable: true },
       { key: "name", label: "Nama Item", sortable: true },
-      { key: "stock_quantity", label: "Stok Saat Ini", sortable: true, align: "center" },
-      { key: "min_stock_alert", label: "Batas Minimum", sortable: true, align: "center" },
+      {
+        key: "stock_quantity",
+        label: "Stok Saat Ini",
+        sortable: true,
+        align: "center",
+      },
+      {
+        key: "min_stock_alert",
+        label: "Batas Minimum",
+        sortable: true,
+        align: "center",
+      },
       {
         key: "deficit",
         label: "Kekurangan",

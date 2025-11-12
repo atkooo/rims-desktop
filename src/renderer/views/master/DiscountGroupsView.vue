@@ -4,7 +4,8 @@
       <div class="title-wrap">
         <h1>Grup Diskon</h1>
         <p class="subtitle">
-          Kelola daftar grup diskon. Grup diskon dapat digunakan untuk memberikan diskon kepada pelanggan.
+          Kelola daftar grup diskon. Grup diskon dapat digunakan untuk
+          memberikan diskon kepada pelanggan.
         </p>
       </div>
       <AppButton variant="primary" @click="openCreateDialog">
@@ -110,7 +111,11 @@
 
         <div class="form-group">
           <label>Deskripsi</label>
-          <textarea v-model="form.description" rows="3" maxlength="500"></textarea>
+          <textarea
+            v-model="form.description"
+            rows="3"
+            maxlength="500"
+          ></textarea>
         </div>
 
         <div class="form-group inline">
@@ -156,7 +161,9 @@
       </p>
       <div class="dialog-footer">
         <button class="btn" @click="closeDeleteDialog">Batal</button>
-        <button class="btn danger" @click="handleDeleteDiscountGroup">Hapus</button>
+        <button class="btn danger" @click="handleDeleteDiscountGroup">
+          Hapus
+        </button>
       </div>
     </Dialog>
   </div>
@@ -211,7 +218,6 @@ export default {
         form.value.discount_percentage = 0;
       }
     });
-
 
     // Load data
     async function loadDiscountGroups() {
@@ -319,7 +325,10 @@ export default {
 
         // Validate discount type
         if (discountType.value === "percentage") {
-          if (form.value.discount_percentage <= 0 || form.value.discount_percentage > 100) {
+          if (
+            form.value.discount_percentage <= 0 ||
+            form.value.discount_percentage > 100
+          ) {
             formError.value = "Persentase diskon harus antara 0 dan 100";
             return;
           }
@@ -552,4 +561,3 @@ export default {
   color: #6b7280;
 }
 </style>
-

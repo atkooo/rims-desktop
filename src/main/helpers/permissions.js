@@ -123,4 +123,3 @@ module.exports = {
   hasAnyPermission,
   hasAllPermissions,
 };
-

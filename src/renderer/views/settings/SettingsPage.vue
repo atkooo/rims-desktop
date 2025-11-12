@@ -2,10 +2,10 @@
   <div class="data-page settings-page admin-page">
     <div class="page-header">
       <div>
-
         <h1>Pengaturan Aplikasi</h1>
         <p class="subtitle">
-          Kelola profil toko, backup database, dan pengaturan printer agar operasional tetap lancar.
+          Kelola profil toko, backup database, dan pengaturan printer agar
+          operasional tetap lancar.
         </p>
       </div>
       <div class="header-meta">
@@ -23,18 +23,14 @@
     <div v-if="successMessage" class="success-message">
       <Icon name="eye" :size="18" />
       <span>{{ successMessage }}</span>
-      <button @click="successMessage = ''" class="close-btn">
-        ×
-      </button>
+      <button @click="successMessage = ''" class="close-btn">×</button>
     </div>
 
     <!-- Error Message -->
     <div v-if="errorMessage" class="error-message">
       <Icon name="bell" :size="18" />
       <span>{{ errorMessage }}</span>
-      <button @click="errorMessage = ''" class="close-btn">
-        ×
-      </button>
+      <button @click="errorMessage = ''" class="close-btn">×</button>
     </div>
 
     <section class="card-section">
@@ -47,7 +43,8 @@
           <div>
             <h2>Profil Toko</h2>
             <p class="section-subtitle">
-              Informasi ini akan muncul di struk dan laporan agar pelanggan mengenali toko Anda dengan mudah.
+              Informasi ini akan muncul di struk dan laporan agar pelanggan
+              mengenali toko Anda dengan mudah.
             </p>
           </div>
         </header>
@@ -94,7 +91,8 @@
           <div>
             <h2>Database Backup</h2>
             <p class="section-subtitle">
-              Cadangkan data secara rutin agar Anda bisa kembali pulih jika terjadi situasi tak terduga.
+              Cadangkan data secara rutin agar Anda bisa kembali pulih jika
+              terjadi situasi tak terduga.
             </p>
           </div>
         </header>
@@ -143,7 +141,8 @@
           <div>
             <h2>Pengaturan Printer & Struk</h2>
             <p class="section-subtitle">
-              Kelola pengaturan printer dan tampilan struk transaksi untuk mencetak struk dengan benar.
+              Kelola pengaturan printer dan tampilan struk transaksi untuk
+              mencetak struk dengan benar.
             </p>
           </div>
         </header>
@@ -171,7 +170,9 @@
         <div class="warning-banner">
           <Icon name="bell" :size="20" />
           <p>
-            Restore akan mengganti data saat ini dengan data dari backup. Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum melanjutkan.
+            Restore akan mengganti data saat ini dengan data dari backup.
+            Pastikan Anda telah menyimpan semua pekerjaan terbaru sebelum
+            melanjutkan.
           </p>
         </div>
 
@@ -510,7 +511,6 @@ export default {
   cursor: pointer;
 }
 
-
 .checkbox-wrapper input {
   width: 16px;
   height: 16px;
@@ -641,7 +641,9 @@ export default {
   font-size: 0.9rem;
   background: white;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .select-group .form-select:focus {

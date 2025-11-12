@@ -62,7 +62,17 @@
         />
         <div class="form-group">
           <label class="form-label">Grup Diskon (Opsional)</label>
-          <select v-model.number="form.discount_group_id" class="form-select" style="width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 0.55rem 0.65rem; font-size: 0.95rem;">
+          <select
+            v-model.number="form.discount_group_id"
+            class="form-select"
+            style="
+              width: 100%;
+              border: 1px solid #d1d5db;
+              border-radius: 6px;
+              padding: 0.55rem 0.65rem;
+              font-size: 0.95rem;
+            "
+          >
             <option :value="null">Tidak ada diskon</option>
             <option
               v-for="discountGroup in discountGroups"
@@ -115,7 +125,11 @@
 import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
-import { createAccessory, updateAccessory, fetchDiscountGroups } from "@/services/masterData";
+import {
+  createAccessory,
+  updateAccessory,
+  fetchDiscountGroups,
+} from "@/services/masterData";
 
 const defaultForm = () => ({
   code: "",
@@ -317,7 +331,7 @@ export default {
     const loadDiscountGroups = async () => {
       try {
         const data = await fetchDiscountGroups();
-        discountGroups.value = data.filter(dg => dg.is_active);
+        discountGroups.value = data.filter((dg) => dg.is_active);
       } catch (error) {
         console.error("Gagal memuat grup diskon:", error);
       }

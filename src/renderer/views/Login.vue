@@ -15,11 +15,26 @@
             <span>Username</span>
           </label>
           <div class="input-wrapper">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            <svg
+              class="input-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clip-rule="evenodd"
+              />
             </svg>
-            <input id="username" v-model.trim="username" type="text" autocomplete="username"
-              placeholder="Masukkan username" required />
+            <input
+              id="username"
+              v-model.trim="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Masukkan username"
+              required
+            />
           </div>
         </div>
 
@@ -28,21 +43,60 @@
             <span>Password</span>
           </label>
           <div class="input-wrapper">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
+            <svg
+              class="input-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
                 d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clip-rule="evenodd" />
+                clip-rule="evenodd"
+              />
             </svg>
-            <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'"
-              autocomplete="current-password" placeholder="Masukkan password" required />
-            <button type="button" class="password-toggle" @click="showPassword = !showPassword"
-              :aria-label="showPassword ? 'Sembunyikan password' : 'Tampilkan password'">
-              <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <input
+              id="password"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              autocomplete="current-password"
+              placeholder="Masukkan password"
+              required
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="showPassword = !showPassword"
+              :aria-label="
+                showPassword ? 'Sembunyikan password' : 'Tampilkan password'
+              "
+            >
+              <svg
+                v-if="showPassword"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
                 <line x1="1" y1="1" x2="23" y2="23"></line>
               </svg>
             </button>
@@ -56,34 +110,76 @@
           </label>
         </div>
 
-        <button type="submit" class="submit-button" :disabled="loading" :class="{ 'loading': loading }">
+        <button
+          type="submit"
+          class="submit-button"
+          :disabled="loading"
+          :class="{ loading: loading }"
+        >
           <span v-if="loading" class="button-content">
-            <svg class="spinner" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-              <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-                stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="32">
-                <animate attributeName="stroke-dasharray" dur="2s" values="0 32;16 16;0 32;0 32"
-                  repeatCount="indefinite" />
-                <animate attributeName="stroke-dashoffset" dur="2s" values="0;-16;-32;-32" repeatCount="indefinite" />
+            <svg
+              class="spinner"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                class="spinner-circle"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-dasharray="32"
+                stroke-dashoffset="32"
+              >
+                <animate
+                  attributeName="stroke-dasharray"
+                  dur="2s"
+                  values="0 32;16 16;0 32;0 32"
+                  repeatCount="indefinite"
+                />
+                <animate
+                  attributeName="stroke-dashoffset"
+                  dur="2s"
+                  values="0;-16;-32;-32"
+                  repeatCount="indefinite"
+                />
               </circle>
             </svg>
             Memproses...
           </span>
           <span v-else class="button-content">
             Masuk
-            <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
+            <svg
+              class="button-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
                 d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                clip-rule="evenodd" />
+                clip-rule="evenodd"
+              />
             </svg>
           </span>
         </button>
       </form>
 
       <div v-if="errorMessage" class="error-message">
-        <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd"
+        <svg
+          class="error-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-            clip-rule="evenodd" />
+            clip-rule="evenodd"
+          />
         </svg>
         {{ errorMessage }}
       </div>
@@ -127,17 +223,17 @@ export default {
       if (loading.value) return;
       loading.value = true;
       errorMessage.value = "";
-      
+
       try {
         // Delay 2 detik dengan animasi loading
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
         await login(username.value, password.value);
-        
+
         // Tampilkan notifikasi berhasil
         showNotification.value = true;
         loading.value = false;
-        
+
         // Redirect setelah notifikasi ditampilkan
         setTimeout(() => {
           const redirect = route.query.redirect || "/";
@@ -180,7 +276,8 @@ export default {
   width: 100%;
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12),
+  box-shadow:
+    0 20px 60px rgba(15, 23, 42, 0.12),
     0 8px 24px rgba(15, 23, 42, 0.08);
   padding: 40px 36px;
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -336,7 +433,11 @@ export default {
 
 .submit-button {
   width: 100%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-600) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-600) 100%
+  );
   color: white;
   border: none;
   padding: 14px 20px;

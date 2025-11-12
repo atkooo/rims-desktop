@@ -33,7 +33,10 @@ import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetail
 import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
 import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
 import { getCurrentUser } from "./services/auth.js";
-import { hasPermissionSync, initPermissions } from "./composables/usePermissions.js";
+import {
+  hasPermissionSync,
+  initPermissions,
+} from "./composables/usePermissions.js";
 
 // Route permission mapping
 const routePermissions = {
@@ -103,7 +106,11 @@ const routes = [
     component: ItemDetailView,
   },
   { path: "/master/customers", name: "customers", component: CustomersView },
-  { path: "/master/discount-groups", name: "discount-groups", component: DiscountGroupsView },
+  {
+    path: "/master/discount-groups",
+    name: "discount-groups",
+    component: DiscountGroupsView,
+  },
   { path: "/master/roles", name: "roles", component: RolesView },
   { path: "/master/users", name: "users", component: UsersView },
   // Transactions (read-only views)
@@ -125,7 +132,8 @@ const routes = [
   {
     path: "/transactions/rentals/:id/payment",
     name: "transaction-rental-payment",
-    component: () => import("./views/transaction/RentalTransactionPaymentView.vue"),
+    component: () =>
+      import("./views/transaction/RentalTransactionPaymentView.vue"),
   },
   {
     path: "/transactions/sales",
@@ -145,7 +153,8 @@ const routes = [
   {
     path: "/transactions/sales/:id/payment",
     name: "transaction-sale-payment",
-    component: () => import("./views/transaction/SaleTransactionPaymentView.vue"),
+    component: () =>
+      import("./views/transaction/SaleTransactionPaymentView.vue"),
   },
   {
     path: "/transactions/bookings",
@@ -250,7 +259,9 @@ router.beforeEach(async (to, from, next) => {
         const hasAccess = hasPermissionSync(requiredPermission);
         if (!hasAccess) {
           // User doesn't have permission, redirect to dashboard
-          console.warn(`Access denied: User doesn't have permission ${requiredPermission} for ${to.path}`);
+          console.warn(
+            `Access denied: User doesn't have permission ${requiredPermission} for ${to.path}`,
+          );
           return next({ path: "/" });
         }
       } catch (error) {
@@ -262,7 +273,10 @@ router.beforeEach(async (to, from, next) => {
 
     // For dynamic routes, check parent route permission
     // e.g., /transactions/rentals/:code should check transactions.rentals.view
-    if (to.path.startsWith("/transactions/rentals/") && to.path !== "/transactions/rentals/new") {
+    if (
+      to.path.startsWith("/transactions/rentals/") &&
+      to.path !== "/transactions/rentals/new"
+    ) {
       try {
         const hasAccess = hasPermissionSync("transactions.rentals.view");
         if (!hasAccess) {
@@ -273,7 +287,10 @@ router.beforeEach(async (to, from, next) => {
         return next();
       }
     }
-    if (to.path.startsWith("/transactions/sales/") && to.path !== "/transactions/sales/new") {
+    if (
+      to.path.startsWith("/transactions/sales/") &&
+      to.path !== "/transactions/sales/new"
+    ) {
       try {
         const hasAccess = hasPermissionSync("transactions.sales.view");
         if (!hasAccess) {
@@ -295,7 +312,10 @@ router.beforeEach(async (to, from, next) => {
         return next();
       }
     }
-    if (to.path.startsWith("/master/bundles/") && !to.path.includes("/bundle-details")) {
+    if (
+      to.path.startsWith("/master/bundles/") &&
+      !to.path.includes("/bundle-details")
+    ) {
       try {
         const hasAccess = hasPermissionSync("master.bundles.view");
         if (!hasAccess) {

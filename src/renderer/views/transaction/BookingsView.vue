@@ -40,55 +40,60 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="bookings"
-        :loading="loading"
-        :searchable-keys="['booking_code', 'customer_name', 'item_name', 'status']"
-        row-key="id"
-        default-page-size="10"
-      >
-        <template #actions="{ row }">
-          <div class="action-menu-wrapper">
-            <button
-              type="button"
-              class="action-menu-trigger"
-              :data-item-id="row.id"
-              @click.stop="toggleActionMenu(row.id)"
-              :aria-expanded="openMenuId === row.id"
-            >
-              <Icon name="more-vertical" :size="18" />
-            </button>
-            <Teleport to="body">
-              <transition name="fade-scale">
-                <div
-                  v-if="openMenuId === row.id"
-                  class="action-menu"
-                  :style="getMenuPosition(row.id)"
-                  @click.stop
-                >
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="handleEdit(row)"
+        <AppTable
+          :columns="columns"
+          :rows="bookings"
+          :loading="loading"
+          :searchable-keys="[
+            'booking_code',
+            'customer_name',
+            'item_name',
+            'status',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        >
+          <template #actions="{ row }">
+            <div class="action-menu-wrapper">
+              <button
+                type="button"
+                class="action-menu-trigger"
+                :data-item-id="row.id"
+                @click.stop="toggleActionMenu(row.id)"
+                :aria-expanded="openMenuId === row.id"
+              >
+                <Icon name="more-vertical" :size="18" />
+              </button>
+              <Teleport to="body">
+                <transition name="fade-scale">
+                  <div
+                    v-if="openMenuId === row.id"
+                    class="action-menu"
+                    :style="getMenuPosition(row.id)"
+                    @click.stop
                   >
-                    <Icon name="edit" :size="16" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item danger"
-                    @click="handleDelete(row)"
-                  >
-                    <Icon name="trash" :size="16" />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </transition>
-            </Teleport>
-          </div>
-        </template>
-      </AppTable>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="handleEdit(row)"
+                    >
+                      <Icon name="edit" :size="16" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="action-menu-item danger"
+                      @click="handleDelete(row)"
+                    >
+                      <Icon name="trash" :size="16" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </transition>
+              </Teleport>
+            </div>
+          </template>
+        </AppTable>
       </div>
     </section>
 
@@ -161,11 +166,38 @@ export default {
       { key: "customer_name", label: "Customer", sortable: true },
       { key: "item_name", label: "Item", sortable: true },
       { key: "quantity", label: "Jumlah", sortable: true, align: "center" },
-      { key: "booking_date", label: "Tanggal Booking", format: formatDate, sortable: true },
-      { key: "planned_start_date", label: "Mulai", format: formatDate, sortable: true },
-      { key: "planned_end_date", label: "Selesai", format: formatDate, sortable: true },
-      { key: "estimated_price", label: "Estimasi", format: formatCurrency, sortable: true, align: "right" },
-      { key: "deposit", label: "DP", format: formatCurrency, sortable: true, align: "right" },
+      {
+        key: "booking_date",
+        label: "Tanggal Booking",
+        format: formatDate,
+        sortable: true,
+      },
+      {
+        key: "planned_start_date",
+        label: "Mulai",
+        format: formatDate,
+        sortable: true,
+      },
+      {
+        key: "planned_end_date",
+        label: "Selesai",
+        format: formatDate,
+        sortable: true,
+      },
+      {
+        key: "estimated_price",
+        label: "Estimasi",
+        format: formatCurrency,
+        sortable: true,
+        align: "right",
+      },
+      {
+        key: "deposit",
+        label: "DP",
+        format: formatCurrency,
+        sortable: true,
+        align: "right",
+      },
       { key: "status", label: "Status", sortable: true },
     ];
 
@@ -250,9 +282,7 @@ export default {
     };
 
     const updateMenuPosition = (itemId) => {
-      const trigger = document.querySelector(
-        `[data-item-id="${itemId}"]`,
-      );
+      const trigger = document.querySelector(`[data-item-id="${itemId}"]`);
       if (!trigger) return;
 
       const rect = trigger.getBoundingClientRect();
@@ -314,7 +344,7 @@ export default {
     };
   },
 };
- </script>
+</script>
 
 <style scoped>
 .summary-grid {
@@ -390,7 +420,8 @@ export default {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   min-width: 180px;
   z-index: 1000;

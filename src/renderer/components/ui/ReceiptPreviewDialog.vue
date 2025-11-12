@@ -31,7 +31,10 @@
             <span>Info Pelanggan</span>
           </label>
           <label class="setting-item">
-            <input type="checkbox" v-model="receiptSettings.showTransactionCode" />
+            <input
+              type="checkbox"
+              v-model="receiptSettings.showTransactionCode"
+            />
             <span>Kode Transaksi</span>
           </label>
           <label class="setting-item">
@@ -175,7 +178,10 @@ export default {
       try {
         const settings = await ipcRenderer.invoke("settings:get");
         if (settings && settings.receiptSettings) {
-          receiptSettings.value = { ...receiptSettings.value, ...settings.receiptSettings };
+          receiptSettings.value = {
+            ...receiptSettings.value,
+            ...settings.receiptSettings,
+          };
         }
       } catch (err) {
         console.warn("Could not load receipt settings:", err);
@@ -191,7 +197,7 @@ export default {
 
       loading.value = true;
       error.value = "";
-      
+
       // Clean up previous blob URL
       if (previewBlobUrl.value) {
         URL.revokeObjectURL(previewBlobUrl.value);
@@ -201,8 +207,10 @@ export default {
 
       try {
         // Convert reactive objects to plain objects for IPC
-        const receiptSettingsPlain = JSON.parse(JSON.stringify(receiptSettings.value));
-        
+        const receiptSettingsPlain = JSON.parse(
+          JSON.stringify(receiptSettings.value),
+        );
+
         const result = await ipcRenderer.invoke("receipt:generate", {
           transactionId: props.transactionId,
           transactionType: props.transactionType,
@@ -214,14 +222,15 @@ export default {
           if (result.pdfBase64) {
             try {
               // Extract base64 data from data URI
-              const base64Data = result.pdfBase64.split(',')[1] || result.pdfBase64;
+              const base64Data =
+                result.pdfBase64.split(",")[1] || result.pdfBase64;
               const byteCharacters = atob(base64Data);
               const byteNumbers = new Array(byteCharacters.length);
               for (let i = 0; i < byteCharacters.length; i++) {
                 byteNumbers[i] = byteCharacters.charCodeAt(i);
               }
               const byteArray = new Uint8Array(byteNumbers);
-              const blob = new Blob([byteArray], { type: 'application/pdf' });
+              const blob = new Blob([byteArray], { type: "application/pdf" });
               previewBlobUrl.value = URL.createObjectURL(blob);
               previewUrl.value = previewBlobUrl.value;
             } catch (blobError) {
@@ -424,4 +433,3 @@ export default {
   }
 }
 </style>
-

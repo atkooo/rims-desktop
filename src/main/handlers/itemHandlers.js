@@ -49,11 +49,16 @@ function setupItemHandlers() {
       }
 
       // Map dailyRate to rental_price_per_day
-      const rentalPricePerDay = itemData.dailyRate ?? itemData.rental_price_per_day ?? 0;
+      const rentalPricePerDay =
+        itemData.dailyRate ?? itemData.rental_price_per_day ?? 0;
 
       // Validate discount_group_id if provided
       let discountGroupId = null;
-      if (itemData.discount_group_id !== undefined && itemData.discount_group_id !== null && itemData.discount_group_id !== "") {
+      if (
+        itemData.discount_group_id !== undefined &&
+        itemData.discount_group_id !== null &&
+        itemData.discount_group_id !== ""
+      ) {
         discountGroupId = Number(itemData.discount_group_id);
         if (discountGroupId) {
           const discountGroup = await database.queryOne(
@@ -177,23 +182,40 @@ function setupItemHandlers() {
 
       // Map form fields to database columns and filter out invalid fields
       const validColumns = [
-        'code', 'name', 'description', 'price', 'type', 'status',
-        'size_id', 'category_id', 'purchase_price', 'rental_price_per_day',
-        'sale_price', 'stock_quantity', 'available_quantity', 'min_stock_alert',
-        'image_path', 'is_available_for_rent', 'is_available_for_sale', 'is_active',
-        'discount_group_id'
+        "code",
+        "name",
+        "description",
+        "price",
+        "type",
+        "status",
+        "size_id",
+        "category_id",
+        "purchase_price",
+        "rental_price_per_day",
+        "sale_price",
+        "stock_quantity",
+        "available_quantity",
+        "min_stock_alert",
+        "image_path",
+        "is_available_for_rent",
+        "is_available_for_sale",
+        "is_active",
+        "discount_group_id",
       ];
 
       const normalizedUpdates = {};
-      
+
       // Map dailyRate to rental_price_per_day
       if (updates.dailyRate !== undefined) {
         normalizedUpdates.rental_price_per_day = updates.dailyRate;
       }
-      
+
       // Validate discount_group_id if provided
       if (updates.discount_group_id !== undefined) {
-        if (updates.discount_group_id === null || updates.discount_group_id === "") {
+        if (
+          updates.discount_group_id === null ||
+          updates.discount_group_id === ""
+        ) {
           normalizedUpdates.discount_group_id = null;
         } else {
           const discountGroupId = Number(updates.discount_group_id);
@@ -215,23 +237,28 @@ function setupItemHandlers() {
       // Copy other valid fields
       for (const [key, value] of Object.entries(updates)) {
         // Skip fields that don't exist in database
-        if (key === 'dailyRate' || key === 'weeklyRate' || key === 'deposit' || key === 'discount_group_id') {
+        if (
+          key === "dailyRate" ||
+          key === "weeklyRate" ||
+          key === "deposit" ||
+          key === "discount_group_id"
+        ) {
           continue;
         }
         if (validColumns.includes(key)) {
           normalizedUpdates[key] = value;
         }
       }
-      
+
       // Normalize code if provided
       if (normalizedUpdates.code !== undefined) {
         normalizedUpdates.code = normalizeCode(normalizedUpdates.code);
       }
-      
+
       if (Object.keys(normalizedUpdates).length === 0) {
         throw new Error("Tidak ada field yang valid untuk diupdate");
       }
-      
+
       const fields = Object.keys(normalizedUpdates);
       const values = Object.values(normalizedUpdates);
       const sql = `UPDATE items SET ${fields.map((f) => `${f} = ?`).join(", ")} WHERE id = ?`;
@@ -273,7 +300,9 @@ function setupItemHandlers() {
         [id],
       );
       if (rentalCheck && rentalCheck.count > 0) {
-        throw new Error("Tidak dapat menghapus item yang digunakan dalam transaksi sewa");
+        throw new Error(
+          "Tidak dapat menghapus item yang digunakan dalam transaksi sewa",
+        );
       }
 
       // Check if item is used in sales transactions
@@ -282,7 +311,9 @@ function setupItemHandlers() {
         [id],
       );
       if (salesCheck && salesCheck.count > 0) {
-        throw new Error("Tidak dapat menghapus item yang digunakan dalam transaksi penjualan");
+        throw new Error(
+          "Tidak dapat menghapus item yang digunakan dalam transaksi penjualan",
+        );
       }
 
       // Check if item is used in bookings
@@ -291,7 +322,9 @@ function setupItemHandlers() {
         [id],
       );
       if (bookingCheck && bookingCheck.count > 0) {
-        throw new Error("Tidak dapat menghapus item yang digunakan dalam booking");
+        throw new Error(
+          "Tidak dapat menghapus item yang digunakan dalam booking",
+        );
       }
 
       // Check if item is used in stock movements
@@ -300,7 +333,9 @@ function setupItemHandlers() {
         [id],
       );
       if (stockMovementCheck && stockMovementCheck.count > 0) {
-        throw new Error("Tidak dapat menghapus item yang memiliki riwayat pergerakan stok");
+        throw new Error(
+          "Tidak dapat menghapus item yang memiliki riwayat pergerakan stok",
+        );
       }
 
       await database.execute("DELETE FROM items WHERE id = ?", [id]);

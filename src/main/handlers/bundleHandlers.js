@@ -29,7 +29,11 @@ async function buildPayload(raw) {
 
   // Validate discount_group_id if provided
   let discountGroupId = null;
-  if (raw.discount_group_id !== undefined && raw.discount_group_id !== null && raw.discount_group_id !== "") {
+  if (
+    raw.discount_group_id !== undefined &&
+    raw.discount_group_id !== null &&
+    raw.discount_group_id !== ""
+  ) {
     discountGroupId = Number(raw.discount_group_id);
     if (discountGroupId) {
       const discountGroup = await database.queryOne(
@@ -210,7 +214,7 @@ function setupBundleHandlers() {
   ipcMain.handle("bundles:update", async (_event, id, rawPayload = {}) => {
     try {
       if (!id) throw new Error("ID paket tidak ditemukan");
-      
+
       const existing = await database.queryOne(
         "SELECT * FROM bundles WHERE id = ?",
         [id],
@@ -219,16 +223,19 @@ function setupBundleHandlers() {
 
       // Merge with existing data and build payload
       const payload = await buildPayload({ ...existing, ...rawPayload });
-      
+
       // Only validate when fields provided
       validatePayload(payload);
 
       const fields = [];
       const values = [];
-      
+
       // Process discount_group_id separately
       if (rawPayload.discount_group_id !== undefined) {
-        if (rawPayload.discount_group_id === null || rawPayload.discount_group_id === "") {
+        if (
+          rawPayload.discount_group_id === null ||
+          rawPayload.discount_group_id === ""
+        ) {
           fields.push("discount_group_id = ?");
           values.push(null);
         } else {
@@ -249,10 +256,14 @@ function setupBundleHandlers() {
           }
         }
       }
-      
+
       // Process other fields
       Object.entries(rawPayload).forEach(([key, value]) => {
-        if (key !== 'discount_group_id' && value !== undefined && value !== null) {
+        if (
+          key !== "discount_group_id" &&
+          value !== undefined &&
+          value !== null
+        ) {
           fields.push(`${key} = ?`);
           values.push(value);
         }

@@ -1,24 +1,66 @@
 <template>
   <Teleport to="body">
     <Transition name="notification">
-      <div v-if="visible" :class="['notification', `notification--${type}`]" @click="handleClose">
+      <div
+        v-if="visible"
+        :class="['notification', `notification--${type}`]"
+        @click="handleClose"
+      >
         <div class="notification-content">
           <div class="notification-icon">
-            <svg v-if="type === 'success'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              v-if="type === 'success'"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
-            <svg v-else-if="type === 'error'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              v-else-if="type === 'error'"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <svg v-else-if="type === 'warning'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <svg
+              v-else-if="type === 'warning'"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              ></path>
               <line x1="12" y1="9" x2="12" y2="13"></line>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              v-else
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -28,15 +70,31 @@
             <h4 v-if="title" class="notification-title">{{ title }}</h4>
             <p class="notification-message">{{ message }}</p>
           </div>
-          <button v-if="closable" class="notification-close" @click.stop="handleClose" aria-label="Tutup">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button
+            v-if="closable"
+            class="notification-close"
+            @click.stop="handleClose"
+            aria-label="Tutup"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </div>
         <div v-if="showProgress" class="notification-progress">
-          <div class="notification-progress-bar" :style="{ animationDuration: `${duration}ms` }"></div>
+          <div
+            class="notification-progress-bar"
+            :style="{ animationDuration: `${duration}ms` }"
+          ></div>
         </div>
       </div>
     </Transition>
@@ -54,7 +112,8 @@ export default {
     type: {
       type: String,
       default: "info",
-      validator: (value) => ["success", "error", "warning", "info"].includes(value),
+      validator: (value) =>
+        ["success", "error", "warning", "info"].includes(value),
     },
     title: {
       type: String,
@@ -142,18 +201,22 @@ export default {
   max-width: 420px;
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15),
-              0 4px 16px rgba(15, 23, 42, 0.1);
+  box-shadow:
+    0 10px 40px rgba(15, 23, 42, 0.15),
+    0 4px 16px rgba(15, 23, 42, 0.1);
   z-index: 9999;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .notification:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 48px rgba(15, 23, 42, 0.2),
-              0 6px 20px rgba(15, 23, 42, 0.15);
+  box-shadow:
+    0 12px 48px rgba(15, 23, 42, 0.2),
+    0 6px 20px rgba(15, 23, 42, 0.15);
 }
 
 .notification-content {
@@ -335,4 +398,3 @@ export default {
   }
 }
 </style>
-

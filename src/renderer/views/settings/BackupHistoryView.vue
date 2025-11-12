@@ -2,13 +2,12 @@
   <div class="data-page backup-history-page admin-page">
     <div class="page-header">
       <div>
-    
         <h1>Riwayat Backup</h1>
         <p class="subtitle">
-          Daftar backup database yang pernah dibuat. Lakukan backup secara rutin untuk menjaga keamanan data.
+          Daftar backup database yang pernah dibuat. Lakukan backup secara rutin
+          untuk menjaga keamanan data.
         </p>
       </div>
-     
     </div>
 
     <section class="card-section">
@@ -57,14 +56,19 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="history"
-        :loading="loading"
-        :searchable-keys="['backup_file', 'backup_type', 'status', 'user_name']"
-        row-key="id"
-        default-page-size="10"
-      />
+        <AppTable
+          :columns="columns"
+          :rows="history"
+          :loading="loading"
+          :searchable-keys="[
+            'backup_file',
+            'backup_type',
+            'status',
+            'user_name',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        />
       </div>
     </section>
   </div>
@@ -201,7 +205,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .summary-card:hover {

@@ -152,5 +152,5 @@ app.on("activate", () => {
 app.on("will-quit", () => {
   try {
     globalShortcut.unregisterAll();
-  } catch (_) { }
+  } catch (_) {}
 });

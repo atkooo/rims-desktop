@@ -4,7 +4,8 @@
       <div class="title-wrap">
         <h1>Role & Hak Akses</h1>
         <p class="subtitle">
-          Kelola daftar role dan permission. Setiap role dapat memiliki permission yang berbeda.
+          Kelola daftar role dan permission. Setiap role dapat memiliki
+          permission yang berbeda.
         </p>
       </div>
       <AppButton
@@ -95,7 +96,11 @@
       v-model="showDialog"
       :title="isEdit ? 'Edit Role' : 'Tambah Role'"
       :max-width="600"
-      @update:modelValue="(v) => { if (!v) closeDialog(); }"
+      @update:modelValue="
+        (v) => {
+          if (!v) closeDialog();
+        }
+      "
     >
       <form @submit.prevent="saveRole">
         <div class="form-group">
@@ -141,7 +146,11 @@
       v-model="showPermissionsDialog"
       :title="`Kelola Permission: ${selectedRole?.name || ''}`"
       :max-width="800"
-      @update:modelValue="(v) => { if (!v) closePermissionsDialog(); }"
+      @update:modelValue="
+        (v) => {
+          if (!v) closePermissionsDialog();
+        }
+      "
     >
       <div v-if="loadingPermissions" class="loading-state">
         Memuat permissions...
@@ -149,13 +158,22 @@
       <div v-else>
         <div class="permissions-header">
           <p class="permissions-description">
-            Pilih permission yang akan diberikan kepada role ini. Permission dikelompokkan berdasarkan modul.
+            Pilih permission yang akan diberikan kepada role ini. Permission
+            dikelompokkan berdasarkan modul.
           </p>
           <div class="permissions-actions">
-            <button type="button" class="btn-link" @click="selectAllPermissions">
+            <button
+              type="button"
+              class="btn-link"
+              @click="selectAllPermissions"
+            >
               Pilih Semua
             </button>
-            <button type="button" class="btn-link" @click="deselectAllPermissions">
+            <button
+              type="button"
+              class="btn-link"
+              @click="deselectAllPermissions"
+            >
               Hapus Semua
             </button>
           </div>
@@ -227,7 +245,11 @@
     <Dialog
       v-model="showDeleteDialog"
       title="Hapus Role"
-      @update:modelValue="(v) => { if (!v) closeDeleteDialog(); }"
+      @update:modelValue="
+        (v) => {
+          if (!v) closeDeleteDialog();
+        }
+      "
     >
       <p>Yakin ingin menghapus role ini?</p>
       <p class="warning-text">
@@ -374,16 +396,16 @@ async function openPermissionsDialog(role) {
     loadingPermissions.value = true;
     selectedRole.value = role;
     selectedPermissionIds.value = [];
-    
+
     // Load all permissions if not loaded
     if (allPermissions.value.length === 0) {
       await loadPermissions();
     }
-    
+
     // Load role permissions
     const rolePermissions = await fetchRolePermissions(role.id);
     selectedPermissionIds.value = rolePermissions.map((p) => p.id);
-    
+
     showPermissionsDialog.value = true;
   } catch (err) {
     permissionsError.value = err.message || "Gagal memuat permissions.";
@@ -431,18 +453,18 @@ function getModuleLabel(module) {
 function isModuleSelected(module) {
   const modulePermissions = getPermissionsByModule(module);
   return modulePermissions.every((p) =>
-    selectedPermissionIds.value.includes(p.id)
+    selectedPermissionIds.value.includes(p.id),
   );
 }
 
 function toggleModule(module) {
   const modulePermissions = getPermissionsByModule(module);
   const allSelected = isModuleSelected(module);
-  
+
   if (allSelected) {
     // Deselect all
     selectedPermissionIds.value = selectedPermissionIds.value.filter(
-      (id) => !modulePermissions.some((p) => p.id === id)
+      (id) => !modulePermissions.some((p) => p.id === id),
     );
   } else {
     // Select all
@@ -469,7 +491,9 @@ async function saveRole() {
     loading.value = true;
 
     const payload = {
-      name: String(form.value.name || "").trim().toLowerCase(),
+      name: String(form.value.name || "")
+        .trim()
+        .toLowerCase(),
       description: String(form.value.description || "").trim(),
     };
 
@@ -511,7 +535,7 @@ async function savePermissions() {
 
     await updateRolePermissions(
       selectedRole.value.id,
-      selectedPermissionIds.value
+      selectedPermissionIds.value,
     );
 
     closePermissionsDialog();

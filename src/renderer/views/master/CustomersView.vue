@@ -42,94 +42,96 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="customers"
-        :loading="loading"
-        :searchable-keys="[
-          'code',
-          'name',
-          'phone',
-          'email',
-          'id_card_number',
-          'address',
-        ]"
-        row-key="id"
-      >
-        <template #cell-documents="{ row }">
-          <div class="doc-status">
-            <span :class="['dot', row.photo_path ? 'dot-success' : 'dot-muted']">
-              Foto
-            </span>
-            <span
-              :class="[
-                'dot',
-                row.id_card_image_path ? 'dot-success' : 'dot-muted',
-              ]"
-            >
-              KTP
-            </span>
-          </div>
-        </template>
-        <template #cell-is_active="{ row }">
-          {{ row.is_active ? "Aktif" : "Nonaktif" }}
-        </template>
-        <template #cell-created_at="{ row }">
-          {{
-            row.created_at
-              ? new Date(row.created_at).toLocaleDateString("id-ID")
-              : "-"
-          }}
-        </template>
-        <template #actions="{ row }">
-          <div class="action-menu-wrapper">
-            <button
-              type="button"
-              class="action-menu-trigger"
-              :data-item-id="row.id"
-              @click.stop="toggleActionMenu(row.id)"
-              :aria-expanded="openMenuId === row.id"
-            >
-              <Icon name="more-vertical" :size="18" />
-            </button>
-            <Teleport to="body">
-              <transition name="fade-scale">
-                <div
-                  v-if="openMenuId === row.id"
-                  class="action-menu"
-                  :style="getMenuPosition(row.id)"
-                  @click.stop
-                >
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="openDetail(row)"
+        <AppTable
+          :columns="columns"
+          :rows="customers"
+          :loading="loading"
+          :searchable-keys="[
+            'code',
+            'name',
+            'phone',
+            'email',
+            'id_card_number',
+            'address',
+          ]"
+          row-key="id"
+        >
+          <template #cell-documents="{ row }">
+            <div class="doc-status">
+              <span
+                :class="['dot', row.photo_path ? 'dot-success' : 'dot-muted']"
+              >
+                Foto
+              </span>
+              <span
+                :class="[
+                  'dot',
+                  row.id_card_image_path ? 'dot-success' : 'dot-muted',
+                ]"
+              >
+                KTP
+              </span>
+            </div>
+          </template>
+          <template #cell-is_active="{ row }">
+            {{ row.is_active ? "Aktif" : "Nonaktif" }}
+          </template>
+          <template #cell-created_at="{ row }">
+            {{
+              row.created_at
+                ? new Date(row.created_at).toLocaleDateString("id-ID")
+                : "-"
+            }}
+          </template>
+          <template #actions="{ row }">
+            <div class="action-menu-wrapper">
+              <button
+                type="button"
+                class="action-menu-trigger"
+                :data-item-id="row.id"
+                @click.stop="toggleActionMenu(row.id)"
+                :aria-expanded="openMenuId === row.id"
+              >
+                <Icon name="more-vertical" :size="18" />
+              </button>
+              <Teleport to="body">
+                <transition name="fade-scale">
+                  <div
+                    v-if="openMenuId === row.id"
+                    class="action-menu"
+                    :style="getMenuPosition(row.id)"
+                    @click.stop
                   >
-                    <Icon name="eye" :size="16" />
-                    <span>Detail</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="handleEdit(row)"
-                  >
-                    <Icon name="edit" :size="16" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item danger"
-                    @click="promptDelete(row)"
-                  >
-                    <Icon name="trash" :size="16" />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </transition>
-            </Teleport>
-          </div>
-        </template>
-      </AppTable>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="openDetail(row)"
+                    >
+                      <Icon name="eye" :size="16" />
+                      <span>Detail</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="handleEdit(row)"
+                    >
+                      <Icon name="edit" :size="16" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="action-menu-item danger"
+                      @click="promptDelete(row)"
+                    >
+                      <Icon name="trash" :size="16" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </transition>
+              </Teleport>
+            </div>
+          </template>
+        </AppTable>
       </div>
     </section>
 
@@ -164,7 +166,9 @@
           </div>
           <div class="detail-item">
             <span class="label">Nomor KTP</span>
-            <span class="value">{{ selectedCustomer.id_card_number || "-" }}</span>
+            <span class="value">{{
+              selectedCustomer.id_card_number || "-"
+            }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Status</span>
@@ -230,7 +234,14 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+  nextTick,
+} from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
@@ -396,9 +407,7 @@ export default {
     };
 
     const updateMenuPosition = (itemId) => {
-      const trigger = document.querySelector(
-        `[data-item-id="${itemId}"]`,
-      );
+      const trigger = document.querySelector(`[data-item-id="${itemId}"]`);
       if (!trigger) return;
 
       const rect = trigger.getBoundingClientRect();
@@ -518,7 +527,8 @@ export default {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   min-width: 140px;
   z-index: 1000;

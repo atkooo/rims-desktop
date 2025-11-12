@@ -65,7 +65,10 @@
                 </button>
               </div>
               <div class="notification-menu-content">
-                <div v-if="transactionStore.loading" class="notification-loading">
+                <div
+                  v-if="transactionStore.loading"
+                  class="notification-loading"
+                >
                   Memuat...
                 </div>
                 <div
@@ -206,9 +209,10 @@
                           "
                           class="payment-remaining"
                         >
-                          Sisa: {{
+                          Sisa:
+                          {{
                             formatCurrency(
-                              transaction.totalAmount - transaction.paid_amount
+                              transaction.totalAmount - transaction.paid_amount,
                             )
                           }}
                         </span>
@@ -218,11 +222,13 @@
                           :class="[
                             'payment-status-badge',
                             `payment-status--${getPaymentStatusClass(
-                              transaction.payment_status
+                              transaction.payment_status,
                             )}`,
                           ]"
                         >
-                          {{ getPaymentStatusLabel(transaction.payment_status) }}
+                          {{
+                            getPaymentStatusLabel(transaction.payment_status)
+                          }}
                         </span>
                         <span class="payment-date">
                           {{ formatDate(transaction.transactionDate) }}
@@ -405,7 +411,7 @@ const formatDate = (dateString) => {
   const now = new Date();
   const diffTime = Math.abs(now - date);
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) {
     return "Hari ini";
   } else if (diffDays === 1) {
@@ -481,8 +487,7 @@ const updateNotificationMenuPosition = () => {
   const anchor = notificationButtonRef.value;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
-  const dropdownWidth =
-    notificationMenuDropdownRef.value?.offsetWidth || 380;
+  const dropdownWidth = notificationMenuDropdownRef.value?.offsetWidth || 380;
   const padding = 16;
   const desiredLeft = rect.right - dropdownWidth;
   const maxLeft = window.innerWidth - dropdownWidth - padding;
@@ -495,8 +500,7 @@ const updatePaymentMenuPosition = () => {
   const anchor = paymentButtonRef.value;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
-  const dropdownWidth =
-    paymentMenuDropdownRef.value?.offsetWidth || 400;
+  const dropdownWidth = paymentMenuDropdownRef.value?.offsetWidth || 400;
   const padding = 16;
   const desiredLeft = rect.right - dropdownWidth;
   const maxLeft = window.innerWidth - dropdownWidth - padding;
@@ -639,7 +643,8 @@ const handleClickOutside = (event) => {
   profileMenuOpen.value = false;
 
   const clickedNotificationTrigger =
-    notificationMenuRef.value && notificationMenuRef.value.contains(event.target);
+    notificationMenuRef.value &&
+    notificationMenuRef.value.contains(event.target);
   const clickedNotificationDropdown =
     notificationMenuDropdownRef.value &&
     notificationMenuDropdownRef.value.contains(event.target);
@@ -769,7 +774,10 @@ watch(paymentMenuOpen, async (isOpen) => {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #f8fafc;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
   flex: 1 1 320px;
   min-width: 220px;
   max-width: 480px;

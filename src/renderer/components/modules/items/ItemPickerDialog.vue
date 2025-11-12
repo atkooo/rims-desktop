@@ -16,11 +16,11 @@
         <div class="form-group">
           <label for="typeFilter" class="form-label">Filter Tipe</label>
           <select id="typeFilter" v-model="typeFilter" class="filter-dropdown">
-          <option value="">Semua Tipe</option>
-          <option v-for="type in itemTypes" :key="type" :value="type">
-            {{ type }}
-          </option>
-        </select>
+            <option value="">Semua Tipe</option>
+            <option v-for="type in itemTypes" :key="type" :value="type">
+              {{ type }}
+            </option>
+          </select>
         </div>
       </div>
 
@@ -39,18 +39,19 @@
             <div>
               <div class="picker-name">{{ item.name }}</div>
               <div class="picker-detail">
-                {{ item.type || "General" }} · {{ formatCurrency(item.sale_price ?? item.price ?? 0) }}
-                <span v-if="item.sale_price && item.sale_price !== item.price" class="price-note">
+                {{ item.type || "General" }} ·
+                {{ formatCurrency(item.sale_price ?? item.price ?? 0) }}
+                <span
+                  v-if="item.sale_price && item.sale_price !== item.price"
+                  class="price-note"
+                >
                   (Harga: {{ formatCurrency(item.price) }})
                 </span>
               </div>
             </div>
           </div>
           <div class="picker-actions">
-            <span
-              class="status-chip"
-              :class="item.status.toLowerCase()"
-            >
+            <span class="status-chip" :class="item.status.toLowerCase()">
               {{ item.status }}
             </span>
             <AppButton

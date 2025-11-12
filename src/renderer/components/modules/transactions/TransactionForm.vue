@@ -14,27 +14,27 @@
       <section class="form-section">
         <h3>Detail Transaksi</h3>
         <div class="form-grid">
-        <div class="field-group">
-          <label for="transactionType">Jenis Transaksi</label>
-          <select
-            v-if="!fixedType"
-            id="transactionType"
-            v-model="form.transactionType"
-            class="form-select"
-          >
-            <option
-              v-for="option in transactionTypeOptions"
-              :key="option.value"
-              :value="option.value"
+          <div class="field-group">
+            <label for="transactionType">Jenis Transaksi</label>
+            <select
+              v-if="!fixedType"
+              id="transactionType"
+              v-model="form.transactionType"
+              class="form-select"
             >
-              {{ option.label }}
-            </option>
-          </select>
-          <div v-else class="fixed-type">
-            <span>{{ fixedTypeLabel }}</span>
-            <input type="hidden" v-model="form.transactionType" />
+              <option
+                v-for="option in transactionTypeOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <div v-else class="fixed-type">
+              <span>{{ fixedTypeLabel }}</span>
+              <input type="hidden" v-model="form.transactionType" />
+            </div>
           </div>
-        </div>
           <div class="field-group">
             <label for="customerId">
               Customer
@@ -46,13 +46,16 @@
               :class="{ error: errors.customerId }"
               class="form-select"
             >
-              <option value="">{{ isRental ? "Pilih Customer" : "Tanpa Customer" }}</option>
+              <option value="">
+                {{ isRental ? "Pilih Customer" : "Tanpa Customer" }}
+              </option>
               <option
                 v-for="customer in customers"
                 :key="customer.id"
                 :value="customer.id"
               >
-                {{ customer.name }} {{ customer.code ? `(${customer.code})` : "" }}
+                {{ customer.name }}
+                {{ customer.code ? `(${customer.code})` : "" }}
               </option>
             </select>
             <div v-if="errors.customerId" class="error-message">
@@ -127,41 +130,38 @@
         </div>
       </section>
 
-    <section class="form-section">
-      <h3>Pilih Item</h3>
-      <ItemSelector v-model="form.items" />
-      <div v-if="errors.items" class="error-message">
-        {{ errors.items }}
-      </div>
-    </section>
+      <section class="form-section">
+        <h3>Pilih Item</h3>
+        <ItemSelector v-model="form.items" />
+        <div v-if="errors.items" class="error-message">
+          {{ errors.items }}
+        </div>
+      </section>
 
-    <section class="form-section" v-if="!isRental">
-      <h3>Pilih Paket</h3>
-      <BundleSelector v-model="form.bundles" />
-    </section>
+      <section class="form-section" v-if="!isRental">
+        <h3>Pilih Paket</h3>
+        <BundleSelector v-model="form.bundles" />
+      </section>
 
       <section class="form-section">
         <h3>Ringkasan</h3>
         <div class="summary-grid">
-        <div class="summary-line">
-          <span>Total Item</span>
-          <strong>{{ totalItems }}</strong>
-        </div>
-        <div class="summary-line" v-if="!isRental">
-          <span>Total Paket</span>
-          <strong>{{ bundleCount }}</strong>
-        </div>
-        <div class="summary-line">
-          <span>Subtotal</span>
-          <strong>{{ formatCurrency(subtotal) }}</strong>
-        </div>
-        <div
-          class="summary-line"
-          v-if="!isRental && bundleSubtotal > 0"
-        >
-          <span>Subtotal Paket</span>
-          <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
-        </div>
+          <div class="summary-line">
+            <span>Total Item</span>
+            <strong>{{ totalItems }}</strong>
+          </div>
+          <div class="summary-line" v-if="!isRental">
+            <span>Total Paket</span>
+            <strong>{{ bundleCount }}</strong>
+          </div>
+          <div class="summary-line">
+            <span>Subtotal</span>
+            <strong>{{ formatCurrency(subtotal) }}</strong>
+          </div>
+          <div class="summary-line" v-if="!isRental && bundleSubtotal > 0">
+            <span>Subtotal Paket</span>
+            <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
+          </div>
           <div class="summary-line" v-if="isRental">
             <span>Total Hari</span>
             <strong>{{ totalDays }}</strong>
@@ -282,22 +282,22 @@ const createDefaultForm = (type = TRANSACTION_TYPE.RENTAL) => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-    return {
-      customerId: "",
-      transactionType: type,
-      rentalDate: toDateInput(today),
-      plannedReturnDate: toDateInput(tomorrow),
-      saleDate: toDateInput(today),
-      paymentMethod: "cash",
-      paymentStatus: "unpaid",
-      deposit: 0,
-      discount: 0,
-      tax: 0,
-      paidAmount: 0,
-      items: [],
-      bundles: [],
-      notes: "",
-    };
+  return {
+    customerId: "",
+    transactionType: type,
+    rentalDate: toDateInput(today),
+    plannedReturnDate: toDateInput(tomorrow),
+    saleDate: toDateInput(today),
+    paymentMethod: "cash",
+    paymentStatus: "unpaid",
+    deposit: 0,
+    discount: 0,
+    tax: 0,
+    paidAmount: 0,
+    items: [],
+    bundles: [],
+    notes: "",
+  };
 };
 
 export default {
@@ -360,31 +360,31 @@ export default {
       if (isRental.value) {
         return item.rental_price_per_day ?? item.price ?? 0;
       }
-      
+
       // For sales, use sale_price and apply item discount
       const basePrice = item.sale_price ?? item.price ?? 0;
-      
+
       // Apply item discount if item has discount_group
       if (item.discount_percentage > 0) {
         return Math.round(basePrice * (1 - item.discount_percentage / 100));
       } else if (item.discount_amount > 0) {
         return Math.max(0, basePrice - item.discount_amount);
       }
-      
+
       return basePrice;
     };
 
     // Calculate bundle price after discount (for sales)
     const calculateBundlePrice = (bundle) => {
       const basePrice = bundle.price || 0;
-      
+
       // Apply bundle discount if bundle has discount_group
       if (bundle.discount_percentage > 0) {
         return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
       } else if (bundle.discount_amount > 0) {
         return Math.max(0, basePrice - bundle.discount_amount);
       }
-      
+
       return basePrice;
     };
 
@@ -419,15 +419,16 @@ export default {
     });
 
     const bundleCount = computed(() =>
-      form.value.bundles.reduce((sum, bundle) => sum + (bundle.quantity || 0), 0),
+      form.value.bundles.reduce(
+        (sum, bundle) => sum + (bundle.quantity || 0),
+        0,
+      ),
     );
 
     const totalAmount = computed(() => {
       const numericSubtotal = subtotal.value;
       if (isRental.value) {
-        return (
-          numericSubtotal + (Number(form.value.deposit) || 0)
-        );
+        return numericSubtotal + (Number(form.value.deposit) || 0);
       }
       return (
         numericSubtotal -
@@ -449,7 +450,9 @@ export default {
 
     const getDiscountHint = () => {
       if (!isRental.value && form.value.customerId) {
-        const customer = customers.value.find((c) => c.id === form.value.customerId);
+        const customer = customers.value.find(
+          (c) => c.id === form.value.customerId,
+        );
         if (customer && customer.discount_group_name) {
           if (customer.discount_percentage > 0) {
             return `Dari grup: ${customer.discount_group_name} (${customer.discount_percentage}%)`;
@@ -520,17 +523,21 @@ export default {
             // Customer has a discount group, apply the discount automatically
             if (customer.discount_percentage > 0) {
               // Apply percentage discount to subtotal
-              const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+              const calculatedDiscount =
+                (subtotal.value * customer.discount_percentage) / 100;
               form.value.discount = Math.round(calculatedDiscount);
-              lastAutoAppliedDiscount.value = { type: 'percentage', customerId };
+              lastAutoAppliedDiscount.value = {
+                type: "percentage",
+                customerId,
+              };
             } else if (customer.discount_amount > 0) {
               // Apply fixed amount discount
               form.value.discount = customer.discount_amount;
-              lastAutoAppliedDiscount.value = { type: 'amount', customerId };
+              lastAutoAppliedDiscount.value = { type: "amount", customerId };
             } else {
               // Discount group exists but no discount configured
               form.value.discount = 0;
-              lastAutoAppliedDiscount.value = { type: 'none', customerId };
+              lastAutoAppliedDiscount.value = { type: "none", customerId };
             }
           } else {
             // Customer doesn't have discount group, reset discount to 0
@@ -551,14 +558,22 @@ export default {
       ([newSubtotal, isRental, customerId]) => {
         if (!isRental && customerId && lastAutoAppliedDiscount.value) {
           const customer = customers.value.find((c) => c.id === customerId);
-          if (customer && customer.discount_group_id && customer.discount_percentage > 0 && 
-              lastAutoAppliedDiscount.value.type === 'percentage' && 
-              lastAutoAppliedDiscount.value.customerId === customerId) {
+          if (
+            customer &&
+            customer.discount_group_id &&
+            customer.discount_percentage > 0 &&
+            lastAutoAppliedDiscount.value.type === "percentage" &&
+            lastAutoAppliedDiscount.value.customerId === customerId
+          ) {
             // Recalculate percentage discount when subtotal changes (only if it was auto-applied)
-            const calculatedDiscount = (newSubtotal * customer.discount_percentage) / 100;
+            const calculatedDiscount =
+              (newSubtotal * customer.discount_percentage) / 100;
             form.value.discount = Math.round(calculatedDiscount);
           }
-        } else if (!isRental && (!customerId || !lastAutoAppliedDiscount.value)) {
+        } else if (
+          !isRental &&
+          (!customerId || !lastAutoAppliedDiscount.value)
+        ) {
           // If no customer or no auto-applied discount, ensure discount is 0
           form.value.discount = 0;
         }
@@ -568,17 +583,21 @@ export default {
     const mapEditData = () => {
       if (!props.editData) return createDefaultForm();
       const base = createDefaultForm();
-      const type =
-        (props.editData.transaction_type || props.editData.transactionType || "")
-          .toString()
-          .toLowerCase()
-          .includes("rental")
-          ? TRANSACTION_TYPE.RENTAL
-          : TRANSACTION_TYPE.SALE;
+      const type = (
+        props.editData.transaction_type ||
+        props.editData.transactionType ||
+        ""
+      )
+        .toString()
+        .toLowerCase()
+        .includes("rental")
+        ? TRANSACTION_TYPE.RENTAL
+        : TRANSACTION_TYPE.SALE;
       const mapped = {
         ...base,
         ...{
-          customerId: props.editData.customer_id || props.editData.customerId || "",
+          customerId:
+            props.editData.customer_id || props.editData.customerId || "",
           transactionType: type,
           notes: props.editData.notes || "",
           paymentMethod: props.editData.payment_method || base.paymentMethod,
@@ -593,11 +612,14 @@ export default {
       };
 
       if (type === TRANSACTION_TYPE.RENTAL) {
-        mapped.rentalDate = toDateInput(props.editData.rental_date) || base.rentalDate;
+        mapped.rentalDate =
+          toDateInput(props.editData.rental_date) || base.rentalDate;
         mapped.plannedReturnDate =
-          toDateInput(props.editData.planned_return_date) || base.plannedReturnDate;
+          toDateInput(props.editData.planned_return_date) ||
+          base.plannedReturnDate;
       } else {
-        mapped.saleDate = toDateInput(props.editData.sale_date) || base.saleDate;
+        mapped.saleDate =
+          toDateInput(props.editData.sale_date) || base.saleDate;
       }
 
       mapped.items = [];
@@ -631,16 +653,29 @@ export default {
 
     const recalculateDiscountForEdit = () => {
       // Recalculate discount if customer has discount_group (for sale transactions in edit mode)
-      if (!isRental.value && form.value.customerId && customers.value.length > 0) {
-        const customer = customers.value.find((c) => c.id === form.value.customerId);
+      if (
+        !isRental.value &&
+        form.value.customerId &&
+        customers.value.length > 0
+      ) {
+        const customer = customers.value.find(
+          (c) => c.id === form.value.customerId,
+        );
         if (customer && customer.discount_group_id) {
           if (customer.discount_percentage > 0) {
-            const calculatedDiscount = (subtotal.value * customer.discount_percentage) / 100;
+            const calculatedDiscount =
+              (subtotal.value * customer.discount_percentage) / 100;
             form.value.discount = Math.round(calculatedDiscount);
-            lastAutoAppliedDiscount.value = { type: 'percentage', customerId: form.value.customerId };
+            lastAutoAppliedDiscount.value = {
+              type: "percentage",
+              customerId: form.value.customerId,
+            };
           } else if (customer.discount_amount > 0) {
             form.value.discount = customer.discount_amount;
-            lastAutoAppliedDiscount.value = { type: 'amount', customerId: form.value.customerId };
+            lastAutoAppliedDiscount.value = {
+              type: "amount",
+              customerId: form.value.customerId,
+            };
           }
         }
       }
@@ -669,7 +704,12 @@ export default {
     watch(
       () => customers.value.length,
       () => {
-        if (isEdit.value && !isRental.value && form.value.customerId && customers.value.length > 0) {
+        if (
+          isEdit.value &&
+          !isRental.value &&
+          form.value.customerId &&
+          customers.value.length > 0
+        ) {
           // Delay to ensure items are loaded first
           setTimeout(() => {
             recalculateDiscountForEdit();
@@ -727,7 +767,8 @@ export default {
         if (
           form.value.rentalDate &&
           form.value.plannedReturnDate &&
-          new Date(form.value.rentalDate) > new Date(form.value.plannedReturnDate)
+          new Date(form.value.rentalDate) >
+            new Date(form.value.plannedReturnDate)
         ) {
           newErrors.plannedReturnDate =
             "Tanggal kembali harus sama atau setelah tanggal sewa";

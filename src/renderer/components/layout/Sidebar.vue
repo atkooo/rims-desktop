@@ -17,7 +17,10 @@
         <span v-if="!collapsed">Dashboard</span>
       </router-link>
       <template v-for="group in filteredGroups" :key="group.title">
-        <div v-if="group && group.items && group.items.length > 0" class="group">
+        <div
+          v-if="group && group.items && group.items.length > 0"
+          class="group"
+        >
           <div class="group-title" v-if="!collapsed">{{ group.title }}</div>
           <router-link
             v-for="item in group.items"
@@ -54,7 +57,7 @@ const filteredGroups = computed(() => {
   if (!permissionsInitialized.value) {
     return menuGroups;
   }
-  
+
   try {
     return menuGroups
       .map((group) => {

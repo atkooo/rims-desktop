@@ -32,10 +32,20 @@
           </td>
           <td v-if="actions" class="actions">
             <slot name="actions" :item="item">
-              <AppButton v-if="showEdit" variant="secondary" class="action-button" @click="$emit('edit', item)">
+              <AppButton
+                v-if="showEdit"
+                variant="secondary"
+                class="action-button"
+                @click="$emit('edit', item)"
+              >
                 Edit
               </AppButton>
-              <AppButton v-if="showDelete" variant="danger" class="action-button" @click="$emit('delete', item)">
+              <AppButton
+                v-if="showDelete"
+                variant="danger"
+                class="action-button"
+                @click="$emit('delete', item)"
+              >
                 Hapus
               </AppButton>
             </slot>
@@ -50,11 +60,18 @@
         {{ paginationInfo.total }}
       </span>
       <div class="pagination-buttons">
-        <AppButton variant="secondary" :disabled="currentPage === 1" @click="$emit('page-change', currentPage - 1)">
+        <AppButton
+          variant="secondary"
+          :disabled="currentPage === 1"
+          @click="$emit('page-change', currentPage - 1)"
+        >
           Previous
         </AppButton>
-        <AppButton variant="secondary" :disabled="currentPage === totalPages"
-          @click="$emit('page-change', currentPage + 1)">
+        <AppButton
+          variant="secondary"
+          :disabled="currentPage === totalPages"
+          @click="$emit('page-change', currentPage + 1)"
+        >
           Next
         </AppButton>
       </div>

@@ -8,10 +8,10 @@
           status aktif.
         </p>
       </div>
-    <AppButton variant="primary" @click="openCreateDialog">
-      <i class="fas fa-plus"></i> Tambah Kategori
-    </AppButton>
-  </header>
+      <AppButton variant="primary" @click="openCreateDialog">
+        <i class="fas fa-plus"></i> Tambah Kategori
+      </AppButton>
+    </header>
 
     <!-- Tabel Kategori -->
     <section class="card-section">

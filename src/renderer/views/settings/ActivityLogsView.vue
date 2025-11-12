@@ -2,13 +2,12 @@
   <div class="data-page activity-logs-page admin-page">
     <div class="page-header">
       <div>
-
         <h1>Log Aktivitas</h1>
         <p class="subtitle">
-          Catatan aktivitas pengguna pada aplikasi. Pantau semua aktivitas untuk keamanan dan audit.
+          Catatan aktivitas pengguna pada aplikasi. Pantau semua aktivitas untuk
+          keamanan dan audit.
         </p>
       </div>
-    
     </div>
 
     <section class="card-section">
@@ -48,14 +47,20 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="logs"
-        :loading="loading"
-        :searchable-keys="['user_name', 'action', 'module', 'description', 'ip_address']"
-        row-key="id"
-        default-page-size="10"
-      />
+        <AppTable
+          :columns="columns"
+          :rows="logs"
+          :loading="loading"
+          :searchable-keys="[
+            'user_name',
+            'action',
+            'module',
+            'description',
+            'ip_address',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        />
       </div>
     </section>
   </div>
@@ -167,7 +172,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .summary-card:hover {

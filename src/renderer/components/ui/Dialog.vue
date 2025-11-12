@@ -1,6 +1,16 @@
 <template>
   <div class="dialog-overlay" v-if="modelValue" @click="closeOnOverlay">
-    <div class="dialog" :style="{ maxWidth: maxWidth ? (typeof maxWidth === 'number' ? maxWidth + 'px' : maxWidth) : '90vw' }" @click.stop>
+    <div
+      class="dialog"
+      :style="{
+        maxWidth: maxWidth
+          ? typeof maxWidth === 'number'
+            ? maxWidth + 'px'
+            : maxWidth
+          : '90vw',
+      }"
+      @click.stop
+    >
       <div class="dialog-header">
         <h3>{{ title }}</h3>
         <button class="close-btn" @click="close">

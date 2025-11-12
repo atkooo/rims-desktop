@@ -43,7 +43,8 @@ async function expandBundleSelections(selections = []) {
 
     const details = cache.get(bundleId);
     for (const detail of details) {
-      const detailQuantity = Math.max(1, toInteger(detail.quantity)) * bundleQuantity;
+      const detailQuantity =
+        Math.max(1, toInteger(detail.quantity)) * bundleQuantity;
       const salePrice = Number(detail.sale_price) || 0;
       if (detailQuantity <= 0) continue;
       result.push({
@@ -104,26 +105,29 @@ function setupTransactionHandlers() {
             `);
 
       // Process transactions to use actual payment data
-      const processedRentalTransactions = rentalTransactions.map(t => ({
+      const processedRentalTransactions = rentalTransactions.map((t) => ({
         ...t,
         paid_amount: t.actual_paid_amount || 0,
-        payment_status: t.calculated_payment_status || t.payment_status || 'unpaid'
+        payment_status:
+          t.calculated_payment_status || t.payment_status || "unpaid",
       }));
 
-      const processedSalesTransactions = salesTransactions.map(t => ({
+      const processedSalesTransactions = salesTransactions.map((t) => ({
         ...t,
         paid_amount: t.actual_paid_amount || 0,
-        payment_status: t.calculated_payment_status || t.payment_status || 'unpaid'
+        payment_status:
+          t.calculated_payment_status || t.payment_status || "unpaid",
       }));
 
       // Combine and sort both types of transactions
-      const transactions = [...processedRentalTransactions, ...processedSalesTransactions].sort(
-        (a, b) => {
-          const dateA = new Date(a.created_at);
-          const dateB = new Date(b.created_at);
-          return dateB - dateA;
-        },
-      );
+      const transactions = [
+        ...processedRentalTransactions,
+        ...processedSalesTransactions,
+      ].sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateB - dateA;
+      });
       return transactions;
     } catch (error) {
       logger.error("Error fetching transactions:", error);
@@ -162,18 +166,19 @@ function setupTransactionHandlers() {
         }
 
         // Check if cashier session exists
-        const cashierTableExists = await database.tableExists("cashier_sessions");
+        const cashierTableExists =
+          await database.tableExists("cashier_sessions");
         if (cashierTableExists) {
           const activeSession = await database.queryOne(
             `SELECT id FROM cashier_sessions 
              WHERE user_id = ? AND status = 'open' 
              ORDER BY opening_date DESC LIMIT 1`,
-            [transactionData.userId]
+            [transactionData.userId],
           );
 
           if (!activeSession) {
             throw new Error(
-              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash."
+              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash.",
             );
           }
 
@@ -276,10 +281,12 @@ function setupTransactionHandlers() {
         } else {
           // Insert sales transaction
           // Convert empty string to null for customer_id (customer is optional for sales)
-          const customerId = transactionData.customerId && transactionData.customerId.toString().trim() !== "" 
-            ? transactionData.customerId 
-            : null;
-          
+          const customerId =
+            transactionData.customerId &&
+            transactionData.customerId.toString().trim() !== ""
+              ? transactionData.customerId
+              : null;
+
           result = await database.execute(
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
@@ -322,13 +329,7 @@ function setupTransactionHandlers() {
                 sales_transaction_id, item_id, quantity,
                 sale_price, subtotal
               ) VALUES (?, ?, ?, ?, ?)`,
-              [
-                result.id,
-                line.itemId,
-                quantity,
-                salePrice,
-                lineSubtotal,
-              ],
+              [result.id, line.itemId, quantity, salePrice, lineSubtotal],
             );
 
             // Update available quantity and stock quantity for the item
@@ -532,9 +533,11 @@ function setupTransactionHandlers() {
 
           if (transactionData.customerId !== undefined) {
             // Convert empty string to null for customer_id (customer is optional for sales)
-            const customerId = transactionData.customerId && transactionData.customerId.toString().trim() !== "" 
-              ? transactionData.customerId 
-              : null;
+            const customerId =
+              transactionData.customerId &&
+              transactionData.customerId.toString().trim() !== ""
+                ? transactionData.customerId
+                : null;
             updateFields.push("customer_id = ?");
             updateValues.push(customerId);
           }
@@ -798,26 +801,24 @@ function setupPaymentHandlers() {
       }
 
       // Validasi cashier session untuk pembayaran cash
-      if (
-        !paymentData.paymentMethod ||
-        paymentData.paymentMethod === "cash"
-      ) {
+      if (!paymentData.paymentMethod || paymentData.paymentMethod === "cash") {
         if (!paymentData.userId) {
           throw new Error("User ID harus diisi untuk membuat pembayaran");
         }
 
-        const cashierTableExists = await database.tableExists("cashier_sessions");
+        const cashierTableExists =
+          await database.tableExists("cashier_sessions");
         if (cashierTableExists) {
           const activeSession = await database.queryOne(
             `SELECT id FROM cashier_sessions 
              WHERE user_id = ? AND status = 'open' 
              ORDER BY opening_date DESC LIMIT 1`,
-            [paymentData.userId]
+            [paymentData.userId],
           );
 
           if (!activeSession) {
             throw new Error(
-              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat pembayaran cash."
+              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat pembayaran cash.",
             );
           }
         }
@@ -1035,10 +1036,9 @@ function setupStockMovementHandlers() {
         );
 
         // Delete movement
-        await database.execute(
-          "DELETE FROM stock_movements WHERE id = ?",
-          [id],
-        );
+        await database.execute("DELETE FROM stock_movements WHERE id = ?", [
+          id,
+        ]);
 
         await database.execute("COMMIT");
         return true;

@@ -237,7 +237,8 @@ export default {
         form.value.plannedEndDate &&
         form.value.plannedStartDate > form.value.plannedEndDate
       ) {
-        newErrors.plannedEndDate = "Tanggal selesai harus setelah tanggal mulai";
+        newErrors.plannedEndDate =
+          "Tanggal selesai harus setelah tanggal mulai";
       }
 
       errors.value = newErrors;
@@ -395,6 +396,3 @@ export default {
   margin-top: 0.25rem;
 }
 </style>
-
-
-

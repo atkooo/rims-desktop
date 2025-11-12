@@ -2,14 +2,17 @@
   <div class="data-page receipt-settings-page admin-page">
     <div class="page-header">
       <div>
-
         <h1>Pengaturan Printer & Struk</h1>
         <p class="subtitle">
-          Kelola pengaturan printer dan tampilan struk transaksi. Preview akan diperbarui secara otomatis.
+          Kelola pengaturan printer dan tampilan struk transaksi. Preview akan
+          diperbarui secara otomatis.
         </p>
       </div>
       <div class="header-actions">
-        <AppButton variant="secondary" @click="$router.push('/settings/system')">
+        <AppButton
+          variant="secondary"
+          @click="$router.push('/settings/system')"
+        >
           <i class="fas fa-arrow-left"></i> Kembali
         </AppButton>
       </div>
@@ -27,15 +30,25 @@
             </h3>
             <div class="form-group">
               <label>Printer Receipt</label>
-              <select v-model="settings.printer" class="form-select" @change="updatePreview">
+              <select
+                v-model="settings.printer"
+                class="form-select"
+                @change="updatePreview"
+              >
                 <option value="">Pilih Printer</option>
                 <option
                   v-for="printer in printers"
                   :key="typeof printer === 'string' ? printer : printer.name"
                   :value="typeof printer === 'string' ? printer : printer.name"
                 >
-                  {{ typeof printer === 'string' ? printer : (printer.displayName || printer.name) }}
-                  <span v-if="typeof printer === 'object' && printer.isDefault"> (Default)</span>
+                  {{
+                    typeof printer === "string"
+                      ? printer
+                      : printer.displayName || printer.name
+                  }}
+                  <span v-if="typeof printer === 'object' && printer.isDefault">
+                    (Default)</span
+                  >
                 </option>
               </select>
             </div>
@@ -68,96 +81,156 @@
                   <i class="fas fa-store"></i>
                   Informasi Toko
                 </h4>
-              <div class="checkbox-list">
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showCompanyName" @change="updatePreview" />
-                  <span>Nama Toko</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showAddress" @change="updatePreview" />
-                  <span>Alamat</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showPhone" @change="updatePreview" />
-                  <span>Telepon</span>
-                </label>
+                <div class="checkbox-list">
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showCompanyName"
+                      @change="updatePreview"
+                    />
+                    <span>Nama Toko</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showAddress"
+                      @change="updatePreview"
+                    />
+                    <span>Alamat</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showPhone"
+                      @change="updatePreview"
+                    />
+                    <span>Telepon</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div class="settings-group">
-              <h4 class="group-title">
-                <i class="fas fa-receipt"></i>
-                Informasi Transaksi
-              </h4>
-              <div class="checkbox-list">
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showTransactionCode" @change="updatePreview" />
-                  <span>Kode Transaksi</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showDate" @change="updatePreview" />
-                  <span>Tanggal</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showCashier" @change="updatePreview" />
-                  <span>Kasir</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showCustomerInfo" @change="updatePreview" />
-                  <span>Info Pelanggan</span>
-                </label>
+              <div class="settings-group">
+                <h4 class="group-title">
+                  <i class="fas fa-receipt"></i>
+                  Informasi Transaksi
+                </h4>
+                <div class="checkbox-list">
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showTransactionCode"
+                      @change="updatePreview"
+                    />
+                    <span>Kode Transaksi</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showDate"
+                      @change="updatePreview"
+                    />
+                    <span>Tanggal</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showCashier"
+                      @change="updatePreview"
+                    />
+                    <span>Kasir</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showCustomerInfo"
+                      @change="updatePreview"
+                    />
+                    <span>Info Pelanggan</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div class="settings-group">
-              <h4 class="group-title">
-                <i class="fas fa-list"></i>
-                Detail Item
-              </h4>
-              <div class="checkbox-list">
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showItems" @change="updatePreview" />
-                  <span>Daftar Item</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showSubtotal" @change="updatePreview" />
-                  <span>Subtotal</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showDiscount" @change="updatePreview" />
-                  <span>Diskon</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showTax" @change="updatePreview" />
-                  <span>Pajak</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showTotal" @change="updatePreview" />
-                  <span>Total</span>
-                </label>
+              <div class="settings-group">
+                <h4 class="group-title">
+                  <i class="fas fa-list"></i>
+                  Detail Item
+                </h4>
+                <div class="checkbox-list">
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showItems"
+                      @change="updatePreview"
+                    />
+                    <span>Daftar Item</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showSubtotal"
+                      @change="updatePreview"
+                    />
+                    <span>Subtotal</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showDiscount"
+                      @change="updatePreview"
+                    />
+                    <span>Diskon</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showTax"
+                      @change="updatePreview"
+                    />
+                    <span>Pajak</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showTotal"
+                      @change="updatePreview"
+                    />
+                    <span>Total</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div class="settings-group">
-              <h4 class="group-title">
-                <i class="fas fa-info-circle"></i>
-                Informasi Lainnya
-              </h4>
-              <div class="checkbox-list">
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showPaymentInfo" @change="updatePreview" />
-                  <span>Info Pembayaran</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showNotes" @change="updatePreview" />
-                  <span>Catatan</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" v-model="settings.receiptSettings.showFooter" @change="updatePreview" />
-                  <span>Footer</span>
-                </label>
+              <div class="settings-group">
+                <h4 class="group-title">
+                  <i class="fas fa-info-circle"></i>
+                  Informasi Lainnya
+                </h4>
+                <div class="checkbox-list">
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showPaymentInfo"
+                      @change="updatePreview"
+                    />
+                    <span>Info Pembayaran</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showNotes"
+                      @change="updatePreview"
+                    />
+                    <span>Catatan</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showFooter"
+                      @change="updatePreview"
+                    />
+                    <span>Footer</span>
+                  </label>
+                </div>
               </div>
-            </div>
             </div>
           </div>
 
@@ -201,7 +274,11 @@
               </AppButton>
             </div>
             <div v-else-if="previewUrl" class="preview-iframe-wrapper">
-              <embed :src="previewUrl" type="application/pdf" class="preview-iframe" />
+              <embed
+                :src="previewUrl"
+                type="application/pdf"
+                class="preview-iframe"
+              />
             </div>
             <div v-else class="preview-empty">
               <i class="fas fa-file-pdf"></i>
@@ -267,7 +344,10 @@ export default {
         if (savedSettings) {
           settings.value = { ...settings.value, ...savedSettings };
           if (savedSettings.receiptSettings) {
-            settings.value.receiptSettings = { ...settings.value.receiptSettings, ...savedSettings.receiptSettings };
+            settings.value.receiptSettings = {
+              ...settings.value.receiptSettings,
+              ...savedSettings.receiptSettings,
+            };
           }
         }
 
@@ -283,7 +363,7 @@ export default {
     const updatePreview = async () => {
       previewLoading.value = true;
       previewError.value = "";
-      
+
       // Clean up previous blob URL
       if (previewBlobUrl.value) {
         URL.revokeObjectURL(previewBlobUrl.value);
@@ -301,7 +381,9 @@ export default {
         };
 
         // Deep clone receiptSettings to plain object
-        const receiptSettings = JSON.parse(JSON.stringify(settings.value.receiptSettings));
+        const receiptSettings = JSON.parse(
+          JSON.stringify(settings.value.receiptSettings),
+        );
 
         const result = await ipcRenderer.invoke("receipt:generateSample", {
           receiptSettings: receiptSettings,
@@ -313,14 +395,15 @@ export default {
           if (result.pdfBase64) {
             try {
               // Extract base64 data from data URI
-              const base64Data = result.pdfBase64.split(',')[1] || result.pdfBase64;
+              const base64Data =
+                result.pdfBase64.split(",")[1] || result.pdfBase64;
               const byteCharacters = atob(base64Data);
               const byteNumbers = new Array(byteCharacters.length);
               for (let i = 0; i < byteCharacters.length; i++) {
                 byteNumbers[i] = byteCharacters.charCodeAt(i);
               }
               const byteArray = new Uint8Array(byteNumbers);
-              const blob = new Blob([byteArray], { type: 'application/pdf' });
+              const blob = new Blob([byteArray], { type: "application/pdf" });
               previewBlobUrl.value = URL.createObjectURL(blob);
               previewUrl.value = previewBlobUrl.value;
             } catch (blobError) {
@@ -372,16 +455,20 @@ export default {
       }, 500);
     };
 
-    watch(
-      () => settings.value.receiptSettings,
-      debouncedUpdatePreview,
-      { deep: true }
-    );
+    watch(() => settings.value.receiptSettings, debouncedUpdatePreview, {
+      deep: true,
+    });
 
     // Watch company settings and printer settings too
     watch(
-      () => [settings.value.companyName, settings.value.address, settings.value.phone, settings.value.paperWidth, settings.value.printer],
-      debouncedUpdatePreview
+      () => [
+        settings.value.companyName,
+        settings.value.address,
+        settings.value.phone,
+        settings.value.paperWidth,
+        settings.value.printer,
+      ],
+      debouncedUpdatePreview,
     );
 
     // Cleanup blob URL on unmount
@@ -514,7 +601,9 @@ export default {
   font-size: 0.9rem;
   color: #111827;
   background-color: #ffffff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .form-select:focus,
@@ -545,7 +634,9 @@ export default {
   border-radius: 10px;
   padding: 1.25rem;
   border: 1px solid #e5e7eb;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
 }
 
 .settings-group:hover {
@@ -729,4 +820,3 @@ export default {
   }
 }
 </style>
-

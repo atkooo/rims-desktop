@@ -45,7 +45,11 @@ function setupAccessoryHandlers() {
 
       // Validate discount_group_id if provided
       let discountGroupId = null;
-      if (payload.discount_group_id !== undefined && payload.discount_group_id !== null && payload.discount_group_id !== "") {
+      if (
+        payload.discount_group_id !== undefined &&
+        payload.discount_group_id !== null &&
+        payload.discount_group_id !== ""
+      ) {
         discountGroupId = Number(payload.discount_group_id);
         if (discountGroupId) {
           const discountGroup = await database.queryOne(
@@ -193,7 +197,10 @@ function setupAccessoryHandlers() {
 
       // Validate discount_group_id if provided
       if (payload.discount_group_id !== undefined) {
-        if (payload.discount_group_id === null || payload.discount_group_id === "") {
+        if (
+          payload.discount_group_id === null ||
+          payload.discount_group_id === ""
+        ) {
           updates.discount_group_id = null;
         } else {
           const discountGroupId = Number(payload.discount_group_id);

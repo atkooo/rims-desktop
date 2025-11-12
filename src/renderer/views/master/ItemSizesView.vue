@@ -14,9 +14,19 @@
     </div>
 
     <section class="card-section">
-      <AppTable :columns="columns" :rows="sizes" :loading="loading" :show-index="true" row-key="id" :dense="true">
+      <AppTable
+        :columns="columns"
+        :rows="sizes"
+        :loading="loading"
+        :show-index="true"
+        row-key="id"
+        :dense="true"
+      >
         <template #cell-is_active="{ row }">
-          <span class="badge" :class="row.is_active ? 'badge-success' : 'badge-muted'">
+          <span
+            class="badge"
+            :class="row.is_active ? 'badge-success' : 'badge-muted'"
+          >
             {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </span>
         </template>
@@ -34,15 +44,24 @@
       </AppTable>
     </section>
 
-    <Dialog v-model="showDialog" :title="isEdit ? 'Edit Ukuran' : 'Tambah Ukuran'" @update:modelValue="
-      (val) => {
-        if (!val) closeDialog();
-      }
-    ">
+    <Dialog
+      v-model="showDialog"
+      :title="isEdit ? 'Edit Ukuran' : 'Tambah Ukuran'"
+      @update:modelValue="
+        (val) => {
+          if (!val) closeDialog();
+        }
+      "
+    >
       <form class="form" @submit.prevent="saveSize">
         <div class="form-group">
           <label>Nama Ukuran</label>
-          <input v-model="form.name" type="text" required placeholder="Misal: Medium" />
+          <input
+            v-model="form.name"
+            type="text"
+            required
+            placeholder="Misal: Medium"
+          />
         </div>
         <div class="form-group">
           <label>Deskripsi</label>
@@ -72,11 +91,15 @@
       </form>
     </Dialog>
 
-    <Dialog v-model="showDeleteDialog" title="Hapus Ukuran" @update:modelValue="
-      (val) => {
-        if (!val) closeDeleteDialog();
-      }
-    ">
+    <Dialog
+      v-model="showDeleteDialog"
+      title="Hapus Ukuran"
+      @update:modelValue="
+        (val) => {
+          if (!val) closeDeleteDialog();
+        }
+      "
+    >
       <p>
         Ukuran <strong>{{ selectedSize?.name }}</strong> akan dihapus.
       </p>
@@ -207,10 +230,10 @@ export default {
       return Number.isNaN(d.getTime())
         ? value
         : d.toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
     };
 
     onMounted(loadSizes);

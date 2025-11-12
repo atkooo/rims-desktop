@@ -24,4 +24,3 @@ export function closeSession(sessionData) {
 export function getSessionById(sessionId) {
   return ipcRenderer.invoke("cashier:getSessionById", sessionId);
 }
-

@@ -404,4 +404,3 @@ export default {
   color: #991b1b;
 }
 </style>
-

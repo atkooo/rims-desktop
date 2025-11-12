@@ -39,26 +39,28 @@
           maxlength="50"
         />
         <div class="form-group">
-          <label class="form-label" for="customerDiscountGroup">Grup Diskon</label>
+          <label class="form-label" for="customerDiscountGroup"
+            >Grup Diskon</label
+          >
           <select
             id="customerDiscountGroup"
             v-model="form.discount_group_id"
             class="form-select"
           >
             <option value="">Tidak Ada</option>
-              <option
-                v-for="group in discountGroups"
-                :key="group.id"
-                :value="group.id"
-              >
-                {{ group.name }}
-                <template v-if="group.discount_percentage > 0">
-                  ({{ group.discount_percentage }}%)
-                </template>
-                <template v-else-if="group.discount_amount > 0">
-                  ({{ formatCurrency(group.discount_amount) }})
-                </template>
-              </option>
+            <option
+              v-for="group in discountGroups"
+              :key="group.id"
+              :value="group.id"
+            >
+              {{ group.name }}
+              <template v-if="group.discount_percentage > 0">
+                ({{ group.discount_percentage }}%)
+              </template>
+              <template v-else-if="group.discount_amount > 0">
+                ({{ formatCurrency(group.discount_amount) }})
+              </template>
+            </option>
           </select>
         </div>
         <div class="form-group">
@@ -202,12 +204,7 @@ const defaultForm = () => ({
 });
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/jpg",
-];
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
 export default {
   name: "CustomerForm",
@@ -383,8 +380,7 @@ export default {
       if (file.size > MAX_FILE_SIZE) {
         documentErrors.value = {
           ...documentErrors.value,
-          [type === "photo" ? "photo" : "idCard"]:
-            "Ukuran file melebihi 5MB",
+          [type === "photo" ? "photo" : "idCard"]: "Ukuran file melebihi 5MB",
         };
         return;
       }
@@ -487,8 +483,7 @@ export default {
         emit("saved");
         showDialog.value = false;
       } catch (error) {
-        submitError.value =
-          error?.message || "Gagal menyimpan data pelanggan.";
+        submitError.value = error?.message || "Gagal menyimpan data pelanggan.";
       } finally {
         loading.value = false;
       }
@@ -719,4 +714,3 @@ export default {
   font-size: 0.9rem;
 }
 </style>
-

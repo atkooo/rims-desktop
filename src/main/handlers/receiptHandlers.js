@@ -10,11 +10,13 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Import jsPDF - for jsPDF 3.x, use require with jsPDF property
     const jsPDFModule = require("jspdf");
     const jsPDF = jsPDFModule.jsPDF;
-    
+
     if (!jsPDF || typeof jsPDF !== "function") {
-      throw new Error("jsPDF constructor not found. Please check jsPDF installation.");
+      throw new Error(
+        "jsPDF constructor not found. Please check jsPDF installation.",
+      );
     }
-    
+
     // Get receipt display settings
     const settingsFile = path.join(__dirname, "../../data/settings.json");
     let settings = {
@@ -46,7 +48,10 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       const savedSettings = JSON.parse(settingsData);
       settings = { ...settings, ...savedSettings };
       if (savedSettings.receiptSettings) {
-        settings.receiptSettings = { ...settings.receiptSettings, ...savedSettings.receiptSettings };
+        settings.receiptSettings = {
+          ...settings.receiptSettings,
+          ...savedSettings.receiptSettings,
+        };
       }
     } catch (error) {
       logger.warn("Could not load settings, using defaults");
@@ -54,7 +59,10 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     // Override with options if provided
     if (options.receiptSettings) {
-      settings.receiptSettings = { ...settings.receiptSettings, ...options.receiptSettings };
+      settings.receiptSettings = {
+        ...settings.receiptSettings,
+        ...options.receiptSettings,
+      };
     }
 
     let transaction;
@@ -70,7 +78,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
          LEFT JOIN customers c ON st.customer_id = c.id
          LEFT JOIN users u ON st.user_id = u.id
          WHERE st.id = ?`,
-        [transactionId]
+        [transactionId],
       );
 
       if (!transaction) {
@@ -84,7 +92,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
          LEFT JOIN items i ON std.item_id = i.id
          WHERE std.sales_transaction_id = ?
          ORDER BY std.id`,
-        [transactionId]
+        [transactionId],
       );
 
       if (transaction.customer_id) {
@@ -103,7 +111,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
          LEFT JOIN customers c ON rt.customer_id = c.id
          LEFT JOIN users u ON rt.user_id = u.id
          WHERE rt.id = ?`,
-        [transactionId]
+        [transactionId],
       );
 
       if (!transaction) {
@@ -117,7 +125,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
          LEFT JOIN items i ON rtd.item_id = i.id
          WHERE rtd.rental_transaction_id = ?
          ORDER BY rtd.id`,
-        [transactionId]
+        [transactionId],
       );
 
       if (transaction.customer_id) {
@@ -138,14 +146,14 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
        LEFT JOIN users u ON p.user_id = u.id
        WHERE p.transaction_id = ? AND p.transaction_type = ?
        ORDER BY p.payment_date DESC`,
-      [transactionId, transactionType]
+      [transactionId, transactionType],
     );
 
     // Calculate paper width in mm (default 80mm for thermal printer)
     const paperWidth = settings.paperWidth || 80;
     const paperWidthMM = paperWidth; // Already in mm
     const margin = 5; // Small margin for thermal printer
-    const contentWidth = paperWidthMM - (margin * 2);
+    const contentWidth = paperWidthMM - margin * 2;
 
     // Generate PDF with custom page size
     const doc = new jsPDF({
@@ -234,7 +242,10 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     // Date
     if (settings.receiptSettings.showDate) {
-      const dateStr = transactionType === "sale" ? transaction.sale_date : transaction.rental_date;
+      const dateStr =
+        transactionType === "sale"
+          ? transaction.sale_date
+          : transaction.rental_date;
       addLeftText(`Tgl: ${formatDate(dateStr)}`, 9);
     }
 
@@ -247,7 +258,11 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     addLine();
 
     // Customer Info
-    if (settings.receiptSettings.showCustomerInfo && customer && customer.name) {
+    if (
+      settings.receiptSettings.showCustomerInfo &&
+      customer &&
+      customer.name
+    ) {
       addLeftText("Pelanggan:", 9);
       doc.setFont("helvetica", "bold");
       addLeftText(customer.name, 9);
@@ -256,7 +271,10 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         addLeftText(`Telp: ${customer.phone}`, 8);
       }
       if (customer.address) {
-        const addressLines = doc.splitTextToSize(customer.address, contentWidth);
+        const addressLines = doc.splitTextToSize(
+          customer.address,
+          contentWidth,
+        );
         addressLines.forEach((line) => {
           addLeftText(line, 8);
         });
@@ -282,7 +300,8 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       for (const detail of transactionDetails) {
         const itemName = detail.item_name || "-";
         const quantity = detail.quantity || 0;
-        const price = transactionType === "sale" ? detail.sale_price : detail.rental_price;
+        const price =
+          transactionType === "sale" ? detail.sale_price : detail.rental_price;
         const subtotal = detail.subtotal || 0;
 
         // Check if we need a new page
@@ -320,19 +339,25 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     if (settings.receiptSettings.showSubtotal) {
       doc.text("Subtotal:", margin, yPos);
-      doc.text(formatCurrency(subtotal), pageWidth - margin, yPos, { align: "right" });
+      doc.text(formatCurrency(subtotal), pageWidth - margin, yPos, {
+        align: "right",
+      });
       yPos += 4;
     }
 
     if (settings.receiptSettings.showDiscount && discount > 0) {
       doc.text("Diskon:", margin, yPos);
-      doc.text(`- ${formatCurrency(discount)}`, pageWidth - margin, yPos, { align: "right" });
+      doc.text(`- ${formatCurrency(discount)}`, pageWidth - margin, yPos, {
+        align: "right",
+      });
       yPos += 4;
     }
 
     if (settings.receiptSettings.showTax && tax > 0) {
       doc.text("Pajak:", margin, yPos);
-      doc.text(`+ ${formatCurrency(tax)}`, pageWidth - margin, yPos, { align: "right" });
+      doc.text(`+ ${formatCurrency(tax)}`, pageWidth - margin, yPos, {
+        align: "right",
+      });
       yPos += 4;
     }
 
@@ -340,7 +365,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.text("TOTAL:", margin, yPos);
-      doc.text(formatCurrency(total), pageWidth - margin, yPos, { align: "right" });
+      doc.text(formatCurrency(total), pageWidth - margin, yPos, {
+        align: "right",
+      });
       yPos += 5;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -349,12 +376,16 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     if (settings.receiptSettings.showPaymentInfo) {
       addLine();
       doc.text("Dibayar:", margin, yPos);
-      doc.text(formatCurrency(paid), pageWidth - margin, yPos, { align: "right" });
+      doc.text(formatCurrency(paid), pageWidth - margin, yPos, {
+        align: "right",
+      });
       yPos += 4;
 
       if (remaining > 0) {
         doc.text("Sisa:", margin, yPos);
-        doc.text(formatCurrency(remaining), pageWidth - margin, yPos, { align: "right" });
+        doc.text(formatCurrency(remaining), pageWidth - margin, yPos, {
+          align: "right",
+        });
         yPos += 4;
       }
 
@@ -380,11 +411,12 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
             transfer: "Transfer",
             card: "Kartu",
           };
-          const methodLabel = methodLabels[payment.payment_method] || payment.payment_method;
+          const methodLabel =
+            methodLabels[payment.payment_method] || payment.payment_method;
           doc.text(
             `${formatDate(payment.payment_date)} - ${methodLabel}: ${formatCurrency(payment.amount)}`,
             margin,
-            yPos
+            yPos,
           );
           yPos += 3;
         });
@@ -446,11 +478,11 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
   try {
     const jsPDFModule = require("jspdf");
     const jsPDF = jsPDFModule.jsPDF;
-    
+
     if (!jsPDF || typeof jsPDF !== "function") {
       throw new Error("jsPDF constructor not found.");
     }
-    
+
     const settings = {
       companyName: companySettings?.companyName || "TOKO CONTOH",
       address: companySettings?.address || "Jl. Contoh No. 123, Jakarta",
@@ -477,7 +509,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     const paperWidth = settings.paperWidth || 80;
     const margin = 5;
-    const contentWidth = paperWidth - (margin * 2);
+    const contentWidth = paperWidth - margin * 2;
 
     const doc = new jsPDF({
       orientation: "portrait",
@@ -599,7 +631,10 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         addLeftText(`Telp: ${sampleTransaction.customer_phone}`, 8);
       }
       if (sampleTransaction.customer_address) {
-        const addressLines = doc.splitTextToSize(sampleTransaction.customer_address, contentWidth);
+        const addressLines = doc.splitTextToSize(
+          sampleTransaction.customer_address,
+          contentWidth,
+        );
         addressLines.forEach((line) => {
           addLeftText(line, 8);
         });
@@ -643,19 +678,37 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     if (settings.receiptSettings.showSubtotal) {
       doc.text("Subtotal:", margin, yPos);
-      doc.text(formatCurrency(sampleTransaction.subtotal), pageWidth - margin, yPos, { align: "right" });
+      doc.text(
+        formatCurrency(sampleTransaction.subtotal),
+        pageWidth - margin,
+        yPos,
+        { align: "right" },
+      );
       yPos += 4;
     }
 
-    if (settings.receiptSettings.showDiscount && sampleTransaction.discount > 0) {
+    if (
+      settings.receiptSettings.showDiscount &&
+      sampleTransaction.discount > 0
+    ) {
       doc.text("Diskon:", margin, yPos);
-      doc.text(`- ${formatCurrency(sampleTransaction.discount)}`, pageWidth - margin, yPos, { align: "right" });
+      doc.text(
+        `- ${formatCurrency(sampleTransaction.discount)}`,
+        pageWidth - margin,
+        yPos,
+        { align: "right" },
+      );
       yPos += 4;
     }
 
     if (settings.receiptSettings.showTax && sampleTransaction.tax > 0) {
       doc.text("Pajak:", margin, yPos);
-      doc.text(`+ ${formatCurrency(sampleTransaction.tax)}`, pageWidth - margin, yPos, { align: "right" });
+      doc.text(
+        `+ ${formatCurrency(sampleTransaction.tax)}`,
+        pageWidth - margin,
+        yPos,
+        { align: "right" },
+      );
       yPos += 4;
     }
 
@@ -663,7 +716,12 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.text("TOTAL:", margin, yPos);
-      doc.text(formatCurrency(sampleTransaction.total_amount), pageWidth - margin, yPos, { align: "right" });
+      doc.text(
+        formatCurrency(sampleTransaction.total_amount),
+        pageWidth - margin,
+        yPos,
+        { align: "right" },
+      );
       yPos += 5;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -672,7 +730,12 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     if (settings.receiptSettings.showPaymentInfo) {
       addLine();
       doc.text("Dibayar:", margin, yPos);
-      doc.text(formatCurrency(sampleTransaction.paid_amount), pageWidth - margin, yPos, { align: "right" });
+      doc.text(
+        formatCurrency(sampleTransaction.paid_amount),
+        pageWidth - margin,
+        yPos,
+        { align: "right" },
+      );
       yPos += 4;
       doc.setFont("helvetica", "bold");
       doc.text(`Status: LUNAS`, margin, yPos);
@@ -687,7 +750,10 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       doc.setFont("helvetica", "normal");
       doc.text("Catatan:", margin, yPos);
       yPos += 4;
-      const noteLines = doc.splitTextToSize(sampleTransaction.notes, contentWidth);
+      const noteLines = doc.splitTextToSize(
+        sampleTransaction.notes,
+        contentWidth,
+      );
       noteLines.forEach((line) => {
         doc.text(line, margin, yPos);
         yPos += 3.5;
@@ -715,122 +781,171 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
 function setupReceiptHandlers() {
   // Generate receipt for preview
-  ipcMain.handle("receipt:generate", async (event, { transactionId, transactionType, receiptSettings }) => {
-    return await generateReceipt(transactionId, transactionType, { receiptSettings });
-  });
+  ipcMain.handle(
+    "receipt:generate",
+    async (event, { transactionId, transactionType, receiptSettings }) => {
+      return await generateReceipt(transactionId, transactionType, {
+        receiptSettings,
+      });
+    },
+  );
 
   // Generate sample receipt for settings preview
-  ipcMain.handle("receipt:generateSample", async (event, { receiptSettings, companySettings }) => {
-    const result = await generateSampleReceipt(receiptSettings, companySettings);
-    
-    // Note: We no longer create file:// URLs as they are blocked by browsers in development.
-    // The frontend will use blob URLs created from pdfBase64 instead.
-    
-    return result;
-  });
+  ipcMain.handle(
+    "receipt:generateSample",
+    async (event, { receiptSettings, companySettings }) => {
+      const result = await generateSampleReceipt(
+        receiptSettings,
+        companySettings,
+      );
+
+      // Note: We no longer create file:// URLs as they are blocked by browsers in development.
+      // The frontend will use blob URLs created from pdfBase64 instead.
+
+      return result;
+    },
+  );
 
   // Print receipt to specific printer
-  ipcMain.handle("receipt:print", async (event, { transactionId, transactionType, printerName, silent = false, receiptSettings }) => {
-    try {
-      // Generate receipt first
-      const result = await generateReceipt(transactionId, transactionType, { receiptSettings });
+  ipcMain.handle(
+    "receipt:print",
+    async (
+      event,
+      {
+        transactionId,
+        transactionType,
+        printerName,
+        silent = false,
+        receiptSettings,
+      },
+    ) => {
+      try {
+        // Generate receipt first
+        const result = await generateReceipt(transactionId, transactionType, {
+          receiptSettings,
+        });
 
-      // If printer name is provided, print directly to that printer
-      if (printerName) {
-        try {
-          // Try using pdf-to-printer library first (better for direct printing)
-          const ptp = require("pdf-to-printer");
-          
-          await ptp.print(result.filePath, {
-            printer: printerName,
-            silent: silent,
-          });
-
-          logger.info(`Receipt printed to printer: ${printerName}`);
-          return { success: true, filePath: result.filePath, printer: printerName };
-        } catch (ptpError) {
-          // Fallback: Use Electron's webContents.print() method
-          logger.warn("pdf-to-printer failed, trying Electron print method:", ptpError);
-          
+        // If printer name is provided, print directly to that printer
+        if (printerName) {
           try {
-            const { BrowserWindow } = require("electron");
-            
-            // Create a hidden window to load and print the PDF
-            const printWindow = new BrowserWindow({
-              show: false,
-              webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                plugins: true, // Enable plugins for PDF support
-              },
+            // Try using pdf-to-printer library first (better for direct printing)
+            const ptp = require("pdf-to-printer");
+
+            await ptp.print(result.filePath, {
+              printer: printerName,
+              silent: silent,
             });
 
+            logger.info(`Receipt printed to printer: ${printerName}`);
+            return {
+              success: true,
+              filePath: result.filePath,
+              printer: printerName,
+            };
+          } catch (ptpError) {
+            // Fallback: Use Electron's webContents.print() method
+            logger.warn(
+              "pdf-to-printer failed, trying Electron print method:",
+              ptpError,
+            );
+
             try {
-              // Load PDF file using file:// protocol
-              const filePath = result.filePath.replace(/\\/g, '/');
-              await printWindow.loadURL(`file://${filePath}`);
-              
-              // Wait for PDF to load
-              await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                  resolve(); // Resolve even on timeout to continue
-                }, 3000);
-                
-                printWindow.webContents.once("did-finish-load", () => {
-                  clearTimeout(timeout);
-                  setTimeout(resolve, 1000); // Give PDF viewer time to render
-                });
+              const { BrowserWindow } = require("electron");
+
+              // Create a hidden window to load and print the PDF
+              const printWindow = new BrowserWindow({
+                show: false,
+                webPreferences: {
+                  nodeIntegration: false,
+                  contextIsolation: true,
+                  plugins: true, // Enable plugins for PDF support
+                },
               });
 
-              // Print to specific printer using Electron's print API
-              return new Promise((resolve, reject) => {
-                printWindow.webContents.print({
-                  silent: silent,
-                  printBackground: true,
-                  deviceName: printerName,
-                }, (success, errorType) => {
-                  // Close print window after printing
-                  setTimeout(() => {
-                    if (!printWindow.isDestroyed()) {
-                      printWindow.close();
-                    }
-                  }, 1000);
-                  
-                  if (success) {
-                    logger.info(`Receipt printed to printer: ${printerName}`);
-                    resolve({ success: true, filePath: result.filePath, printer: printerName });
-                  } else {
-                    logger.error(`Print failed: ${errorType}`);
-                    reject(new Error(`Gagal mencetak: ${errorType || "Unknown error"}`));
-                  }
+              try {
+                // Load PDF file using file:// protocol
+                const filePath = result.filePath.replace(/\\/g, "/");
+                await printWindow.loadURL(`file://${filePath}`);
+
+                // Wait for PDF to load
+                await new Promise((resolve, reject) => {
+                  const timeout = setTimeout(() => {
+                    resolve(); // Resolve even on timeout to continue
+                  }, 3000);
+
+                  printWindow.webContents.once("did-finish-load", () => {
+                    clearTimeout(timeout);
+                    setTimeout(resolve, 1000); // Give PDF viewer time to render
+                  });
                 });
-              });
-            } catch (printError) {
-              if (!printWindow.isDestroyed()) {
-                printWindow.close();
+
+                // Print to specific printer using Electron's print API
+                return new Promise((resolve, reject) => {
+                  printWindow.webContents.print(
+                    {
+                      silent: silent,
+                      printBackground: true,
+                      deviceName: printerName,
+                    },
+                    (success, errorType) => {
+                      // Close print window after printing
+                      setTimeout(() => {
+                        if (!printWindow.isDestroyed()) {
+                          printWindow.close();
+                        }
+                      }, 1000);
+
+                      if (success) {
+                        logger.info(
+                          `Receipt printed to printer: ${printerName}`,
+                        );
+                        resolve({
+                          success: true,
+                          filePath: result.filePath,
+                          printer: printerName,
+                        });
+                      } else {
+                        logger.error(`Print failed: ${errorType}`);
+                        reject(
+                          new Error(
+                            `Gagal mencetak: ${errorType || "Unknown error"}`,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                });
+              } catch (printError) {
+                if (!printWindow.isDestroyed()) {
+                  printWindow.close();
+                }
+                throw printError;
               }
-              throw printError;
+            } catch (electronPrintError) {
+              logger.error(
+                "Electron print method also failed:",
+                electronPrintError,
+              );
+              // Final fallback: open PDF viewer
+              const { shell } = require("electron");
+              await shell.openPath(result.filePath);
+              throw new Error(
+                `Gagal mencetak ke printer ${printerName}. PDF dibuka di viewer untuk print manual.`,
+              );
             }
-          } catch (electronPrintError) {
-            logger.error("Electron print method also failed:", electronPrintError);
-            // Final fallback: open PDF viewer
-            const { shell } = require("electron");
-            await shell.openPath(result.filePath);
-            throw new Error(`Gagal mencetak ke printer ${printerName}. PDF dibuka di viewer untuk print manual.`);
           }
+        } else {
+          // No printer specified, open PDF in default viewer
+          const { shell } = require("electron");
+          await shell.openPath(result.filePath);
+          return { success: true, filePath: result.filePath };
         }
-      } else {
-        // No printer specified, open PDF in default viewer
-        const { shell } = require("electron");
-        await shell.openPath(result.filePath);
-        return { success: true, filePath: result.filePath };
+      } catch (error) {
+        logger.error("Error printing receipt:", error);
+        throw error;
       }
-    } catch (error) {
-      logger.error("Error printing receipt:", error);
-      throw error;
-    }
-  });
+    },
+  );
 }
 
 module.exports = setupReceiptHandlers;
-

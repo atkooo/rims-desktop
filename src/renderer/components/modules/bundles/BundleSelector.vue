@@ -3,7 +3,9 @@
     <div class="picker-header">
       <div>
         <div class="picker-label">Pilih Paket</div>
-        <p class="picker-description">Tambahkan paket penjualan yang tersedia</p>
+        <p class="picker-description">
+          Tambahkan paket penjualan yang tersedia
+        </p>
       </div>
       <AppButton variant="secondary" class="picker-button" @click="openPicker">
         <Icon name="grid" :size="16" />
@@ -21,8 +23,18 @@
           <span class="item-name">{{ bundle.name }}</span>
           <span class="item-price">
             {{ formatCurrency(calculateBundlePrice(bundle)) }}
-            <span v-if="bundle.discount_percentage > 0 || bundle.discount_amount > 0" class="discount-badge">
-              (Diskon: {{ bundle.discount_percentage > 0 ? bundle.discount_percentage + '%' : formatCurrency(bundle.discount_amount) }})
+            <span
+              v-if="
+                bundle.discount_percentage > 0 || bundle.discount_amount > 0
+              "
+              class="discount-badge"
+            >
+              (Diskon:
+              {{
+                bundle.discount_percentage > 0
+                  ? bundle.discount_percentage + "%"
+                  : formatCurrency(bundle.discount_amount)
+              }})
             </span>
           </span>
         </div>
@@ -49,9 +61,7 @@
       </div>
     </div>
 
-    <div v-else class="empty-state">
-      Belum ada paket yang dipilih.
-    </div>
+    <div v-else class="empty-state">Belum ada paket yang dipilih.</div>
 
     <BundlePickerDialog
       v-model="pickerOpen"
@@ -95,14 +105,14 @@ export default {
     // Calculate price after bundle discount
     const calculateBundlePrice = (bundle) => {
       const basePrice = bundle.price || 0;
-      
+
       // Apply bundle discount if bundle has discount_group
       if (bundle.discount_percentage > 0) {
         return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
       } else if (bundle.discount_amount > 0) {
         return Math.max(0, basePrice - bundle.discount_amount);
       }
-      
+
       return basePrice;
     };
 

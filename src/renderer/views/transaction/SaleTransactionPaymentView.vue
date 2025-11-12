@@ -5,7 +5,11 @@
         <div>
           <h1>Pembayaran Penjualan</h1>
           <p class="subtitle">
-            {{ transaction ? `Transaksi ${transaction.transaction_code}` : "Memuat data transaksi..." }}
+            {{
+              transaction
+                ? `Transaksi ${transaction.transaction_code}`
+                : "Memuat data transaksi..."
+            }}
           </p>
         </div>
         <div class="header-actions">
@@ -14,9 +18,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading-state">
-      Memuat data transaksi...
-    </div>
+    <div v-if="loading" class="loading-state">Memuat data transaksi...</div>
 
     <div v-else-if="error" class="error-banner">
       {{ error }}
@@ -29,19 +31,28 @@
         <div class="info-grid">
           <div class="info-item">
             <span class="info-label">Kode Transaksi</span>
-            <strong class="info-value">{{ transaction.transaction_code }}</strong>
+            <strong class="info-value">{{
+              transaction.transaction_code
+            }}</strong>
           </div>
           <div class="info-item">
             <span class="info-label">Customer</span>
-            <strong class="info-value">{{ transaction.customer_name || "-" }}</strong>
+            <strong class="info-value">{{
+              transaction.customer_name || "-"
+            }}</strong>
           </div>
           <div class="info-item">
             <span class="info-label">Tanggal</span>
-            <strong class="info-value">{{ formatDate(transaction.sale_date) }}</strong>
+            <strong class="info-value">{{
+              formatDate(transaction.sale_date)
+            }}</strong>
           </div>
           <div class="info-item">
             <span class="info-label">Status Pembayaran</span>
-            <strong class="info-value status-badge" :class="transaction.payment_status">
+            <strong
+              class="info-value status-badge"
+              :class="transaction.payment_status"
+            >
               {{ getPaymentStatusLabel(transaction.payment_status) }}
             </strong>
           </div>
@@ -108,7 +119,9 @@
           </div>
           <div class="summary-row" v-if="transaction.discount > 0">
             <span>Diskon</span>
-            <strong class="discount">- {{ formatCurrency(transaction.discount) }}</strong>
+            <strong class="discount"
+              >- {{ formatCurrency(transaction.discount) }}</strong
+            >
           </div>
           <div class="summary-row" v-if="transaction.tax > 0">
             <span>Pajak</span>
@@ -231,7 +244,12 @@ import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
-import { fetchSalesTransactions, fetchSalesDetails, createPayment, fetchPayments } from "@/services/transactions";
+import {
+  fetchSalesTransactions,
+  fetchSalesDetails,
+  createPayment,
+  fetchPayments,
+} from "@/services/transactions";
 import { getStoredUser } from "@/services/auth";
 
 export default {
@@ -290,7 +308,10 @@ export default {
 
     const remainingAmount = computed(() => {
       if (!transaction.value) return 0;
-      return Math.max(0, transaction.value.total_amount - transaction.value.paid_amount);
+      return Math.max(
+        0,
+        transaction.value.total_amount - transaction.value.paid_amount,
+      );
     });
 
     const loadTransaction = async () => {
@@ -304,8 +325,10 @@ export default {
       try {
         // Load transactions
         const transactions = await fetchSalesTransactions();
-        const found = transactions.find((t) => t.id === Number(transactionId.value));
-        
+        const found = transactions.find(
+          (t) => t.id === Number(transactionId.value),
+        );
+
         if (!found) {
           throw new Error("Transaksi tidak ditemukan");
         }
@@ -315,14 +338,17 @@ export default {
         // Load transaction details
         const details = await fetchSalesDetails();
         transactionDetails.value = details.filter(
-          (d) => d.transaction_code === found.transaction_code
+          (d) => d.transaction_code === found.transaction_code,
         );
 
         // Load payment history
         const payments = await fetchPayments();
-        paymentHistory.value = payments.filter(
-          (p) => p.transaction_type === "sale" && p.transaction_id === found.id
-        ).sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+        paymentHistory.value = payments
+          .filter(
+            (p) =>
+              p.transaction_type === "sale" && p.transaction_id === found.id,
+          )
+          .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
       } catch (err) {
         error.value = err.message || "Gagal memuat data transaksi";
       } finally {
@@ -383,7 +409,9 @@ export default {
         if (remainingAmount.value === 0) {
           // Wait a bit then offer to print
           setTimeout(() => {
-            if (confirm("Pembayaran berhasil! Apakah Anda ingin mencetak struk?")) {
+            if (
+              confirm("Pembayaran berhasil! Apakah Anda ingin mencetak struk?")
+            ) {
               showReceiptPreview.value = true;
             }
           }, 500);
@@ -636,4 +664,3 @@ export default {
   justify-content: center;
 }
 </style>
-

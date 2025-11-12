@@ -5,8 +5,8 @@
         <div>
           <h1>Transaksi Sewa Baru</h1>
           <p class="subtitle">
-            Formulir yang disederhanakan agar kasir atau admin dapat mencatat sewa baru dengan
-            cepat dan langsung ke sistem.
+            Formulir yang disederhanakan agar kasir atau admin dapat mencatat
+            sewa baru dengan cepat dan langsung ke sistem.
           </p>
         </div>
         <div class="header-actions">
@@ -20,28 +20,45 @@
 
     <!-- Cashier Status Banner -->
     <section v-if="cashierStatus" class="cashier-status-section">
-      <div :class="['cashier-status-banner', cashierStatus.status === 'open' ? 'open' : 'closed']">
+      <div
+        :class="[
+          'cashier-status-banner',
+          cashierStatus.status === 'open' ? 'open' : 'closed',
+        ]"
+      >
         <div class="cashier-status-content">
           <div class="cashier-status-info">
             <div class="cashier-status-label">
-              <span class="status-indicator" :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"></span>
-              <strong>Sesi Kasir: {{ cashierStatus.status === 'open' ? 'Aktif' : 'Tidak Aktif' }}</strong>
+              <span
+                class="status-indicator"
+                :class="cashierStatus.status === 'open' ? 'active' : 'inactive'"
+              ></span>
+              <strong
+                >Sesi Kasir:
+                {{
+                  cashierStatus.status === "open" ? "Aktif" : "Tidak Aktif"
+                }}</strong
+              >
             </div>
             <div v-if="cashierStatus.status === 'open'" class="cashier-details">
               <span class="detail-item">
                 <span class="detail-label">Saldo Awal:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.opening_balance) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.opening_balance)
+                }}</span>
               </span>
               <span class="detail-item">
                 <span class="detail-label">Saldo Diharapkan:</span>
-                <span class="detail-value">{{ formatCurrency(cashierStatus.expected_balance || 0) }}</span>
+                <span class="detail-value">{{
+                  formatCurrency(cashierStatus.expected_balance || 0)
+                }}</span>
               </span>
             </div>
           </div>
           <div class="cashier-status-action">
-            <AppButton 
-              v-if="cashierStatus.status !== 'open'" 
-              variant="primary" 
+            <AppButton
+              v-if="cashierStatus.status !== 'open'"
+              variant="primary"
               size="small"
               @click="$router.push('/transactions/cashier')"
             >
@@ -81,7 +98,8 @@
                   :key="customer.id"
                   :value="customer.id"
                 >
-                  {{ customer.name }} {{ customer.code ? `(${customer.code})` : "" }}
+                  {{ customer.name }}
+                  {{ customer.code ? `(${customer.code})` : "" }}
                 </option>
               </select>
               <div v-if="errors.customerId" class="error-message">
@@ -118,7 +136,6 @@
                 min="0"
                 v-model.number="form.deposit"
               />
-              
             </div>
           </div>
         </div>
@@ -126,7 +143,8 @@
         <div class="form-section">
           <h3 class="section-title">Item yang Dipilih</h3>
           <p class="section-description">
-            Tambahkan item satu per satu agar sistem bisa menghitung durasi dan jumlah.
+            Tambahkan item satu per satu agar sistem bisa menghitung durasi dan
+            jumlah.
           </p>
           <div class="form-content">
             <ItemSelector v-model="form.items" />
@@ -139,10 +157,16 @@
         <div class="form-section">
           <h3 class="section-title">Catatan</h3>
           <p class="section-description">
-            Apa pun yang penting agar customer dan tim backend tahu penggunaan sewa.
+            Apa pun yang penting agar customer dan tim backend tahu penggunaan
+            sewa.
           </p>
           <div class="form-content">
-            <FormInput id="notes" label="Catatan" type="textarea" v-model="form.notes" />
+            <FormInput
+              id="notes"
+              label="Catatan"
+              type="textarea"
+              v-model="form.notes"
+            />
           </div>
         </div>
 
@@ -185,7 +209,9 @@
             <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
             <li>Catatan akan tampil di struk dan riwayat customer.</li>
           </ul>
-          <AppButton variant="success" @click="goBack">Lihat Daftar Transaksi</AppButton>
+          <AppButton variant="success" @click="goBack"
+            >Lihat Daftar Transaksi</AppButton
+          >
         </div>
       </aside>
     </section>
@@ -357,10 +383,10 @@ export default {
           deposit: Number(form.value.deposit) || 0,
           items: normalizedItems.value,
         });
-        
+
         // Refresh cashier status after transaction
         await loadCashierStatus();
-        
+
         // Redirect to payment page
         if (newTransaction && newTransaction.id) {
           router.push({
@@ -432,7 +458,9 @@ export default {
 .cashier-status-banner {
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #d1d5db;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -479,12 +507,16 @@ export default {
 
 .status-indicator.active {
   background-color: #16a34a;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15), 0 0 0 8px rgba(22, 163, 74, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(22, 163, 74, 0.15),
+    0 0 0 8px rgba(22, 163, 74, 0.08);
 }
 
 .status-indicator.inactive {
   background-color: #ef4444;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 0 0 8px rgba(239, 68, 68, 0.08);
+  box-shadow:
+    0 0 0 4px rgba(239, 68, 68, 0.15),
+    0 0 0 8px rgba(239, 68, 68, 0.08);
 }
 
 .cashier-status-label strong {
@@ -720,7 +752,3 @@ export default {
   }
 }
 </style>
-
-
-
-

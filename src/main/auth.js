@@ -56,10 +56,10 @@ function registerAuthIpc() {
         "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
         [user.id],
       );
-      
+
       // Get user permissions
       const permissions = await getUserPermissions(user.id);
-      
+
       currentUser = {
         id: user.id,
         role_id: user.role_id,
@@ -105,19 +105,19 @@ function registerAuthIpc() {
     return true;
   });
   ipcMain.handle("auth:getCurrentUser", () => currentUser);
-  
+
   ipcMain.handle("auth:hasPermission", async (event, permissionSlug) => {
     if (!currentUser) return false;
     const { hasPermission } = require("./helpers/permissions");
     return await hasPermission(currentUser.id, permissionSlug);
   });
-  
+
   ipcMain.handle("auth:hasAnyPermission", async (event, permissionSlugs) => {
     if (!currentUser) return false;
     const { hasAnyPermission } = require("./helpers/permissions");
     return await hasAnyPermission(currentUser.id, permissionSlugs);
   });
-  
+
   ipcMain.handle("auth:getUserPermissions", async () => {
     if (!currentUser) return [];
     return currentUser.permissions || [];

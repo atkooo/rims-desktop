@@ -28,12 +28,12 @@ export async function login(username, password) {
   if (!isIpcAvailable()) throw new Error("IPC Electron tidak tersedia");
 
   const user = await invoke("auth:login", { username, password });
-  
+
   // Ensure permissions are loaded
   if (user && isIpcAvailable()) {
     try {
       // Load permissions from IPC
-      const permissions = await invoke("auth:getUserPermissions") || [];
+      const permissions = (await invoke("auth:getUserPermissions")) || [];
       user.permissions = permissions;
     } catch (error) {
       console.error("Error loading permissions:", error);
@@ -46,10 +46,10 @@ export async function login(username, password) {
       }
     }
   }
-  
+
   // Store user with permissions
   writeStoredUser(user);
-  
+
   // Initialize permissions in composable
   try {
     const { initPermissions } = await import("@/composables/usePermissions");
@@ -58,7 +58,7 @@ export async function login(username, password) {
     console.error("Error initializing permissions in composable:", error);
     // Continue anyway
   }
-  
+
   return user;
 }
 
@@ -81,7 +81,7 @@ export async function getCurrentUser(forceRefresh = false) {
       // Ensure permissions are loaded
       if (!user.permissions && isIpcAvailable()) {
         try {
-          user.permissions = await invoke("auth:getUserPermissions") || [];
+          user.permissions = (await invoke("auth:getUserPermissions")) || [];
         } catch (error) {
           console.error("Error loading permissions:", error);
           user.permissions = [];
@@ -90,7 +90,9 @@ export async function getCurrentUser(forceRefresh = false) {
       writeStoredUser(user);
       // Initialize permissions in composable if available
       try {
-        const { initPermissions } = await import("@/composables/usePermissions");
+        const { initPermissions } = await import(
+          "@/composables/usePermissions"
+        );
         await initPermissions();
       } catch (error) {
         // Composable may not be available yet

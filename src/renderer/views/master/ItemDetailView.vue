@@ -16,9 +16,7 @@
         <AppButton variant="secondary" :loading="loading" @click="loadData">
           Refresh Data
         </AppButton>
-        <AppButton variant="primary" @click="handleEdit">
-          Edit Item
-        </AppButton>
+        <AppButton variant="primary" @click="handleEdit"> Edit Item </AppButton>
       </div>
     </div>
 
@@ -150,9 +148,7 @@
             <div class="detail-value">
               <span
                 class="status-badge"
-                :class="
-                  item.is_available_for_rent ? 'active' : 'inactive'
-                "
+                :class="item.is_available_for_rent ? 'active' : 'inactive'"
               >
                 {{ item.is_available_for_rent ? "Ya" : "Tidak" }}
               </span>
@@ -163,9 +159,7 @@
             <div class="detail-value">
               <span
                 class="status-badge"
-                :class="
-                  item.is_available_for_sale ? 'active' : 'inactive'
-                "
+                :class="item.is_available_for_sale ? 'active' : 'inactive'"
               >
                 {{ item.is_available_for_sale ? "Ya" : "Tidak" }}
               </span>
@@ -474,4 +468,3 @@ export default {
   color: #92400e;
 }
 </style>
-

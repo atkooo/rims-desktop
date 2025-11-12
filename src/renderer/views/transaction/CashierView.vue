@@ -31,7 +31,9 @@
       <div class="session-details">
         <div class="detail-row">
           <span>Dibuka oleh:</span>
-          <strong>{{ currentSession.full_name || currentSession.username }}</strong>
+          <strong>{{
+            currentSession.full_name || currentSession.username
+          }}</strong>
         </div>
         <div class="detail-row">
           <span>Tanggal Buka:</span>
@@ -43,12 +45,18 @@
         </div>
         <div class="detail-row">
           <span>Saldo Diharapkan:</span>
-          <strong>{{ formatCurrency(currentSession.expected_balance || 0) }}</strong>
+          <strong>{{
+            formatCurrency(currentSession.expected_balance || 0)
+          }}</strong>
         </div>
       </div>
 
       <div class="session-actions">
-        <AppButton variant="danger" :loading="closing" @click="showCloseDialog = true">
+        <AppButton
+          variant="danger"
+          :loading="closing"
+          @click="showCloseDialog = true"
+        >
           Tutup Kasir
         </AppButton>
       </div>
@@ -109,11 +117,17 @@
     </section>
 
     <!-- Close Session Dialog -->
-    <div v-if="showCloseDialog" class="modal-overlay" @click.self="showCloseDialog = false">
+    <div
+      v-if="showCloseDialog"
+      class="modal-overlay"
+      @click.self="showCloseDialog = false"
+    >
       <div class="modal-content">
         <div class="modal-header">
           <h2>Tutup Sesi Kasir</h2>
-          <button class="modal-close" @click="showCloseDialog = false">×</button>
+          <button class="modal-close" @click="showCloseDialog = false">
+            ×
+          </button>
         </div>
 
         <div class="modal-body">
@@ -124,21 +138,36 @@
           <div class="close-session-info">
             <div class="info-row">
               <span>Saldo Awal:</span>
-              <strong>{{ formatCurrency(currentSession?.opening_balance) }}</strong>
+              <strong>{{
+                formatCurrency(currentSession?.opening_balance)
+              }}</strong>
             </div>
             <div class="info-row">
               <span>Saldo Diharapkan:</span>
-              <strong>{{ formatCurrency(currentSession?.expected_balance || 0) }}</strong>
+              <strong>{{
+                formatCurrency(currentSession?.expected_balance || 0)
+              }}</strong>
             </div>
             <div class="info-row highlight">
               <span>Selisih:</span>
               <strong
                 :class="{
-                  positive: (currentSession?.expected_balance || 0) - (currentSession?.opening_balance || 0) >= 0,
-                  negative: (currentSession?.expected_balance || 0) - (currentSession?.opening_balance || 0) < 0,
+                  positive:
+                    (currentSession?.expected_balance || 0) -
+                      (currentSession?.opening_balance || 0) >=
+                    0,
+                  negative:
+                    (currentSession?.expected_balance || 0) -
+                      (currentSession?.opening_balance || 0) <
+                    0,
                 }"
               >
-                {{ formatCurrency((currentSession?.expected_balance || 0) - (currentSession?.opening_balance || 0)) }}
+                {{
+                  formatCurrency(
+                    (currentSession?.expected_balance || 0) -
+                      (currentSession?.opening_balance || 0),
+                  )
+                }}
               </strong>
             </div>
           </div>
@@ -185,7 +214,9 @@
                 type="submit"
                 variant="danger"
                 :loading="closing"
-                :disabled="!closeForm.actualBalance || closeForm.actualBalance < 0"
+                :disabled="
+                  !closeForm.actualBalance || closeForm.actualBalance < 0
+                "
               >
                 Tutup Kasir
               </AppButton>
@@ -324,7 +355,10 @@ export default {
           throw new Error("User tidak ditemukan. Silakan login ulang.");
         }
 
-        if (!openForm.value.openingBalance || openForm.value.openingBalance <= 0) {
+        if (
+          !openForm.value.openingBalance ||
+          openForm.value.openingBalance <= 0
+        ) {
           errors.value.openingBalance = "Saldo awal harus lebih dari 0";
           opening.value = false;
           return;
@@ -365,8 +399,12 @@ export default {
           throw new Error("Sesi kasir tidak ditemukan");
         }
 
-        if (!closeForm.value.actualBalance || closeForm.value.actualBalance < 0) {
-          closeErrors.value.actualBalance = "Saldo akhir harus lebih dari atau sama dengan 0";
+        if (
+          !closeForm.value.actualBalance ||
+          closeForm.value.actualBalance < 0
+        ) {
+          closeErrors.value.actualBalance =
+            "Saldo akhir harus lebih dari atau sama dengan 0";
           closing.value = false;
           return;
         }
@@ -684,4 +722,3 @@ export default {
   font-weight: 600;
 }
 </style>
-

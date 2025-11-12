@@ -66,7 +66,6 @@
               {{ errors.type }}
             </div>
           </div>
-
         </div>
 
         <div class="form-group grid-span-2">
@@ -225,7 +224,10 @@ export default {
             ...defaultForm(),
             ...props.editData,
             // Map database column to form field
-            dailyRate: props.editData.rental_price_per_day ?? props.editData.dailyRate ?? 0,
+            dailyRate:
+              props.editData.rental_price_per_day ??
+              props.editData.dailyRate ??
+              0,
             size_id:
               props.editData.size_id ??
               props.editData.sizeId ??
@@ -236,8 +238,7 @@ export default {
               props.editData.categoryId ??
               props.editData.category ??
               null,
-            discount_group_id:
-              props.editData.discount_group_id ?? null,
+            discount_group_id: props.editData.discount_group_id ?? null,
           }
         : defaultForm();
       if (!isEdit.value && categories.value.length && !form.value.category_id) {
@@ -253,8 +254,7 @@ export default {
       // Kode akan di-generate otomatis, tidak perlu validasi
       if (!form.value.price || form.value.price <= 0)
         e.price = "Harga harus > 0";
-      if (!form.value.category_id)
-        e.category_id = "Kategori wajib dipilih";
+      if (!form.value.category_id) e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       if (form.value.type === "RENTAL") {
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
@@ -310,7 +310,7 @@ export default {
     const loadDiscountGroups = async () => {
       try {
         const data = await fetchDiscountGroups();
-        discountGroups.value = data.filter(dg => dg.is_active);
+        discountGroups.value = data.filter((dg) => dg.is_active);
       } catch (error) {
         console.error("Gagal memuat grup diskon:", error);
       }

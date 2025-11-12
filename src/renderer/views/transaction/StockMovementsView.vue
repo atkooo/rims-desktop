@@ -40,14 +40,20 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="movements"
-        :loading="loading"
-        :searchable-keys="['item_name', 'movement_type', 'reference_type', 'user_name', 'notes']"
-        row-key="id"
-        default-page-size="10"
-      />
+        <AppTable
+          :columns="columns"
+          :rows="movements"
+          :loading="loading"
+          :searchable-keys="[
+            'item_name',
+            'movement_type',
+            'reference_type',
+            'user_name',
+            'notes',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        />
       </div>
     </section>
 
@@ -84,11 +90,21 @@ export default {
       { key: "reference_type", label: "Referensi", sortable: true },
       { key: "reference_id", label: "Ref ID", sortable: true },
       { key: "quantity", label: "Qty", sortable: true, align: "center" },
-      { key: "stock_before", label: "Sebelum", sortable: true, align: "center" },
+      {
+        key: "stock_before",
+        label: "Sebelum",
+        sortable: true,
+        align: "center",
+      },
       { key: "stock_after", label: "Sesudah", sortable: true, align: "center" },
       { key: "user_name", label: "Petugas", sortable: true },
       { key: "notes", label: "Catatan", sortable: true },
-      { key: "created_at", label: "Tanggal", format: formatDate, sortable: true },
+      {
+        key: "created_at",
+        label: "Tanggal",
+        format: formatDate,
+        sortable: true,
+      },
     ];
 
     const stats = computed(() => {

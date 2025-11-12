@@ -14,7 +14,7 @@ export async function loadPermissions() {
     console.warn("IPC tidak tersedia");
     return [];
   }
-  
+
   try {
     loading.value = true;
     const userPerms = await invoke("auth:getUserPermissions");
@@ -36,11 +36,15 @@ export async function initPermissions() {
   try {
     // First try to get permissions from stored user (faster)
     const storedUser = getStoredUser();
-    if (storedUser && storedUser.permissions && Array.isArray(storedUser.permissions)) {
+    if (
+      storedUser &&
+      storedUser.permissions &&
+      Array.isArray(storedUser.permissions)
+    ) {
       permissions.value = storedUser.permissions;
       return;
     }
-    
+
     // If not in stored user, get from current user (which should load from IPC)
     const user = await getCurrentUser(true); // Force refresh to ensure permissions are loaded
     if (user && user.permissions && Array.isArray(user.permissions)) {
@@ -62,12 +66,12 @@ export async function initPermissions() {
  */
 export async function hasPermission(permissionSlug) {
   if (!permissionSlug) return true;
-  
+
   // Check cached permissions first
   if (permissions.value.includes(permissionSlug)) {
     return true;
   }
-  
+
   // If not in cache, check via IPC
   if (isIpcAvailable()) {
     try {
@@ -77,7 +81,7 @@ export async function hasPermission(permissionSlug) {
       return false;
     }
   }
-  
+
   return false;
 }
 
@@ -88,11 +92,13 @@ export async function hasPermission(permissionSlug) {
  */
 export async function hasAnyPermission(permissionSlugs) {
   if (!permissionSlugs || permissionSlugs.length === 0) return true;
-  
+
   // Check cached permissions first
-  const hasAny = permissionSlugs.some((slug) => permissions.value.includes(slug));
+  const hasAny = permissionSlugs.some((slug) =>
+    permissions.value.includes(slug),
+  );
   if (hasAny) return true;
-  
+
   // If not in cache, check via IPC
   if (isIpcAvailable()) {
     try {
@@ -102,7 +108,7 @@ export async function hasAnyPermission(permissionSlugs) {
       return false;
     }
   }
-  
+
   return false;
 }
 
@@ -113,11 +119,13 @@ export async function hasAnyPermission(permissionSlugs) {
  */
 export async function hasAllPermissions(permissionSlugs) {
   if (!permissionSlugs || permissionSlugs.length === 0) return true;
-  
+
   // Check cached permissions
-  const hasAll = permissionSlugs.every((slug) => permissions.value.includes(slug));
+  const hasAll = permissionSlugs.every((slug) =>
+    permissions.value.includes(slug),
+  );
   if (hasAll) return true;
-  
+
   // If not all in cache, check each via IPC
   if (isIpcAvailable()) {
     try {
@@ -131,7 +139,7 @@ export async function hasAllPermissions(permissionSlugs) {
       return false;
     }
   }
-  
+
   return false;
 }
 
@@ -172,15 +180,15 @@ export function usePermissions() {
   const checkPermission = async (permissionSlug) => {
     return await hasPermission(permissionSlug);
   };
-  
+
   const checkAnyPermission = async (permissionSlugs) => {
     return await hasAnyPermission(permissionSlugs);
   };
-  
+
   const checkAllPermissions = async (permissionSlugs) => {
     return await hasAllPermissions(permissionSlugs);
   };
-  
+
   return {
     permissions: computed(() => permissions.value),
     loading: computed(() => loading.value),
@@ -194,4 +202,3 @@ export function usePermissions() {
     initPermissions,
   };
 }
-

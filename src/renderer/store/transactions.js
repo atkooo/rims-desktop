@@ -89,7 +89,8 @@ export const useTransactionStore = defineStore("transactions", {
           }
 
           const transactionType = isRental ? "RENTAL" : "SALE";
-          const paidAmount = Number(t.paid_amount ?? t.actual_paid_amount ?? 0) || 0;
+          const paidAmount =
+            Number(t.paid_amount ?? t.actual_paid_amount ?? 0) || 0;
 
           return {
             ...t,

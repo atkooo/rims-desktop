@@ -57,64 +57,68 @@
       </div>
 
       <div class="table-container">
-      <AppTable
-        :columns="columns"
-        :rows="filteredSales"
-        :loading="loading"
-        :searchable-keys="['transaction_code', 'customer_name', 'payment_status']"
-        row-key="id"
-        default-page-size="10"
-      >
-        <template #actions="{ row }">
-          <div class="action-menu-wrapper">
-            <button
-              type="button"
-              class="action-menu-trigger"
-              :data-item-id="row.id"
-              @click.stop="toggleActionMenu(row.id)"
-              :aria-expanded="openMenuId === row.id"
-            >
-              <Icon name="more-vertical" :size="18" />
-            </button>
-            <Teleport to="body">
-              <transition name="fade-scale">
-                <div
-                  v-if="openMenuId === row.id"
-                  class="action-menu"
-                  :style="getMenuPosition(row.id)"
-                  @click.stop
-                >
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="goToSaleDetail(row)"
+        <AppTable
+          :columns="columns"
+          :rows="filteredSales"
+          :loading="loading"
+          :searchable-keys="[
+            'transaction_code',
+            'customer_name',
+            'payment_status',
+          ]"
+          row-key="id"
+          default-page-size="10"
+        >
+          <template #actions="{ row }">
+            <div class="action-menu-wrapper">
+              <button
+                type="button"
+                class="action-menu-trigger"
+                :data-item-id="row.id"
+                @click.stop="toggleActionMenu(row.id)"
+                :aria-expanded="openMenuId === row.id"
+              >
+                <Icon name="more-vertical" :size="18" />
+              </button>
+              <Teleport to="body">
+                <transition name="fade-scale">
+                  <div
+                    v-if="openMenuId === row.id"
+                    class="action-menu"
+                    :style="getMenuPosition(row.id)"
+                    @click.stop
                   >
-                    <Icon name="eye" :size="16" />
-                    <span>Detail</span>
-                  </button>
-                  <button
-                    v-if="!isPaid(row)"
-                    type="button"
-                    class="action-menu-item"
-                    @click="continuePayment(row)"
-                  >
-                    <Icon name="credit-card" :size="16" />
-                    <span>Lanjutkan Pembayaran</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="action-menu-item"
-                    @click="handleEdit(row)"
-                  >
-                    <Icon name="edit" :size="16" />
-                    <span>Edit</span>
-                  </button>
-                </div>
-              </transition>
-            </Teleport>
-          </div>
-        </template>
-      </AppTable>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="goToSaleDetail(row)"
+                    >
+                      <Icon name="eye" :size="16" />
+                      <span>Detail</span>
+                    </button>
+                    <button
+                      v-if="!isPaid(row)"
+                      type="button"
+                      class="action-menu-item"
+                      @click="continuePayment(row)"
+                    >
+                      <Icon name="credit-card" :size="16" />
+                      <span>Lanjutkan Pembayaran</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="handleEdit(row)"
+                    >
+                      <Icon name="edit" :size="16" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                </transition>
+              </Teleport>
+            </div>
+          </template>
+        </AppTable>
       </div>
     </section>
   </div>
@@ -167,22 +171,38 @@ export default {
     const columns = [
       { key: "transaction_code", label: "Kode", sortable: true },
       { key: "customer_name", label: "Customer", sortable: true },
-      { key: "sale_date", label: "Tanggal", format: formatDate, sortable: true },
-      { key: "total_amount", label: "Total", format: formatCurrency, sortable: true },
+      {
+        key: "sale_date",
+        label: "Tanggal",
+        format: formatDate,
+        sortable: true,
+      },
+      {
+        key: "total_amount",
+        label: "Total",
+        format: formatCurrency,
+        sortable: true,
+      },
       { key: "payment_status", label: "Status Pembayaran", sortable: true },
     ];
 
     const filteredSales = computed(() => {
       let items = sales.value;
-      
+
       // Filter by payment status
       if (filters.value.paymentStatus) {
         items = items.filter((item) => {
-          const paymentStatus = (item.payment_status || item.paymentStatus || "").toString().toLowerCase();
+          const paymentStatus = (
+            item.payment_status ||
+            item.paymentStatus ||
+            ""
+          )
+            .toString()
+            .toLowerCase();
           return paymentStatus === filters.value.paymentStatus.toLowerCase();
         });
       }
-      
+
       return items;
     });
 
@@ -220,7 +240,6 @@ export default {
       }
     };
 
-
     const goToSaleDetail = (sale) => {
       openMenuId.value = null;
       if (!sale.transaction_code) return;
@@ -240,7 +259,9 @@ export default {
     };
 
     const isPaid = (sale) => {
-      const status = (sale.payment_status || sale.paymentStatus || "").toString().toLowerCase();
+      const status = (sale.payment_status || sale.paymentStatus || "")
+        .toString()
+        .toLowerCase();
       return status === "paid";
     };
 
@@ -266,9 +287,7 @@ export default {
     };
 
     const updateMenuPosition = (itemId) => {
-      const trigger = document.querySelector(
-        `[data-item-id="${itemId}"]`,
-      );
+      const trigger = document.querySelector(`[data-item-id="${itemId}"]`);
       if (!trigger) return;
 
       const rect = trigger.getBoundingClientRect();
@@ -363,7 +382,8 @@ export default {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   min-width: 180px;
   z-index: 1000;
