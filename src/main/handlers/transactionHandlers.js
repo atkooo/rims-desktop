@@ -2,8 +2,14 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
-const { TRANSACTION_STATUS } = require("../../shared/constants");
 const { generateTransactionCode, toInteger } = require("../helpers/codeUtils");
+
+// Constants for transaction status (duplicated from shared/constants for CommonJS compatibility)
+const TRANSACTION_STATUS = {
+  PENDING: "PENDING",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+};
 
 const bundleItemSql = `
   SELECT

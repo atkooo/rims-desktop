@@ -19,19 +19,6 @@
       </div>
     </div>
 
-    <!-- Success Message -->
-    <div v-if="successMessage" class="success-message">
-      <Icon name="eye" :size="18" />
-      <span>{{ successMessage }}</span>
-      <button @click="successMessage = ''" class="close-btn">×</button>
-    </div>
-
-    <!-- Error Message -->
-    <div v-if="errorMessage" class="error-message">
-      <Icon name="bell" :size="18" />
-      <span>{{ errorMessage }}</span>
-      <button @click="errorMessage = ''" class="close-btn">×</button>
-    </div>
 
     <section class="card-section">
       <!-- Profil Toko Section -->
@@ -239,6 +226,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "SettingsPage",
@@ -251,6 +239,7 @@ export default {
   },
 
   setup() {
+    const { showSuccess, showError } = useNotification();
     const loading = ref(false);
     const backupLoading = ref(false);
     const restoreLoading = ref(false);
@@ -259,8 +248,6 @@ export default {
     const backupFiles = ref([]);
     const selectedBackup = ref("");
     const lastBackupDate = ref(null);
-    const successMessage = ref("");
-    const errorMessage = ref("");
 
     const settings = ref({
       companyName: "",
@@ -272,8 +259,6 @@ export default {
     // Clear messages after 5 seconds
     const clearMessages = () => {
       setTimeout(() => {
-        successMessage.value = "";
-        errorMessage.value = "";
       }, 5000);
     };
 
@@ -296,7 +281,7 @@ export default {
         }
       } catch (error) {
         console.error("Error loading settings:", error);
-        errorMessage.value = "Gagal memuat pengaturan";
+        showError("Gagal memuat pengaturan");
         clearMessages();
       }
     };
@@ -306,18 +291,17 @@ export default {
       if (!validateCompanyProfile()) return;
 
       loading.value = true;
-      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("settings:save", {
           companyName: settings.value.companyName,
           address: settings.value.address,
           phone: settings.value.phone,
         });
-        successMessage.value = "Profil toko berhasil disimpan";
+        showSuccess("Profil toko berhasil disimpan");
         clearMessages();
       } catch (error) {
         console.error("Error saving company profile:", error);
-        errorMessage.value = "Gagal menyimpan profil toko";
+        showError("Gagal menyimpan profil toko");
         clearMessages();
       } finally {
         loading.value = false;
@@ -329,16 +313,15 @@ export default {
       if (!validateTaxSettings()) return;
 
       loading.value = true;
-      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("settings:save", {
           taxPercentage: settings.value.taxPercentage,
         });
-        successMessage.value = "Pengaturan pajak berhasil disimpan";
+        showSuccess("Pengaturan pajak berhasil disimpan");
         clearMessages();
       } catch (error) {
         console.error("Error saving tax settings:", error);
-        errorMessage.value = "Gagal menyimpan pengaturan pajak";
+        showError("Gagal menyimpan pengaturan pajak");
         clearMessages();
       } finally {
         loading.value = false;
@@ -348,15 +331,14 @@ export default {
     // Create backup
     const createBackup = async () => {
       backupLoading.value = true;
-      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("backup:create");
         await loadSettings(); // Reload backup list and last backup date
-        successMessage.value = "Backup berhasil dibuat";
+        showSuccess("Backup berhasil dibuat");
         clearMessages();
       } catch (error) {
         console.error("Error creating backup:", error);
-        errorMessage.value = "Gagal membuat backup";
+        showError("Gagal membuat backup");
         clearMessages();
       } finally {
         backupLoading.value = false;
@@ -366,23 +348,22 @@ export default {
     // Restore backup
     const restoreBackup = async () => {
       if (!selectedBackup.value) {
-        errorMessage.value = "Pilih file backup terlebih dahulu";
+        showError("Pilih file backup terlebih dahulu");
         clearMessages();
         return;
       }
 
       restoreLoading.value = true;
-      errorMessage.value = "";
       try {
         await ipcRenderer.invoke("backup:restore", selectedBackup.value);
         showRestoreDialog.value = false;
         selectedBackup.value = "";
         await loadSettings();
-        successMessage.value = "Backup berhasil direstore";
+        showSuccess("Backup berhasil direstore");
         clearMessages();
       } catch (error) {
         console.error("Error restoring backup:", error);
-        errorMessage.value = error.message || "Gagal restore backup";
+        showError(error.message || "Gagal restore backup");
         clearMessages();
       } finally {
         restoreLoading.value = false;
@@ -438,8 +419,6 @@ export default {
       backupFiles,
       selectedBackup,
       lastBackupDate,
-      successMessage,
-      errorMessage,
       saveCompanyProfile,
       saveTaxSettings,
       createBackup,

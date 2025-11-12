@@ -12,14 +12,36 @@
       </section>
     </main>
   </div>
+  
+  <!-- Global Notification -->
+  <AppNotification
+    v-model="notification.visible"
+    :type="notification.type"
+    :title="notification.title"
+    :message="notification.message"
+    :duration="notification.duration"
+    :closable="notification.closable"
+    :show-progress="notification.showProgress"
+    @close="hideNotification"
+  />
 </template>
 
 <script>
+import { useNotification } from "./composables/useNotification";
 import Sidebar from "./components/layout/Sidebar.vue";
 import Topbar from "./components/layout/Topbar.vue";
 import Breadcrumbs from "./components/layout/Breadcrumbs.vue";
+import AppNotification from "./components/ui/AppNotification.vue";
+
 export default {
-  components: { Sidebar, Topbar, Breadcrumbs },
+  components: { Sidebar, Topbar, Breadcrumbs, AppNotification },
+  setup() {
+    const { notification, hideNotification } = useNotification();
+    return {
+      notification,
+      hideNotification,
+    };
+  },
   data() {
     return {
       sidebarCollapsed: false,

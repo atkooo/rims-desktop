@@ -71,12 +71,6 @@
 
     <section class="card-section form-page-grid">
       <div class="form-panel">
-        <div v-if="submissionError" class="error-banner">
-          {{ submissionError }}
-        </div>
-        <div v-else-if="successMessage" class="success-banner">
-          {{ successMessage }}
-        </div>
 
         <div class="form-section">
           <h3 class="section-title">Detail Customer & Jadwal</h3>
@@ -233,6 +227,7 @@ import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
+import { useNotification } from "@/composables/useNotification";
 
 const toDateInput = (value) => {
   if (!value) return "";
@@ -262,12 +257,11 @@ export default {
   setup() {
     const router = useRouter();
     const transactionStore = useTransactionStore();
+    const { showSuccess, showError } = useNotification();
     const form = ref(createDefaultForm());
     const customers = ref([]);
     const loading = ref(false);
     const errors = ref({});
-    const submissionError = ref("");
-    const successMessage = ref("");
     const cashierStatus = ref(null);
     const taxPercentage = ref(0);
 
@@ -497,8 +491,6 @@ export default {
     const resetForm = () => {
       form.value = createDefaultForm();
       errors.value = {};
-      successMessage.value = "";
-      submissionError.value = "";
       lastAutoAppliedDiscount.value = null;
     };
 
@@ -552,14 +544,15 @@ export default {
           });
         } else {
           // Fallback: show success message
-          successMessage.value = "Penjualan berhasil disimpan.";
+          showSuccess("Penjualan berhasil disimpan.");
           form.value = createDefaultForm();
           errors.value = {};
         }
       } catch (error) {
         console.error("Gagal menyimpan penjualan:", error);
-        submissionError.value =
-          error?.message || "Gagal menyimpan penjualan. Silakan coba lagi.";
+        showError(
+          error?.message || "Gagal menyimpan penjualan. Silakan coba lagi.",
+        );
       } finally {
         loading.value = false;
       }
@@ -606,8 +599,6 @@ export default {
       customers,
       errors,
       loading,
-      submissionError,
-      successMessage,
       formatCurrency,
       totalAmount,
       baseSubtotal,

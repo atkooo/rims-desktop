@@ -209,16 +209,23 @@ function setupCashierHandlers() {
         throw new Error("Saldo awal harus berupa angka positif");
       }
 
-      // Check if user has an open session
-      const existingSession = await database.queryOne(
-        "SELECT id FROM cashier_sessions WHERE user_id = ? AND status = 'open'",
-        [userId],
+      // Check if there is any open session globally
+      const anyOpenSession = await database.queryOne(
+        "SELECT id, user_id, session_code FROM cashier_sessions WHERE status = 'open' LIMIT 1",
       );
 
-      if (existingSession) {
-        throw new Error(
-          "Anda masih memiliki sesi kasir yang terbuka. Tutup sesi sebelumnya terlebih dahulu.",
-        );
+      if (anyOpenSession) {
+        // Check if it's the same user trying to open another session
+        if (anyOpenSession.user_id === userId) {
+          throw new Error(
+            "Anda masih memiliki sesi kasir yang terbuka. Tutup sesi sebelumnya terlebih dahulu.",
+          );
+        } else {
+          // Another user has an open session
+          throw new Error(
+            "Tidak dapat membuka sesi kasir baru. Masih ada sesi kasir yang terbuka. Tutup sesi yang sedang aktif terlebih dahulu.",
+          );
+        }
       }
 
       const sessionCode = generateSessionCode();

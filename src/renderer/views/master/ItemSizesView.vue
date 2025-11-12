@@ -116,11 +116,13 @@ import { ref, onMounted } from "vue";
 import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "ItemSizesView",
   components: { Dialog, AppTable, AppButton },
   setup() {
+    const { showError, showSuccess } = useNotification();
     const sizes = ref([]);
     const loading = ref(false);
     const showDialog = ref(false);
@@ -208,8 +210,9 @@ export default {
         }
         closeDialog();
         await loadSizes();
+        showSuccess("Ukuran berhasil disimpan");
       } catch (error) {
-        alert(error?.message || "Gagal menyimpan ukuran");
+        showError(error?.message || "Gagal menyimpan ukuran");
       }
     };
 
@@ -218,8 +221,9 @@ export default {
         await window.api.invoke("itemSizes:delete", selectedSize.value.id);
         closeDeleteDialog();
         await loadSizes();
+        showSuccess("Ukuran berhasil dihapus");
       } catch (error) {
-        alert(error?.message || "Gagal menghapus ukuran");
+        showError(error?.message || "Gagal menghapus ukuran");
         console.error(error);
       }
     };

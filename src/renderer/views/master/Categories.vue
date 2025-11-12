@@ -119,11 +119,13 @@ import { ref, onMounted } from "vue";
 import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   components: { Dialog, AppTable, AppButton },
 
   setup() {
+    const { showError, showSuccess } = useNotification();
     const categories = ref([]);
     const loading = ref(false);
     // no per-row toggle; status diatur lewat dialog Edit
@@ -150,7 +152,7 @@ export default {
         loading.value = true;
         categories.value = await window.api.invoke("categories:getAll");
       } catch (error) {
-        alert("Gagal memuat data kategori");
+        showError("Gagal memuat data kategori");
         console.error(error);
       } finally {
         loading.value = false;
@@ -211,8 +213,9 @@ export default {
 
         closeDialog();
         loadCategories();
+        showSuccess("Kategori berhasil disimpan");
       } catch (error) {
-        alert("Gagal menyimpan kategori");
+        showError("Gagal menyimpan kategori");
         console.error(error);
       }
     }
@@ -222,8 +225,9 @@ export default {
         await window.api.invoke("categories:delete", selectedCategory.value.id);
         closeDeleteDialog();
         loadCategories();
+        showSuccess("Kategori berhasil dihapus");
       } catch (error) {
-        alert("Gagal menghapus kategori");
+        showError("Gagal menghapus kategori");
         console.error(error);
       }
     }
