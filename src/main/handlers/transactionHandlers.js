@@ -201,9 +201,9 @@ function setupTransactionHandlers() {
           result = await database.execute(
             `INSERT INTO rental_transactions (
               transaction_code, customer_id, user_id, booking_id, rental_date, 
-              planned_return_date, total_days, subtotal, deposit,
+              planned_return_date, total_days, subtotal, deposit, tax,
               total_amount, status, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -214,6 +214,7 @@ function setupTransactionHandlers() {
               transactionData.totalDays,
               transactionData.subtotal,
               transactionData.deposit,
+              transactionData.tax || 0,
               transactionData.totalAmount,
               "active",
               transactionData.notes,

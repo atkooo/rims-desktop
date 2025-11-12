@@ -22,6 +22,7 @@ const setupCashierHandlers = require("./handlers/cashierHandlers");
 const setupDiscountGroupHandlers = require("./handlers/discountGroupHandlers");
 const setupReceiptHandlers = require("./handlers/receiptHandlers");
 const setupRoleHandlers = require("./handlers/roleHandlers");
+const setupUserHandlers = require("./handlers/userHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
@@ -122,6 +123,7 @@ app.whenReady().then(async () => {
   setupDiscountGroupHandlers();
   setupReceiptHandlers();
   setupRoleHandlers();
+  setupUserHandlers();
   createWindow();
 
   // Global shortcuts to toggle/exit fullscreen

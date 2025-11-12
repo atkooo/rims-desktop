@@ -1,5 +1,6 @@
 {
   "printer": "Microsoft Print to PDF",
   "paperWidth": 80,
-  "autoPrint": true
+  "autoPrint": true,
+  "taxPercentage": 0
 }

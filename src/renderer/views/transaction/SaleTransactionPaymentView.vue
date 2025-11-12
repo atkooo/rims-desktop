@@ -117,15 +117,15 @@
             <span>Subtotal</span>
             <strong>{{ formatCurrency(transaction.subtotal) }}</strong>
           </div>
-          <div class="summary-row" v-if="transaction.discount > 0">
+          <div class="summary-row" v-if="(transaction.discount || 0) > 0">
             <span>Diskon</span>
             <strong class="discount"
-              >- {{ formatCurrency(transaction.discount) }}</strong
+              >- {{ formatCurrency(transaction.discount || 0) }}</strong
             >
           </div>
-          <div class="summary-row" v-if="transaction.tax > 0">
+          <div class="summary-row" v-if="(transaction.tax || 0) > 0">
             <span>Pajak</span>
-            <strong>+ {{ formatCurrency(transaction.tax) }}</strong>
+            <strong>+ {{ formatCurrency(transaction.tax || 0) }}</strong>
           </div>
           <div class="summary-row total">
             <span>Total</span>

@@ -151,6 +151,8 @@
                 type="number"
                 min="0"
                 v-model.number="form.tax"
+                :readonly="true"
+                :hint="taxHint"
               />
             </div>
           </div>
@@ -199,7 +201,7 @@
           </div>
           <div class="summary-card">
             <span>Pajak</span>
-            <strong>+ {{ formatCurrency(Number(form.tax) || 0) }}</strong>
+            <strong>+ {{ formatCurrency(calculatedTax) }}</strong>
           </div>
         </div>
         <div class="summary-note">
@@ -230,6 +232,7 @@ import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
+import { ipcRenderer } from "@/services/ipc";
 
 const toDateInput = (value) => {
   if (!value) return "";
@@ -266,6 +269,7 @@ export default {
     const submissionError = ref("");
     const successMessage = ref("");
     const cashierStatus = ref(null);
+    const taxPercentage = ref(0);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -318,11 +322,27 @@ export default {
 
     const subtotal = computed(() => baseSubtotal.value + bundleSubtotal.value);
 
+    // Calculate tax automatically based on tax percentage from settings
+    const calculatedTax = computed(() => {
+      if (taxPercentage.value > 0 && subtotal.value > 0) {
+        const amountAfterDiscount = subtotal.value - (Number(form.value.discount) || 0);
+        return Math.round((amountAfterDiscount * taxPercentage.value) / 100);
+      }
+      return 0;
+    });
+
+    const taxHint = computed(() => {
+      if (taxPercentage.value > 0) {
+        return `Dihitung otomatis: ${taxPercentage.value}% dari subtotal setelah diskon`;
+      }
+      return "Atur persentase pajak di Pengaturan Sistem";
+    });
+
     const totalAmount = computed(
       () =>
         subtotal.value -
         (Number(form.value.discount) || 0) +
-        (Number(form.value.tax) || 0),
+        calculatedTax.value,
     );
 
     const totalItems = computed(() =>
@@ -461,6 +481,16 @@ export default {
           // If no customer or no auto-applied discount, ensure discount is 0
           form.value.discount = 0;
         }
+        // Update tax when subtotal changes
+        form.value.tax = calculatedTax.value;
+      },
+    );
+
+    // Watch discount to recalculate tax
+    watch(
+      () => form.value.discount,
+      () => {
+        form.value.tax = calculatedTax.value;
       },
     );
 
@@ -506,7 +536,7 @@ export default {
           saleDate: form.value.saleDate,
           subtotal: subtotal.value,
           discount: Number(form.value.discount) || 0,
-          tax: Number(form.value.tax) || 0,
+          tax: calculatedTax.value,
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
         });
@@ -552,9 +582,23 @@ export default {
       }
     };
 
+    const loadSettings = async () => {
+      try {
+        const settings = await ipcRenderer.invoke("settings:get");
+        taxPercentage.value = settings?.taxPercentage || 0;
+        // Initialize tax value
+        form.value.tax = calculatedTax.value;
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+
     onMounted(async () => {
       loadCustomers();
       await loadCashierStatus();
+      await loadSettings();
+      // Initialize tax after settings are loaded
+      form.value.tax = calculatedTax.value;
     });
 
     return {
@@ -573,6 +617,7 @@ export default {
       cashierStatus,
       getDiscountHint,
       isDiscountReadonly,
+      taxHint,
       handleSubmit,
       resetForm,
       goBack,

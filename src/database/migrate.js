@@ -96,7 +96,42 @@ async function runMigrations() {
 
       // Execute each statement
       for (const statement of statements) {
-        await runAsync(statement);
+        // Skip empty statements
+        if (!statement || !statement.trim()) {
+          continue;
+        }
+        try {
+          await runAsync(statement);
+        } catch (error) {
+          // If error is about duplicate column, it means column already exists
+          // This is acceptable for ALTER TABLE ADD COLUMN operations
+          const errorMsg = error.message || String(error);
+          if (
+            errorMsg.includes("duplicate column") ||
+            errorMsg.includes("already exists") ||
+            errorMsg.includes("SQLITE_MISUSE")
+          ) {
+            // Check if it's a column already exists error by trying to query the table schema
+            try {
+              const tableInfo = await allAsync(
+                "PRAGMA table_info(rental_transactions)",
+              );
+              const hasTaxColumn = tableInfo.some(
+                (col) => col.name === "tax",
+              );
+              if (hasTaxColumn) {
+                console.log(
+                  `Warning: Column 'tax' already exists in rental_transactions. Skipping ALTER TABLE statement.`,
+                );
+                continue;
+              }
+            } catch (pragmaError) {
+              // If we can't check, re-throw the original error
+            }
+          }
+          // Re-throw other errors
+          throw error;
+        }
       }
 
       // Record the migration

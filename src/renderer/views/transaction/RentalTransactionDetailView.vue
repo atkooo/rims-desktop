@@ -56,6 +56,18 @@
             <strong>{{ rental.status || "-" }}</strong>
           </div>
           <div class="detail-item">
+            <span>Subtotal</span>
+            <strong>{{ formatCurrency(rental.subtotal || 0) }}</strong>
+          </div>
+          <div class="detail-item" v-if="(rental.deposit || 0) > 0">
+            <span>Deposit</span>
+            <strong>+ {{ formatCurrency(rental.deposit || 0) }}</strong>
+          </div>
+          <div class="detail-item" v-if="(rental.tax || 0) > 0">
+            <span>Pajak</span>
+            <strong>+ {{ formatCurrency(rental.tax || 0) }}</strong>
+          </div>
+          <div class="detail-item total-row">
             <span>Total Nilai</span>
             <strong>{{ formatCurrency(rental.total_amount) }}</strong>
           </div>
@@ -63,7 +75,7 @@
             <span>Dibayar</span>
             <strong>{{ formatCurrency(rental.paid_amount) }}</strong>
           </div>
-          <div class="detail-item">
+          <div class="detail-item remaining-row">
             <span>Sisa</span>
             <strong>{{
               formatCurrency(
@@ -290,6 +302,18 @@ export default {
 
 .detail-item span {
   color: #6b7280;
+}
+
+.detail-item.total-row {
+  border-top: 2px solid #e5e7eb;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.detail-item.remaining-row {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .detail-state {

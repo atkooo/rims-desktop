@@ -14,6 +14,7 @@ import CustomersView from "./views/master/CustomersView.vue";
 import DiscountGroupsView from "./views/master/DiscountGroupsView.vue";
 import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
+import UserRoleManagementView from "./views/master/UserRoleManagementView.vue";
 import ReportsPage from "./views/reports/ReportsPage.vue";
 import SettingsPage from "./views/settings/SettingsPage.vue";
 import ReceiptSettingsPage from "./views/settings/ReceiptSettingsPage.vue";
@@ -35,6 +36,7 @@ import SalesTransactionCreateView from "./views/transaction/SalesTransactionCrea
 import { getCurrentUser } from "./services/auth.js";
 import {
   hasPermissionSync,
+  hasAnyPermissionSync,
   initPermissions,
 } from "./composables/usePermissions.js";
 
@@ -50,6 +52,7 @@ const routePermissions = {
   "/master/discount-groups": "master.discount-groups.view",
   "/master/roles": "roles.view",
   "/master/users": "users.view",
+  "/master/user-role-management": ["users.view", "roles.view"],
   "/transactions/rentals": "transactions.rentals.view",
   "/transactions/rentals/new": "transactions.rentals.create",
   "/transactions/sales": "transactions.sales.view",
@@ -113,6 +116,11 @@ const routes = [
   },
   { path: "/master/roles", name: "roles", component: RolesView },
   { path: "/master/users", name: "users", component: UsersView },
+  {
+    path: "/master/user-role-management",
+    name: "user-role-management",
+    component: UserRoleManagementView,
+  },
   // Transactions (read-only views)
   {
     path: "/transactions/rentals",
@@ -256,11 +264,17 @@ router.beforeEach(async (to, from, next) => {
     const requiredPermission = routePermissions[to.path];
     if (requiredPermission) {
       try {
-        const hasAccess = hasPermissionSync(requiredPermission);
+        let hasAccess;
+        // Support both single permission string and array of permissions
+        if (Array.isArray(requiredPermission)) {
+          hasAccess = hasAnyPermissionSync(requiredPermission);
+        } else {
+          hasAccess = hasPermissionSync(requiredPermission);
+        }
         if (!hasAccess) {
           // User doesn't have permission, redirect to dashboard
           console.warn(
-            `Access denied: User doesn't have permission ${requiredPermission} for ${to.path}`,
+            `Access denied: User doesn't have permission ${JSON.stringify(requiredPermission)} for ${to.path}`,
           );
           return next({ path: "/" });
         }

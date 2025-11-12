@@ -132,6 +132,45 @@
         </div>
       </div>
 
+      <!-- Tax Settings Section -->
+      <div class="settings-section">
+        <header class="section-header">
+          <div class="section-icon">
+            <Icon name="tag" :size="24" />
+          </div>
+          <div>
+            <h2>Pengaturan Pajak</h2>
+            <p class="section-subtitle">
+              Atur persentase pajak yang akan dihitung otomatis pada setiap
+              transaksi penjualan atau sewa.
+            </p>
+          </div>
+        </header>
+        <div class="form-grid">
+          <FormInput
+            id="taxPercentage"
+            label="Persentase Pajak (%)"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            v-model.number="settings.taxPercentage"
+            :error="errors.taxPercentage"
+            placeholder="Contoh: 11 untuk 11%"
+            hint="Pajak akan dihitung otomatis berdasarkan persentase ini pada setiap transaksi"
+          />
+        </div>
+        <div class="card-actions">
+          <AppButton
+            variant="primary"
+            :loading="loading"
+            @click="saveTaxSettings"
+          >
+            <Icon name="save" :size="16" /> Simpan Pengaturan Pajak
+          </AppButton>
+        </div>
+      </div>
+
       <!-- Printer & Struk Section -->
       <div class="settings-section">
         <header class="section-header">
@@ -227,6 +266,7 @@ export default {
       companyName: "",
       address: "",
       phone: "",
+      taxPercentage: 0,
     });
 
     // Clear messages after 5 seconds
@@ -278,6 +318,27 @@ export default {
       } catch (error) {
         console.error("Error saving company profile:", error);
         errorMessage.value = "Gagal menyimpan profil toko";
+        clearMessages();
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    // Save tax settings
+    const saveTaxSettings = async () => {
+      if (!validateTaxSettings()) return;
+
+      loading.value = true;
+      errorMessage.value = "";
+      try {
+        await ipcRenderer.invoke("settings:save", {
+          taxPercentage: settings.value.taxPercentage,
+        });
+        successMessage.value = "Pengaturan pajak berhasil disimpan";
+        clearMessages();
+      } catch (error) {
+        console.error("Error saving tax settings:", error);
+        errorMessage.value = "Gagal menyimpan pengaturan pajak";
         clearMessages();
       } finally {
         loading.value = false;
@@ -344,6 +405,25 @@ export default {
       return Object.keys(newErrors).length === 0;
     };
 
+    const validateTaxSettings = () => {
+      const newErrors = {};
+
+      if (
+        settings.value.taxPercentage === null ||
+        settings.value.taxPercentage === undefined ||
+        settings.value.taxPercentage < 0
+      ) {
+        newErrors.taxPercentage = "Persentase pajak harus lebih besar atau sama dengan 0";
+      }
+
+      if (settings.value.taxPercentage > 100) {
+        newErrors.taxPercentage = "Persentase pajak tidak boleh lebih dari 100%";
+      }
+
+      errors.value = newErrors;
+      return Object.keys(newErrors).length === 0;
+    };
+
     onMounted(async () => {
       await loadSettings();
     });
@@ -361,6 +441,7 @@ export default {
       successMessage,
       errorMessage,
       saveCompanyProfile,
+      saveTaxSettings,
       createBackup,
       restoreBackup,
     };

@@ -27,6 +27,7 @@ function setupSettingsHandlers() {
           printer: "",
           paperWidth: 80,
           autoPrint: true,
+          taxPercentage: 0,
         };
       }
       logger.error("Error reading settings:", error);

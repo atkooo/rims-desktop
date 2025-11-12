@@ -126,7 +126,7 @@
         </div>
 
         <div class="form-section">
-          <h3 class="section-title">Deposit</h3>
+          <h3 class="section-title">Deposit & Pajak</h3>
           <div class="form-content">
             <div class="form-grid">
               <FormInput
@@ -135,6 +135,15 @@
                 type="number"
                 min="0"
                 v-model.number="form.deposit"
+              />
+              <FormInput
+                id="tax"
+                label="Pajak"
+                type="number"
+                min="0"
+                v-model.number="form.tax"
+                :readonly="true"
+                :hint="taxHint"
               />
             </div>
           </div>
@@ -201,6 +210,10 @@
             <span>Deposit</span>
             <strong>{{ formatCurrency(Number(form.deposit) || 0) }}</strong>
           </div>
+          <div class="summary-card">
+            <span>Pajak</span>
+            <strong>+ {{ formatCurrency(calculatedTax) }}</strong>
+          </div>
         </div>
         <div class="summary-note">
           <h3>Petunjuk Kasir</h3>
@@ -219,7 +232,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
@@ -229,6 +242,7 @@ import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
+import { ipcRenderer } from "@/services/ipc";
 
 const toDateInput = (value) => {
   if (!value) return "";
@@ -247,6 +261,7 @@ const createDefaultForm = () => {
     rentalDate: toDateInput(today),
     plannedReturnDate: toDateInput(tomorrow),
     deposit: 0,
+    tax: 0,
     notes: "",
     items: [],
   };
@@ -269,6 +284,7 @@ export default {
     const submissionError = ref("");
     const successMessage = ref("");
     const cashierStatus = ref(null);
+    const taxPercentage = ref(0);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -295,8 +311,23 @@ export default {
 
     const subtotal = computed(() => baseSubtotal.value * totalDays.value);
 
+    // Calculate tax automatically based on tax percentage from settings
+    const calculatedTax = computed(() => {
+      if (taxPercentage.value > 0 && subtotal.value > 0) {
+        return Math.round((subtotal.value * taxPercentage.value) / 100);
+      }
+      return 0;
+    });
+
+    const taxHint = computed(() => {
+      if (taxPercentage.value > 0) {
+        return `Dihitung otomatis: ${taxPercentage.value}% dari subtotal`;
+      }
+      return "Atur persentase pajak di Pengaturan Sistem";
+    });
+
     const totalAmount = computed(
-      () => subtotal.value + (Number(form.value.deposit) || 0),
+      () => subtotal.value + (Number(form.value.deposit) || 0) + calculatedTax.value,
     );
 
     const totalItems = computed(() =>
@@ -381,6 +412,7 @@ export default {
           totalDays: totalDays.value,
           subtotal: subtotal.value,
           deposit: Number(form.value.deposit) || 0,
+          tax: calculatedTax.value,
           items: normalizedItems.value,
         });
 
@@ -425,9 +457,31 @@ export default {
       }
     };
 
+    const loadSettings = async () => {
+      try {
+        const settings = await ipcRenderer.invoke("settings:get");
+        taxPercentage.value = settings?.taxPercentage || 0;
+        // Initialize tax value
+        form.value.tax = calculatedTax.value;
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+
+    // Watch subtotal to recalculate tax
+    watch(
+      () => [subtotal.value, form.value.deposit],
+      () => {
+        form.value.tax = calculatedTax.value;
+      },
+    );
+
     onMounted(async () => {
       loadCustomers();
       await loadCashierStatus();
+      await loadSettings();
+      // Initialize tax after settings are loaded
+      form.value.tax = calculatedTax.value;
     });
 
     return {
@@ -442,6 +496,8 @@ export default {
       totalDays,
       totalItems,
       cashierStatus,
+      calculatedTax,
+      taxHint,
       handleSubmit,
       resetForm,
       goBack,

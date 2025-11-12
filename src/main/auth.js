@@ -11,6 +11,7 @@ function scryptHash(password, salt = crypto.randomBytes(16).toString("hex")) {
   return `scrypt:${salt}:${derived}`;
 }
 
+
 function verifyPassword(inputPassword, storedHash) {
   if (!storedHash) return false;
   if (storedHash.startsWith("scrypt:")) {
@@ -147,4 +148,4 @@ function getCurrentUser() {
   return currentUser;
 }
 
-module.exports = { registerAuthIpc, getCurrentUser };
+module.exports = { registerAuthIpc, getCurrentUser, scryptHash };

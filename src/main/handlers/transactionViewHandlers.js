@@ -29,6 +29,9 @@ function setupTransactionViewHandlers() {
         rt.planned_return_date,
         rt.actual_return_date,
         rt.total_days,
+        rt.subtotal,
+        rt.deposit,
+        rt.tax,
         rt.total_amount,
         COALESCE(SUM(p.amount), 0) as paid_amount,
         CASE 
@@ -82,6 +85,9 @@ function setupTransactionViewHandlers() {
         c.name AS customer_name,
         u.full_name AS user_name,
         st.sale_date,
+        st.subtotal,
+        st.discount,
+        st.tax,
         st.total_amount,
         COALESCE(SUM(p.amount), 0) as paid_amount,
         CASE 

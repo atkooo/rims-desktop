@@ -42,7 +42,11 @@
 import { computed, onMounted, ref } from "vue";
 import Icon from "../ui/Icon.vue";
 import { menuGroups } from "@/constants/menu-groups";
-import { usePermissions, initPermissions } from "@/composables/usePermissions";
+import {
+  usePermissions,
+  initPermissions,
+  hasAnyPermissionSync,
+} from "@/composables/usePermissions";
 
 const props = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -67,8 +71,12 @@ const filteredGroups = computed(() => {
           items: group.items.filter((item) => {
             // If no permission required, show item
             if (!item || !item.permission) return true;
-            // Check if user has permission
+            // Check if user has permission(s)
             try {
+              // Support both single permission string and array of permissions
+              if (Array.isArray(item.permission)) {
+                return hasAnyPermissionSync(item.permission);
+              }
               return hasPermissionSync(item.permission);
             } catch (error) {
               console.error("Error checking permission:", error);

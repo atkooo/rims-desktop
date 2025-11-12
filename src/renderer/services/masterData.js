@@ -132,6 +132,22 @@ export function fetchUsers() {
   return ipcRenderer.invoke("master:getUsers");
 }
 
+export function fetchUserById(id) {
+  return ipcRenderer.invoke("users:getById", id);
+}
+
+export function createUser(payload) {
+  return ipcRenderer.invoke("users:create", payload);
+}
+
+export function updateUser(id, payload) {
+  return ipcRenderer.invoke("users:update", id, payload);
+}
+
+export function deleteUser(id) {
+  return ipcRenderer.invoke("users:delete", id);
+}
+
 export function fetchItemSizes() {
   return ipcRenderer.invoke("itemSizes:getAll");
 }

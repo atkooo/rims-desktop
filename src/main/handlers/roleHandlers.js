@@ -284,6 +284,15 @@ function setupRoleHandlers() {
         if (!Array.isArray(permissionIds)) {
           throw new Error("Permission IDs harus berupa array");
         }
+        
+        // Ensure all IDs are numbers (convert if needed)
+        const validPermissionIds = permissionIds.map((id) => {
+          const numId = Number(id);
+          if (isNaN(numId) || numId <= 0) {
+            throw new Error("Permission ID tidak valid");
+          }
+          return numId;
+        });
 
         // Begin transaction
         await database.execute("BEGIN TRANSACTION");
@@ -296,9 +305,9 @@ function setupRoleHandlers() {
           );
 
           // Insert new role permissions
-          if (permissionIds.length > 0) {
-            const placeholders = permissionIds.map(() => "(?, ?)").join(", ");
-            const values = permissionIds.flatMap((permId) => [roleId, permId]);
+          if (validPermissionIds.length > 0) {
+            const placeholders = validPermissionIds.map(() => "(?, ?)").join(", ");
+            const values = validPermissionIds.flatMap((permId) => [roleId, permId]);
             await database.execute(
               `INSERT INTO role_permissions (role_id, permission_id) VALUES ${placeholders}`,
               values,
@@ -310,14 +319,18 @@ function setupRoleHandlers() {
 
           const currentUser = getCurrentUserSafely();
 
-          await logActivity({
+          // Log activity (don't await if it might cause issues)
+          logActivity({
             userId: currentUser?.id || null,
             action: "UPDATE",
             module: "roles",
             description: `Updated permissions for role: ${role.name}`,
+          }).catch((err) => {
+            logger.warn("Error logging activity:", err);
           });
 
-          return true;
+          // Return simple object that can be cloned
+          return { success: true };
         } catch (error) {
           // Rollback on error
           await database.execute("ROLLBACK");
