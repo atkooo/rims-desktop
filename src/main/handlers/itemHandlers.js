@@ -12,12 +12,14 @@ function setupItemHandlers() {
       const items = await database.query(`
         SELECT
           i.*,
+          c.name AS category_name,
           s.name AS size_name,
           s.code AS size_code,
           dg.name AS discount_group_name,
           dg.discount_percentage,
           dg.discount_amount
         FROM items i
+        LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
         ORDER BY i.id DESC
@@ -93,9 +95,23 @@ function setupItemHandlers() {
         ],
       );
 
-      // Return item yang baru dibuat
+      // Return item yang baru dibuat dengan JOIN untuk category_name dan size_name
       const newItem = await database.queryOne(
-        "SELECT * FROM items WHERE id = ?",
+        `
+        SELECT
+          i.*,
+          c.name AS category_name,
+          s.name AS size_name,
+          s.code AS size_code,
+          dg.name AS discount_group_name,
+          dg.discount_percentage,
+          dg.discount_amount
+        FROM items i
+        LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        WHERE i.id = ?
+        `,
         [result.id],
       );
       return newItem;
@@ -222,9 +238,23 @@ function setupItemHandlers() {
 
       await database.execute(sql, [...values, id]);
 
-      // Return updated item
+      // Return updated item dengan JOIN untuk category_name dan size_name
       const updatedItem = await database.queryOne(
-        "SELECT * FROM items WHERE id = ?",
+        `
+        SELECT
+          i.*,
+          c.name AS category_name,
+          s.name AS size_name,
+          s.code AS size_code,
+          dg.name AS discount_group_name,
+          dg.discount_percentage,
+          dg.discount_amount
+        FROM items i
+        LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        WHERE i.id = ?
+        `,
         [id],
       );
       return updatedItem;

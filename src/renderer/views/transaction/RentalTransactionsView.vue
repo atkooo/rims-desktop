@@ -12,7 +12,7 @@
           </AppButton>
           <AppButton
             variant="secondary"
-            :loading="currentLoading"
+            :loading="loading"
             @click="handleRefresh"
           >
             Refresh Data
@@ -21,20 +21,8 @@
       </div>
     </div>
 
-      <div class="tab-group">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="tab-button"
-        :class="{ active: currentTab === tab.id }"
-        @click="switchTab(tab.id)"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
-
     <section class="card-section">
-      <div class="summary-grid" v-if="currentTab === 'all'">
+      <div class="summary-grid">
         <div class="summary-card">
           <span>Total Transaksi</span>
           <strong>{{ stats.totalRentals }}</strong>
@@ -53,57 +41,87 @@
         </div>
       </div>
 
-      <div class="summary-grid" v-else>
-        <div class="summary-card">
-          <span>Transaksi Aktif</span>
-          <strong>{{ activeStats.activeCount }}</strong>
-        </div>
-        <div class="summary-card">
-          <span>Nilai Tertahan</span>
-          <strong>{{ formatCurrency(activeStats.totalValue) }}</strong>
-        </div>
-        <div class="summary-card">
-          <span>Sewa Terlambat</span>
-          <strong>{{ activeStats.overdueCount }}</strong>
-        </div>
-        <div class="summary-card">
-          <span>Rata-rata Hari Terlambat</span>
-          <strong>{{ activeStats.avgOverdueDays }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="card-section">
-      <div v-if="currentError" class="error-banner">
-        {{ currentError }}
+      <div v-if="error" class="error-banner">
+        {{ error }}
       </div>
 
-      <DataTable
-        :columns="displayedColumns"
-        :items="displayedItems"
-        :loading="currentLoading"
-        :actions="true"
-        :show-edit="false"
-        :show-delete="false"
+      <div class="filters">
+        <select v-model="filters.status" class="filter-select">
+          <option value="">Semua Status Sewa</option>
+          <option value="active">Aktif</option>
+          <option value="completed">Selesai</option>
+          <option value="overdue">Terlambat</option>
+          <option value="cancelled">Dibatalkan</option>
+        </select>
+
+        <select v-model="filters.paymentStatus" class="filter-select">
+          <option value="">Semua Status Pembayaran</option>
+          <option value="paid">Lunas</option>
+          <option value="unpaid">Belum Lunas</option>
+          <option value="partial">Sebagian</option>
+        </select>
+      </div>
+
+      <div class="table-container">
+      <AppTable
+        :columns="columns"
+        :rows="filteredItems"
+        :loading="loading"
+        :searchable-keys="['transaction_code', 'customer_name', 'status']"
+        row-key="id"
+        default-page-size="10"
       >
-        <template #actions="{ item }">
-          <div class="table-actions">
-            <AppButton variant="secondary" @click="goToRentalDetail(item)">
-              Detail
-            </AppButton>
-            <AppButton 
-              v-if="!isPaid(item)" 
-              variant="success" 
-              @click="continuePayment(item)"
+        <template #actions="{ row }">
+          <div class="action-menu-wrapper">
+            <button
+              type="button"
+              class="action-menu-trigger"
+              :data-item-id="row.id"
+              @click.stop="toggleActionMenu(row.id)"
+              :aria-expanded="openMenuId === row.id"
             >
-              Lanjutkan Pembayaran
-            </AppButton>
-            <AppButton variant="primary" @click="handleEdit(item)">
-              Edit
-            </AppButton>
+              <Icon name="more-vertical" :size="18" />
+            </button>
+            <Teleport to="body">
+              <transition name="fade-scale">
+                <div
+                  v-if="openMenuId === row.id"
+                  class="action-menu"
+                  :style="getMenuPosition(row.id)"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="goToRentalDetail(row)"
+                  >
+                    <Icon name="eye" :size="16" />
+                    <span>Detail</span>
+                  </button>
+                  <button
+                    v-if="!isPaid(row)"
+                    type="button"
+                    class="action-menu-item"
+                    @click="continuePayment(row)"
+                  >
+                    <Icon name="credit-card" :size="16" />
+                    <span>Lanjutkan Pembayaran</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleEdit(row)"
+                  >
+                    <Icon name="edit" :size="16" />
+                    <span>Edit</span>
+                  </button>
+                </div>
+              </transition>
+            </Teleport>
           </div>
         </template>
-      </DataTable>
+      </AppTable>
+      </div>
     </section>
   </div>
 
@@ -117,33 +135,35 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
-import DataTable from "@/components/ui/DataTable.vue";
+import AppTable from "@/components/ui/AppTable.vue";
+import Icon from "@/components/ui/Icon.vue";
 import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import {
   fetchRentalTransactions,
 } from "@/services/transactions";
-import { fetchActiveRentals } from "@/services/reports";
 import { useTransactionStore } from "@/store/transactions";
 import { TRANSACTION_TYPE } from "@shared/constants";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, DataTable, TransactionForm },
+  components: { AppButton, AppTable, Icon, TransactionForm },
   setup() {
     const rentals = ref([]);
-    const activeRentals = ref([]);
     const loading = ref(false);
-    const activeLoading = ref(false);
     const error = ref("");
-    const activeError = ref("");
-    const currentTab = ref("all");
     const transactionStore = useTransactionStore();
     const showForm = ref(false);
     const editingRental = ref(null);
     const router = useRouter();
+    const openMenuId = ref(null);
+    const menuPositions = ref({});
+    const filters = ref({
+      status: "",
+      paymentStatus: "",
+    });
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -155,29 +175,17 @@ export default {
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
 
     const columns = [
-      { key: "transaction_code", label: "Kode" },
-      { key: "customer_name", label: "Customer" },
-      { key: "rental_date", label: "Tanggal Sewa", format: formatDate },
+      { key: "transaction_code", label: "Kode", sortable: true },
+      { key: "customer_name", label: "Customer", sortable: true },
+      { key: "rental_date", label: "Tanggal Sewa", format: formatDate, sortable: true },
       {
         key: "planned_return_date",
         label: "Rencana Kembali",
         format: formatDate,
+        sortable: true,
       },
-      { key: "total_amount", label: "Total", format: formatCurrency },
-      { key: "status", label: "Status Sewa" },
-    ];
-    const activeColumns = [
-      ...columns,
-      {
-        key: "days_overdue",
-        label: "Terlambat (hari)",
-        format: (value) => (value > 0 ? value : "-"),
-      },
-    ];
-
-    const tabs = [
-      { id: "all", label: "Semua Transaksi" },
-      { id: "active", label: "Sewa Aktif" },
+      { key: "total_amount", label: "Total", format: formatCurrency, sortable: true },
+      { key: "status", label: "Status Sewa", sortable: true },
     ];
 
     const stats = computed(() => {
@@ -200,23 +208,6 @@ export default {
       };
     });
 
-    const activeStats = computed(() => {
-      const list = activeRentals.value;
-      const activeCount = list.length;
-      const totalValue = list.reduce(
-        (sum, item) => sum + (item.total_amount || 0),
-        0,
-      );
-      const overdue = list.filter((item) => (item.days_overdue || 0) > 0);
-      const overdueCount = overdue.length;
-      const avgOverdueDays = overdueCount
-        ? (
-            overdue.reduce((sum, item) => sum + (item.days_overdue || 0), 0) /
-            overdueCount
-          ).toFixed(1)
-        : 0;
-      return { activeCount, totalValue, overdueCount, avgOverdueDays };
-    });
 
     const loadData = async () => {
       loading.value = true;
@@ -230,20 +221,9 @@ export default {
       }
     };
 
-    const loadActiveRentals = async () => {
-      if (activeLoading.value) return;
-      activeLoading.value = true;
-      activeError.value = "";
-      try {
-        activeRentals.value = await fetchActiveRentals();
-      } catch (err) {
-        activeError.value = err.message || "Gagal memuat data sewa aktif.";
-      } finally {
-        activeLoading.value = false;
-      }
-    };
 
     const goToRentalDetail = (rental) => {
+      openMenuId.value = null;
       if (!rental.transaction_code) return;
       router.push({
         name: "transaction-rental-detail",
@@ -252,6 +232,7 @@ export default {
     };
 
     const continuePayment = (rental) => {
+      openMenuId.value = null;
       if (!rental.id) return;
       router.push({
         name: "transaction-rental-payment",
@@ -264,29 +245,27 @@ export default {
       return status === "paid";
     };
 
-    const displayedItems = computed(() =>
-      currentTab.value === "all" ? rentals.value : activeRentals.value,
-    );
-    const displayedColumns = computed(() =>
-      currentTab.value === "all" ? columns : activeColumns,
-    );
-    const currentLoading = computed(() =>
-      currentTab.value === "all" ? loading.value : activeLoading.value,
-    );
-    const currentError = computed(() =>
-      currentTab.value === "all" ? error.value : activeError.value,
-    );
-
-    const switchTab = (tabId) => {
-      currentTab.value = tabId;
-      if (tabId === "active" && !activeRentals.value.length) {
-        loadActiveRentals();
+    const filteredItems = computed(() => {
+      let items = rentals.value;
+      
+      // Filter by status
+      if (filters.value.status) {
+        items = items.filter((item) => item.status === filters.value.status);
       }
-    };
+      
+      // Filter by payment status
+      if (filters.value.paymentStatus) {
+        items = items.filter((item) => {
+          const paymentStatus = (item.payment_status || item.paymentStatus || "").toString().toLowerCase();
+          return paymentStatus === filters.value.paymentStatus.toLowerCase();
+        });
+      }
+      
+      return items;
+    });
 
     const handleRefresh = () => {
-      if (currentTab.value === "all") loadData();
-      else loadActiveRentals();
+      loadData();
     };
 
     const openCreateRental = () => {
@@ -294,8 +273,42 @@ export default {
     };
 
     const handleEdit = (rental) => {
+      openMenuId.value = null;
       editingRental.value = rental;
       showForm.value = true;
+    };
+
+    const toggleActionMenu = async (itemId) => {
+      if (openMenuId.value === itemId) {
+        openMenuId.value = null;
+      } else {
+        openMenuId.value = itemId;
+        await nextTick();
+        updateMenuPosition(itemId);
+      }
+    };
+
+    const updateMenuPosition = (itemId) => {
+      const trigger = document.querySelector(
+        `[data-item-id="${itemId}"]`,
+      );
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      menuPositions.value[itemId] = {
+        top: rect.bottom + 4 + "px",
+        left: rect.right - 120 + "px",
+      };
+    };
+
+    const getMenuPosition = (itemId) => {
+      return menuPositions.value[itemId] || { top: "0px", left: "0px" };
+    };
+
+    const closeActionMenu = (event) => {
+      if (!event.target.closest(".action-menu-wrapper")) {
+        openMenuId.value = null;
+      }
     };
 
     const handleSaved = async () => {
@@ -305,33 +318,27 @@ export default {
     };
 
     onMounted(() => {
+      document.addEventListener("click", closeActionMenu);
       loadData();
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener("click", closeActionMenu);
     });
 
     return {
       rentals,
-      activeRentals,
       loading,
-      activeLoading,
       error,
-      activeError,
       columns,
-      activeColumns,
       stats,
-      activeStats,
       loadData,
-      loadActiveRentals,
       formatCurrency,
       formatDate,
-      currentTab,
-      tabs,
-      switchTab,
-      displayedItems,
-      displayedColumns,
-      currentLoading,
-      currentError,
+      filteredItems,
       showForm,
       editingRental,
+      openMenuId,
       openCreateRental,
       handleEdit,
       handleSaved,
@@ -340,42 +347,163 @@ export default {
       goToRentalDetail,
       continuePayment,
       isPaid,
+      toggleActionMenu,
+      getMenuPosition,
+      filters,
     };
   },
 };
 </script>
 
 <style scoped>
-.tab-group {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
+.action-menu-wrapper {
+  position: relative;
+  display: inline-block;
 }
 
-.tab-button {
-  padding: 0.45rem 1.2rem;
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background-color: #fff;
-  color: #374151;
-  font-size: 0.9rem;
+.action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
   cursor: pointer;
-  line-height: 1;
   transition: all 0.2s ease;
 }
 
-.tab-button.active {
-  background-color: #4338ca;
-  color: #fff;
-  border-color: #4338ca;
-  box-shadow: 0 6px 14px rgba(67, 56, 202, 0.25);
+.action-menu-trigger:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
 }
 
-.table-actions {
+.action-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 180px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.action-menu-item {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.action-menu-item:hover {
+  background: #f9fafb;
+}
+
+.action-menu-item .icon {
+  flex-shrink: 0;
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.15s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background-color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: flex-end;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+  min-width: 180px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-select:hover {
+  border-color: #9ca3af;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #4338ca;
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
 }
 </style>

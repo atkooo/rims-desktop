@@ -21,3 +21,4 @@ CREATE INDEX IF NOT EXISTS idx_discount_groups_active ON discount_groups(is_acti
 
 
 
+

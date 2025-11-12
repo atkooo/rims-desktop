@@ -69,7 +69,7 @@
               :class="[col.align ? `align-${col.align}` : '']"
             >
               <slot :name="'cell-' + col.key" :row="row">
-                {{ row[col.key] }}
+                {{ col.format ? col.format(row[col.key], row) : row[col.key] }}
               </slot>
             </td>
             <td v-if="$slots.actions" class="actions-cell">

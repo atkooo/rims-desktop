@@ -14,32 +14,7 @@
       </div>
     </div>
 
-    <section class="card-section">
-      <div class="filters">
-        <FormInput
-          id="searchItem"
-          v-model="filters.search"
-          placeholder="Cari item..."
-          class="search-input"
-        />
-
-        <select v-model="filters.type" class="filter-select">
-          <option value="">Semua Tipe</option>
-          <option v-for="type in ITEM_TYPE" :key="type" :value="type">
-            {{ type }}
-          </option>
-        </select>
-
-        <select v-model="filters.status" class="filter-select">
-          <option value="">Semua Status</option>
-          <option value="AVAILABLE">Available</option>
-          <option value="RENTED">Rented</option>
-          <option value="MAINTENANCE">Maintenance</option>
-        </select>
-      </div>
-    </section>
-
-    <!-- Items Summary -->
+    <!-- Items Summary, Filters, and Table -->
     <section class="card-section">
       <div class="summary-cards">
         <div class="summary-card">
@@ -59,37 +34,133 @@
           <p class="amount">{{ formatCurrency(totalValue) }}</p>
         </div>
       </div>
-    </section>
 
-    <!-- Items Table -->
-    <section class="card-section">
-      <DataTable
+      <div class="filters">
+        <select v-model="filters.category" class="filter-select">
+          <option value="">Semua Kategori</option>
+          <option
+            v-for="category in categories"
+            :key="category.id"
+            :value="category.id"
+          >
+            {{ category.name }}
+          </option>
+        </select>
+
+        <select v-model="filters.size" class="filter-select">
+          <option value="">Semua Ukuran</option>
+          <option
+            v-for="size in sizes"
+            :key="size.id"
+            :value="size.id"
+          >
+            {{ size.name }}
+          </option>
+        </select>
+
+        <select v-model="filters.type" class="filter-select">
+          <option value="">Semua Tipe</option>
+          <option v-for="type in ITEM_TYPE" :key="type" :value="type">
+            {{ type }}
+          </option>
+        </select>
+
+        <select v-model="filters.status" class="filter-select">
+          <option value="">Semua Status</option>
+          <option value="AVAILABLE">Available</option>
+          <option value="RENTED">Rented</option>
+          <option value="MAINTENANCE">Maintenance</option>
+        </select>
+      </div>
+
+      <div class="table-container">
+      <AppTable
         :columns="columns"
-        :items="filteredItems"
+        :rows="filteredItems"
         :loading="loading"
-        actions
-        @edit="handleEdit"
-        @delete="handleDelete"
+        :searchable-keys="['code', 'name', 'description', 'category_name', 'size_name']"
+        row-key="id"
+        default-page-size="10"
       >
-        <template #actions="{ item }">
-          <div class="action-buttons">
-            <AppButton variant="primary" @click="handleViewDetail(item)">
-              Detail
-            </AppButton>
-            <AppButton variant="secondary" @click="handleEdit(item)">
-              Edit
-            </AppButton>
-            <AppButton variant="danger" @click="handleDelete(item)">
-              Hapus
-            </AppButton>
-          </div>
+        <template #cell-code="{ row }">
+          <a
+            href="#"
+            class="row-link"
+            @click.prevent="handleViewDetail(row)"
+          >
+            {{ row.code }}
+          </a>
         </template>
-        <template #status="{ value }">
-          <span class="status-badge" :class="value.toLowerCase()">
-            {{ value }}
+        <template #cell-name="{ row }">
+          <a
+            href="#"
+            class="row-link"
+            @click.prevent="handleViewDetail(row)"
+          >
+            {{ row.name }}
+          </a>
+        </template>
+        <template #cell-category_name="{ row }">
+          {{ row.category_name || '-' }}
+        </template>
+        <template #cell-size_name="{ row }">
+          {{ row.size_name || '-' }}
+        </template>
+        <template #cell-status="{ row }">
+          <span class="status-badge" :class="(row.status || '').toLowerCase()">
+            {{ row.status || 'AVAILABLE' }}
           </span>
         </template>
-      </DataTable>
+        <template #actions="{ row }">
+          <div class="action-menu-wrapper">
+            <button
+              type="button"
+              class="action-menu-trigger"
+              :data-item-id="row.id"
+              @click.stop="toggleActionMenu(row.id)"
+              :aria-expanded="openMenuId === row.id"
+            >
+              <Icon name="more-vertical" :size="18" />
+            </button>
+            <Teleport to="body">
+              <transition name="fade-scale">
+                <div
+                  v-if="openMenuId === row.id"
+                  class="action-menu"
+                  :style="getMenuPosition(row.id)"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleViewDetail(row)"
+                  >
+                    <Icon name="eye" :size="16" />
+                    <span>Detail</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleEdit(row)"
+                  >
+                    <Icon name="edit" :size="16" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="action-menu-item danger"
+                    @click="handleDelete(row)"
+                  >
+                    <Icon name="trash" :size="16" />
+                    <span>Hapus</span>
+                  </button>
+                </div>
+              </transition>
+            </Teleport>
+          </div>
+        </template>
+      </AppTable>
+      </div>
     </section>
 
     <!-- Item Form Dialog -->
@@ -114,15 +185,15 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
-import DataTable from "@/components/ui/DataTable.vue";
-import FormInput from "@/components/ui/FormInput.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import ItemForm from "@/components/modules/items/ItemForm.vue";
+import Icon from "@/components/ui/Icon.vue";
 
 export default {
   name: "ItemsPage",
@@ -130,9 +201,9 @@ export default {
   components: {
     AppButton,
     AppDialog,
-    DataTable,
-    FormInput,
+    AppTable,
     ItemForm,
+    Icon,
   },
 
   setup() {
@@ -144,13 +215,20 @@ export default {
     const showDeleteConfirm = ref(false);
     const deleteLoading = ref(false);
     const itemToDelete = ref(null);
+    const openMenuId = ref(null);
+    const menuPositions = ref({});
 
     // Filter state
     const filters = ref({
-      search: "",
+      category: "",
+      size: "",
       type: "",
       status: "",
     });
+
+    // Categories and sizes
+    const categories = ref([]);
+    const sizes = ref([]);
 
     // Format currency
     const formatCurrency = (value) => {
@@ -160,20 +238,46 @@ export default {
       }).format(value);
     };
 
+    // Format helper
+    const formatText = (value) => value || "-";
+
     // Table columns
     const columns = [
-      { key: "code", label: "Kode" },
-      { key: "name", label: "Nama Item" },
-      { key: "type", label: "Tipe" },
+      { key: "code", label: "Kode", sortable: true },
+      { key: "name", label: "Nama Item", sortable: true },
+      { key: "category_name", label: "Kategori", sortable: true, format: formatText },
+      { key: "size_name", label: "Ukuran", sortable: true, format: formatText },
+      { key: "type", label: "Tipe", sortable: true },
       {
         key: "price",
         label: "Harga",
         format: formatCurrency,
+        sortable: true,
+        align: "right",
+      },
+      {
+        key: "rental_price_per_day",
+        label: "Harga Sewa/Hari",
+        format: formatCurrency,
+        sortable: true,
+        align: "right",
+      },
+      {
+        key: "stock_quantity",
+        label: "Stok",
+        sortable: true,
+        align: "center",
+      },
+      {
+        key: "available_quantity",
+        label: "Tersedia",
+        sortable: true,
+        align: "center",
       },
       {
         key: "status",
         label: "Status",
-        slot: "status",
+        sortable: true,
       },
     ];
 
@@ -181,12 +285,15 @@ export default {
     const filteredItems = computed(() => {
       let result = [...itemStore.items];
 
-      if (filters.value.search) {
-        const search = filters.value.search.toLowerCase();
+      if (filters.value.category) {
         result = result.filter(
-          (item) =>
-            item.name.toLowerCase().includes(search) ||
-            item.code.toLowerCase().includes(search),
+          (item) => item.category_id === Number(filters.value.category),
+        );
+      }
+
+      if (filters.value.size) {
+        result = result.filter(
+          (item) => item.size_id === Number(filters.value.size),
         );
       }
 
@@ -218,15 +325,18 @@ export default {
 
     // Methods
     const handleViewDetail = (item) => {
+      openMenuId.value = null;
       router.push(`/master/items/${item.id}`);
     };
 
     const handleEdit = (item) => {
+      openMenuId.value = null;
       editingItem.value = item;
       showForm.value = true;
     };
 
     const handleDelete = (item) => {
+      openMenuId.value = null;
       itemToDelete.value = item;
       showDeleteConfirm.value = true;
     };
@@ -246,19 +356,80 @@ export default {
       }
     };
 
-    const handleSaved = () => {
+    const handleSaved = async () => {
       editingItem.value = null;
       showForm.value = false;
+      // Refresh items to get updated category_name and size_name
+      await itemStore.fetchItems();
     };
 
-    // Load items
+    const toggleActionMenu = async (itemId) => {
+      if (openMenuId.value === itemId) {
+        openMenuId.value = null;
+      } else {
+        openMenuId.value = itemId;
+        await nextTick();
+        updateMenuPosition(itemId);
+      }
+    };
+
+    const updateMenuPosition = (itemId) => {
+      const trigger = document.querySelector(
+        `[data-item-id="${itemId}"]`,
+      );
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      menuPositions.value[itemId] = {
+        top: rect.bottom + 4 + "px",
+        left: rect.right - 120 + "px",
+      };
+    };
+
+    const getMenuPosition = (itemId) => {
+      return menuPositions.value[itemId] || { top: "0px", left: "0px" };
+    };
+
+    const closeActionMenu = (event) => {
+      if (!event.target.closest(".action-menu-wrapper")) {
+        openMenuId.value = null;
+      }
+    };
+
+    // Load data
+    const loadCategories = async () => {
+      try {
+        categories.value = await window.api.invoke("categories:getAll");
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      }
+    };
+
+    const loadSizes = async () => {
+      try {
+        await itemStore.fetchSizes();
+        sizes.value = itemStore.sizes;
+      } catch (error) {
+        console.error("Error loading sizes:", error);
+      }
+    };
+
     onMounted(async () => {
+      document.addEventListener("click", closeActionMenu);
       loading.value = true;
       try {
-        await itemStore.fetchItems();
+        await Promise.all([
+          itemStore.fetchItems(),
+          loadCategories(),
+          loadSizes(),
+        ]);
       } finally {
         loading.value = false;
       }
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener("click", closeActionMenu);
     });
 
     return {
@@ -274,12 +445,17 @@ export default {
       itemsRented,
       totalValue,
       ITEM_TYPE,
+      categories,
+      sizes,
+      openMenuId,
       formatCurrency,
       handleViewDetail,
       handleEdit,
       handleDelete,
       confirmDelete,
       handleSaved,
+      toggleActionMenu,
+      getMenuPosition,
     };
   },
 };
@@ -291,15 +467,16 @@ export default {
   gap: 1rem;
   align-items: flex-end;
   flex-wrap: wrap;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.filters :deep(.search-input) {
-  width: 280px;
-  margin: 0;
-}
-
-.filters :deep(.search-input .form-input) {
-  width: 100%;
+.table-container {
+  margin-top: 1.5rem;
 }
 
 .filter-select {
@@ -309,6 +486,19 @@ export default {
   background-color: white;
   min-width: 150px;
   height: 40px;
+  font-size: 0.875rem;
+}
+
+.row-link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.row-link:hover {
+  color: #6366f1;
+  text-decoration: underline;
 }
 
 .summary-cards {
@@ -361,9 +551,87 @@ export default {
   color: #92400e;
 }
 
-.action-buttons {
+.action-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-menu-trigger:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.action-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 140px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.action-menu-item {
   display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.action-menu-item:hover {
+  background: #f9fafb;
+}
+
+.action-menu-item.danger {
+  color: #dc2626;
+}
+
+.action-menu-item.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.action-menu-item .icon {
+  flex-shrink: 0;
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.15s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
 }
 </style>

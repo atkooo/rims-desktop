@@ -50,7 +50,8 @@ export const useItemStore = defineStore("items", {
           "items:add",
           JSON.parse(JSON.stringify(itemData)),
         );
-        this.items.push(newItem);
+        // Add new item with full data from server (includes category_name, size_name, etc.)
+        this.items.unshift(newItem); // Add to beginning to match ORDER BY id DESC
         this.error = null;
       } catch (err) {
         this.error = err.message;
@@ -64,14 +65,15 @@ export const useItemStore = defineStore("items", {
     async updateItem(id, updates) {
       this.loading = true;
       try {
-        await ipcRenderer.invoke(
+        const updatedItem = await ipcRenderer.invoke(
           "items:update",
           id,
           JSON.parse(JSON.stringify(updates)),
         );
         const index = this.items.findIndex((item) => item.id === id);
         if (index !== -1) {
-          this.items[index] = { ...this.items[index], ...updates };
+          // Replace with full item data from server (includes category_name, size_name, etc.)
+          this.items[index] = updatedItem;
         }
         this.error = null;
       } catch (err) {

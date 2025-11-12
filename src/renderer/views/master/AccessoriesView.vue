@@ -36,13 +36,12 @@
           <strong>{{ stats.activeAccessories }}</strong>
         </div>
       </div>
-    </section>
 
-    <section class="card-section">
       <div v-if="error" class="error-banner">
         {{ error }}
       </div>
 
+      <div class="table-container">
       <AppTable
         :columns="columns"
         :rows="accessories"
@@ -89,31 +88,55 @@
           </span>
         </template>
         <template #actions="{ row }">
-          <div class="action-buttons">
-            <AppButton
-              variant="primary"
-              size="small"
-              @click.stop="handleViewDetail(row)"
+          <div class="action-menu-wrapper">
+            <button
+              type="button"
+              class="action-menu-trigger"
+              :data-item-id="row.id"
+              @click.stop="toggleActionMenu(row.id)"
+              :aria-expanded="openMenuId === row.id"
             >
-              Detail
-            </AppButton>
-            <AppButton
-              variant="secondary"
-              size="small"
-              @click.stop="handleEdit(row)"
-            >
-              Edit
-            </AppButton>
-            <AppButton
-              variant="danger"
-              size="small"
-              @click.stop="promptDelete(row)"
-            >
-              Hapus
-            </AppButton>
+              <Icon name="more-vertical" :size="18" />
+            </button>
+            <Teleport to="body">
+              <transition name="fade-scale">
+                <div
+                  v-if="openMenuId === row.id"
+                  class="action-menu"
+                  :style="getMenuPosition(row.id)"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleViewDetail(row)"
+                  >
+                    <Icon name="eye" :size="16" />
+                    <span>Detail</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="action-menu-item"
+                    @click="handleEdit(row)"
+                  >
+                    <Icon name="edit" :size="16" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="action-menu-item danger"
+                    @click="promptDelete(row)"
+                  >
+                    <Icon name="trash" :size="16" />
+                    <span>Hapus</span>
+                  </button>
+                </div>
+              </transition>
+            </Teleport>
           </div>
         </template>
       </AppTable>
+      </div>
     </section>
 
     <AccessoryForm
@@ -140,17 +163,18 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AccessoryForm from "@/components/modules/accessories/AccessoryForm.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { fetchAccessories, deleteAccessory } from "@/services/masterData";
 
 export default {
   name: "AccessoriesView",
-  components: { AppButton, AppDialog, AppTable, AccessoryForm },
+  components: { AppButton, AppDialog, AppTable, AccessoryForm, Icon },
   setup() {
     const router = useRouter();
     const accessories = ref([]);
@@ -161,6 +185,8 @@ export default {
     const showDeleteConfirm = ref(false);
     const deleteLoading = ref(false);
     const accessoryToDelete = ref(null);
+    const openMenuId = ref(null);
+    const menuPositions = ref({});
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -214,7 +240,14 @@ export default {
       }
     };
 
-    onMounted(loadData);
+    onMounted(() => {
+      document.addEventListener("click", closeActionMenu);
+      loadData();
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener("click", closeActionMenu);
+    });
 
     const openCreate = () => {
       editingAccessory.value = null;
@@ -222,10 +255,12 @@ export default {
     };
 
     const handleViewDetail = (item) => {
+      openMenuId.value = null;
       router.push({ name: "accessory-detail", params: { id: item.id } });
     };
 
     const handleEdit = (item) => {
+      openMenuId.value = null;
       editingAccessory.value = item;
       showForm.value = true;
     };
@@ -236,8 +271,42 @@ export default {
     };
 
     const promptDelete = (item) => {
+      openMenuId.value = null;
       accessoryToDelete.value = item;
       showDeleteConfirm.value = true;
+    };
+
+    const toggleActionMenu = async (itemId) => {
+      if (openMenuId.value === itemId) {
+        openMenuId.value = null;
+      } else {
+        openMenuId.value = itemId;
+        await nextTick();
+        updateMenuPosition(itemId);
+      }
+    };
+
+    const updateMenuPosition = (itemId) => {
+      const trigger = document.querySelector(
+        `[data-item-id="${itemId}"]`,
+      );
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      menuPositions.value[itemId] = {
+        top: rect.bottom + 4 + "px",
+        left: rect.right - 120 + "px",
+      };
+    };
+
+    const getMenuPosition = (itemId) => {
+      return menuPositions.value[itemId] || { top: "0px", left: "0px" };
+    };
+
+    const closeActionMenu = (event) => {
+      if (!event.target.closest(".action-menu-wrapper")) {
+        openMenuId.value = null;
+      }
     };
 
     const confirmDelete = async () => {
@@ -272,12 +341,15 @@ export default {
       showDeleteConfirm,
       deleteLoading,
       accessoryToDelete,
+      openMenuId,
       openCreate,
       handleViewDetail,
       handleEdit,
       handleFormSaved,
       promptDelete,
       confirmDelete,
+      toggleActionMenu,
+      getMenuPosition,
       formatCurrency,
     };
   },
@@ -292,10 +364,88 @@ export default {
   justify-content: flex-end;
 }
 
-.action-buttons {
+.action-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-menu-trigger:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.action-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 140px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.action-menu-item {
   display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.action-menu-item:hover {
+  background: #f9fafb;
+}
+
+.action-menu-item.danger {
+  color: #dc2626;
+}
+
+.action-menu-item.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.action-menu-item .icon {
+  flex-shrink: 0;
+}
+
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.15s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
 }
 
 .compact-table :deep(table) {
@@ -365,5 +515,46 @@ export default {
 .status-badge.inactive {
   background-color: #fee2e2;
   color: #991b1b;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background-color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.table-container {
+  margin-top: 1.5rem;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
 }
 </style>
