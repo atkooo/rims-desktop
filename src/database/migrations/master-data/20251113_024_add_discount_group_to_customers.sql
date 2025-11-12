@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_customers_discount_group ON customers(discount_gr
 
 
 
+
