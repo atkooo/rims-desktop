@@ -1,6 +1,6 @@
 <template>
   <div class="dialog-overlay" v-if="modelValue" @click="closeOnOverlay">
-    <div class="dialog" @click.stop>
+    <div class="dialog" :style="{ maxWidth: maxWidth ? (typeof maxWidth === 'number' ? maxWidth + 'px' : maxWidth) : '90vw' }" @click.stop>
       <div class="dialog-header">
         <h3>{{ title }}</h3>
         <button class="close-btn" @click="close">
@@ -30,6 +30,10 @@ export default {
     closeOnOutsideClick: {
       type: Boolean,
       default: true,
+    },
+    maxWidth: {
+      type: [String, Number],
+      default: null,
     },
   },
   methods: {
@@ -66,6 +70,9 @@ export default {
   max-width: 90vw;
   max-height: 90vh;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .dialog-header {
@@ -97,5 +104,8 @@ export default {
 .dialog-content {
   padding: 20px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(90vh - 120px);
 }
 </style>

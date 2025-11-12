@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE roles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(20) UNIQUE NOT NULL CHECK (name IN ('admin','manager','staff')),
+    name VARCHAR(20) UNIQUE NOT NULL CHECK (name IN ('admin','manager','staff','kasir')),
     description VARCHAR(200)
 );
 

@@ -28,7 +28,37 @@ export async function login(username, password) {
   if (!isIpcAvailable()) throw new Error("IPC Electron tidak tersedia");
 
   const user = await invoke("auth:login", { username, password });
+  
+  // Ensure permissions are loaded
+  if (user && isIpcAvailable()) {
+    try {
+      // Load permissions from IPC
+      const permissions = await invoke("auth:getUserPermissions") || [];
+      user.permissions = permissions;
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+      // If admin, allow empty permissions (will be handled in router)
+      if (user.role !== "admin") {
+        user.permissions = [];
+      } else {
+        // Admin should have all permissions, but if loading fails, allow access anyway
+        user.permissions = [];
+      }
+    }
+  }
+  
+  // Store user with permissions
   writeStoredUser(user);
+  
+  // Initialize permissions in composable
+  try {
+    const { initPermissions } = await import("@/composables/usePermissions");
+    await initPermissions();
+  } catch (error) {
+    console.error("Error initializing permissions in composable:", error);
+    // Continue anyway
+  }
+  
   return user;
 }
 
@@ -47,8 +77,27 @@ export async function getCurrentUser(forceRefresh = false) {
 
   try {
     const user = await invoke("auth:getCurrentUser");
-    if (user) writeStoredUser(user);
-    else writeStoredUser(null);
+    if (user) {
+      // Ensure permissions are loaded
+      if (!user.permissions && isIpcAvailable()) {
+        try {
+          user.permissions = await invoke("auth:getUserPermissions") || [];
+        } catch (error) {
+          console.error("Error loading permissions:", error);
+          user.permissions = [];
+        }
+      }
+      writeStoredUser(user);
+      // Initialize permissions in composable if available
+      try {
+        const { initPermissions } = await import("@/composables/usePermissions");
+        await initPermissions();
+      } catch (error) {
+        // Composable may not be available yet
+      }
+    } else {
+      writeStoredUser(null);
+    }
     return user;
   } catch (error) {
     console.warn("Gagal mengambil data pengguna saat ini", error);

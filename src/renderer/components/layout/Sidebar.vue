@@ -16,38 +16,81 @@
         <Icon name="dashboard" class="icon" />
         <span v-if="!collapsed">Dashboard</span>
       </router-link>
-      <div v-for="group in groups" :key="group.title" class="group">
-        <div class="group-title" v-if="!collapsed">{{ group.title }}</div>
-        <router-link
-          v-for="item in group.items"
-          :key="item.to"
-          :to="item.to"
-          active-class="active"
-          :title="collapsed ? item.label : null"
-        >
-          <Icon :name="item.icon" class="icon" />
-          <span v-if="!collapsed">{{ item.label }}</span>
-        </router-link>
-      </div>
+      <template v-for="group in filteredGroups" :key="group.title">
+        <div v-if="group && group.items && group.items.length > 0" class="group">
+          <div class="group-title" v-if="!collapsed">{{ group.title }}</div>
+          <router-link
+            v-for="item in group.items"
+            :key="item.to"
+            :to="item.to"
+            active-class="active"
+            :title="collapsed ? item.label : null"
+          >
+            <Icon :name="item.icon" class="icon" />
+            <span v-if="!collapsed">{{ item.label }}</span>
+          </router-link>
+        </div>
+      </template>
     </nav>
   </aside>
 </template>
 
-<script>
+<script setup>
+import { computed, onMounted, ref } from "vue";
 import Icon from "../ui/Icon.vue";
 import { menuGroups } from "@/constants/menu-groups";
+import { usePermissions, initPermissions } from "@/composables/usePermissions";
 
-export default {
-  components: { Icon },
-  props: {
-    collapsed: { type: Boolean, default: false },
-  },
-  data() {
-    return {
-      groups: menuGroups,
-    };
-  },
-};
+const props = defineProps({
+  collapsed: { type: Boolean, default: false },
+});
+
+const { hasPermissionSync } = usePermissions();
+const permissionsInitialized = ref(false);
+
+// Filter menu groups based on permissions
+const filteredGroups = computed(() => {
+  // If permissions not initialized yet, return all menu groups (will be filtered once loaded)
+  if (!permissionsInitialized.value) {
+    return menuGroups;
+  }
+  
+  try {
+    return menuGroups
+      .map((group) => {
+        if (!group || !group.items) return null;
+        return {
+          ...group,
+          items: group.items.filter((item) => {
+            // If no permission required, show item
+            if (!item || !item.permission) return true;
+            // Check if user has permission
+            try {
+              return hasPermissionSync(item.permission);
+            } catch (error) {
+              console.error("Error checking permission:", error);
+              return false;
+            }
+          }),
+        };
+      })
+      .filter((group) => group && group.items && group.items.length > 0); // Remove empty groups
+  } catch (error) {
+    console.error("Error filtering menu groups:", error);
+    return menuGroups; // Fallback to all groups
+  }
+});
+
+onMounted(async () => {
+  try {
+    await initPermissions();
+    permissionsInitialized.value = true;
+  } catch (error) {
+    console.error("Error initializing permissions in Sidebar:", error);
+    // Even if there's an error, show menu (will show all items)
+    permissionsInitialized.value = true;
+  }
+});
 </script>
 
 <style>

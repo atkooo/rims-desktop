@@ -6,10 +6,11 @@
 INSERT INTO roles (name, description) VALUES
   ('admin', 'Administrator with full access'),
   ('manager', 'Manager with moderate access'),
-  ('staff', 'Staff with basic access');
+  ('staff', 'Staff with basic access'),
+  ('kasir', 'Kasir with transaction access only');
 
 -- Create default users
--- (passwords: Admin123!, Manager123!, Staff123!)
+-- (passwords: Admin123!, Manager123!, Staff123!, Kasir123!)
 INSERT INTO users (username, password_hash, full_name, email, role_id, is_active)
 VALUES
   ('admin',
@@ -31,5 +32,12 @@ VALUES
    'Front Desk Staff',
    'staff@rims.com',
    (SELECT id FROM roles WHERE name = 'staff'),
+   1
+  ),
+  ('kasir',
+   'scrypt:f909b0045fc8a73bc88e97d6ff70bc6c:16594eeadb64b5a4d4077e13352e0cda5b0e1453d7355cfe5fdc47b9fbb8df30',
+   'Kasir Toko',
+   'kasir@rims.com',
+   (SELECT id FROM roles WHERE name = 'kasir'),
    1
   );
