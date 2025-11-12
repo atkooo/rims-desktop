@@ -11,24 +11,27 @@ const TRANSACTION_STATUS = {
   CANCELLED: "CANCELLED",
 };
 
-const bundleItemSql = `
+const bundleItemSql = (bundleType = 'sale') => `
   SELECT
     bd.bundle_id,
     bd.quantity,
     bd.item_id,
-    COALESCE(i.sale_price, i.price, 0) AS sale_price,
+    ${bundleType === 'rental' 
+      ? 'COALESCE(i.rental_price_per_day, i.price, 0) AS rental_price'
+      : 'COALESCE(i.sale_price, i.price, 0) AS sale_price'
+    },
     b.name AS bundle_name
   FROM bundle_details bd
-  JOIN bundles b ON bd.bundle_id = b.id AND b.bundle_type = 'sale'
+  JOIN bundles b ON bd.bundle_id = b.id AND b.bundle_type = ?
   JOIN items i ON bd.item_id = i.id
   WHERE bd.bundle_id = ?
 `;
 
-async function fetchBundleItemDetails(bundleId) {
-  return database.query(bundleItemSql, [bundleId]);
+async function fetchBundleItemDetails(bundleId, bundleType = 'sale') {
+  return database.query(bundleItemSql(bundleType), [bundleType, bundleId]);
 }
 
-async function expandBundleSelections(selections = []) {
+async function expandBundleSelections(selections = [], bundleType = 'sale') {
   const cache = new Map();
   const result = [];
 
@@ -40,9 +43,9 @@ async function expandBundleSelections(selections = []) {
     const bundleQuantity = Math.max(1, toInteger(selection.quantity));
 
     if (!cache.has(bundleId)) {
-      const details = await fetchBundleItemDetails(bundleId);
+      const details = await fetchBundleItemDetails(bundleId, bundleType);
       if (!details.length) {
-        throw new Error(`Bundle ${bundleId} tidak memiliki item penjualan`);
+        throw new Error(`Bundle ${bundleId} tidak memiliki item`);
       }
       cache.set(bundleId, details);
     }
@@ -51,14 +54,28 @@ async function expandBundleSelections(selections = []) {
     for (const detail of details) {
       const detailQuantity =
         Math.max(1, toInteger(detail.quantity)) * bundleQuantity;
-      const salePrice = Number(detail.sale_price) || 0;
-      if (detailQuantity <= 0) continue;
-      result.push({
-        itemId: detail.item_id,
-        quantity: detailQuantity,
-        salePrice,
-        subtotal: salePrice * detailQuantity,
-      });
+      
+      if (bundleType === 'rental') {
+        const rentalPrice = Number(detail.rental_price) || 0;
+        if (detailQuantity <= 0) continue;
+        result.push({
+          itemId: detail.item_id,
+          quantity: detailQuantity,
+          rentalPrice,
+          salePrice: 0,
+          subtotal: rentalPrice * detailQuantity,
+        });
+      } else {
+        const salePrice = Number(detail.sale_price) || 0;
+        if (detailQuantity <= 0) continue;
+        result.push({
+          itemId: detail.item_id,
+          quantity: detailQuantity,
+          salePrice,
+          rentalPrice: 0,
+          subtotal: salePrice * detailQuantity,
+        });
+      }
     }
   }
   return result;
@@ -157,8 +174,11 @@ function setupTransactionHandlers() {
       const hasBundles =
         Array.isArray(transactionData.bundles) &&
         transactionData.bundles.length > 0;
-      if (saleItems.length === 0 && !hasBundles) {
-        throw new Error("Transaksi harus memiliki minimal 1 item atau paket");
+      const hasAccessories =
+        Array.isArray(transactionData.accessories) &&
+        transactionData.accessories.length > 0;
+      if (saleItems.length === 0 && !hasBundles && !hasAccessories) {
+        throw new Error("Transaksi harus memiliki minimal 1 item, paket, atau aksesoris");
       }
 
       // Validasi cashier session untuk transaksi dengan pembayaran cash
@@ -224,8 +244,20 @@ function setupTransactionHandlers() {
             ],
           );
 
-          // Insert rental transaction items
-          for (const item of transactionData.items) {
+          // Process bundles for rental if any
+          const hasBundles =
+            Array.isArray(transactionData.bundles) &&
+            transactionData.bundles.length > 0;
+          
+          let bundleLines = [];
+          if (hasBundles) {
+            bundleLines = await expandBundleSelections(transactionData.bundles, 'rental');
+          }
+          
+          const allRentalItems = [...transactionData.items, ...bundleLines];
+
+          // Insert rental transaction items (including from bundles)
+          for (const item of allRentalItems) {
             // Get current stock before update
             const itemBefore = await database.queryOne(
               "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
@@ -302,10 +334,11 @@ function setupTransactionHandlers() {
           );
 
           const bundleLines = hasBundles
-            ? await expandBundleSelections(transactionData.bundles)
+            ? await expandBundleSelections(transactionData.bundles, 'sale')
             : [];
           const saleLines = [...saleItems, ...bundleLines];
 
+          // Process items and bundles
           for (const line of saleLines) {
             const quantity = Math.max(1, Number(line.quantity) || 0);
             const salePrice = Number(line.salePrice) || 0;
@@ -321,9 +354,9 @@ function setupTransactionHandlers() {
 
             await database.execute(
               `INSERT INTO sales_transaction_details (
-                sales_transaction_id, item_id, quantity,
+                sales_transaction_id, item_id, accessory_id, quantity,
                 sale_price, subtotal
-              ) VALUES (?, ?, ?, ?, ?)`,
+              ) VALUES (?, ?, NULL, ?, ?, ?)`,
               [result.id, line.itemId, quantity, salePrice, lineSubtotal],
             );
 
@@ -353,6 +386,53 @@ function setupTransactionHandlers() {
                 `Sales transaction: ${transactionCode}`,
               ],
             );
+          }
+
+          // Process accessories
+          if (hasAccessories) {
+            for (const accessory of transactionData.accessories) {
+              const quantity = Math.max(1, Number(accessory.quantity) || 0);
+              const salePrice = Number(accessory.salePrice) || 0;
+              const lineSubtotal = Number(accessory.subtotal) || salePrice * quantity;
+
+              // Get current stock before update
+              const accessoryBefore = await database.queryOne(
+                "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+                [accessory.accessoryId],
+              );
+              const stockBefore = accessoryBefore?.available_quantity || 0;
+              const stockQtyBefore = accessoryBefore?.stock_quantity || 0;
+
+              // Validate accessory is available for sale
+              const accessoryData = await database.queryOne(
+                "SELECT is_available_for_sale, is_active FROM accessories WHERE id = ?",
+                [accessory.accessoryId],
+              );
+              if (!accessoryData || !accessoryData.is_available_for_sale || !accessoryData.is_active) {
+                throw new Error(`Aksesoris dengan ID ${accessory.accessoryId} tidak tersedia untuk dijual`);
+              }
+
+              await database.execute(
+                `INSERT INTO sales_transaction_details (
+                  sales_transaction_id, item_id, accessory_id, quantity,
+                  sale_price, subtotal
+                ) VALUES (?, NULL, ?, ?, ?, ?)`,
+                [result.id, accessory.accessoryId, quantity, salePrice, lineSubtotal],
+              );
+
+              // Update available quantity and stock quantity for the accessory
+              await database.execute(
+                "UPDATE accessories SET available_quantity = available_quantity - ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+                [quantity, quantity, accessory.accessoryId],
+              );
+
+              // Get stock after update
+              const stockAfter = stockBefore - quantity;
+              const stockQtyAfter = stockQtyBefore - quantity;
+
+              // Note: Stock movements table might not support accessories, so we'll skip it for now
+              // If needed, we can add accessory_id column to stock_movements table later
+            }
           }
         }
 

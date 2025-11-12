@@ -124,6 +124,11 @@
           <BundleSelector v-model="form.bundles" />
         </div>
 
+        <div class="form-section">
+          <h3 class="section-title">Pilih Aksesoris</h3>
+          <AccessorySelector v-model="form.accessories" />
+        </div>
+
         <div class="form-section payment-section">
           <h3 class="section-title">Detail Pembayaran</h3>
           <div class="form-grid">
@@ -177,7 +182,7 @@
           <span>Total Estimasi Penjualan</span>
           <strong>{{ formatCurrency(totalAmount) }}</strong>
           <p class="summary-description">
-            {{ totalItems }} item • {{ totalBundles }} paket
+            {{ totalItems }} item • {{ totalBundles }} paket • {{ totalAccessories }} aksesoris
           </p>
         </div>
         <div class="summary-grid summary-grid--stacked">
@@ -188,6 +193,10 @@
           <div class="summary-card">
             <span>Subtotal Paket</span>
             <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
+          </div>
+          <div class="summary-card" v-if="accessorySubtotal > 0">
+            <span>Subtotal Aksesoris</span>
+            <strong>{{ formatCurrency(accessorySubtotal) }}</strong>
           </div>
           <div class="summary-card">
             <span>Diskon</span>
@@ -221,6 +230,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
+import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
@@ -244,6 +254,7 @@ const createDefaultForm = () => ({
   notes: "",
   items: [],
   bundles: [],
+  accessories: [],
 });
 
 export default {
@@ -253,6 +264,7 @@ export default {
     FormInput,
     ItemSelector,
     BundleSelector,
+    AccessorySelector,
   },
   setup() {
     const router = useRouter();
@@ -300,6 +312,20 @@ export default {
       return basePrice;
     };
 
+    // Calculate accessory price after discount
+    const calculateAccessoryPrice = (accessory) => {
+      const basePrice = accessory.sale_price ?? 0;
+
+      // Apply accessory discount if accessory has discount_group
+      if (accessory.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - accessory.discount_percentage / 100));
+      } else if (accessory.discount_amount > 0) {
+        return Math.max(0, basePrice - accessory.discount_amount);
+      }
+
+      return basePrice;
+    };
+
     const baseSubtotal = computed(() =>
       form.value.items.reduce((sum, item) => {
         const price = calculateItemPrice(item);
@@ -314,7 +340,14 @@ export default {
       }, 0),
     );
 
-    const subtotal = computed(() => baseSubtotal.value + bundleSubtotal.value);
+    const accessorySubtotal = computed(() =>
+      form.value.accessories.reduce((sum, accessory) => {
+        const price = calculateAccessoryPrice(accessory);
+        return sum + price * (accessory.quantity || 1);
+      }, 0),
+    );
+
+    const subtotal = computed(() => baseSubtotal.value + bundleSubtotal.value + accessorySubtotal.value);
 
     // Calculate tax automatically based on tax percentage from settings
     const calculatedTax = computed(() => {
@@ -350,6 +383,13 @@ export default {
       ),
     );
 
+    const totalAccessories = computed(() =>
+      form.value.accessories.reduce(
+        (sum, accessory) => sum + (accessory.quantity || 1),
+        0,
+      ),
+    );
+
     const normalizedItems = computed(() =>
       form.value.items.map((item) => {
         const quantity = item.quantity || 1;
@@ -370,6 +410,18 @@ export default {
         quantity: Math.max(1, Number(bundle.quantity) || 1),
       })),
     );
+
+    const normalizedAccessories = computed(() => {
+      return form.value.accessories.map((accessory) => {
+        const price = calculateAccessoryPrice(accessory);
+        return {
+          accessoryId: accessory.id,
+          quantity: accessory.quantity || 1,
+          salePrice: price,
+          subtotal: price * (accessory.quantity || 1),
+        };
+      });
+    });
 
     const getDiscountHint = () => {
       if (form.value.customerId) {
@@ -500,8 +552,8 @@ export default {
       if (!form.value.saleDate) {
         newErrors.saleDate = "Tanggal penjualan harus diisi";
       }
-      if (form.value.items.length === 0 && form.value.bundles.length === 0) {
-        newErrors.items = "Pilih minimal 1 item atau paket";
+      if (form.value.items.length === 0 && form.value.bundles.length === 0 && form.value.accessories.length === 0) {
+        newErrors.items = "Pilih minimal 1 item, paket, atau aksesoris";
       }
       errors.value = newErrors;
       return Object.keys(newErrors).length === 0;
@@ -514,8 +566,6 @@ export default {
     const handleSubmit = async () => {
       if (!validateForm()) return;
       loading.value = true;
-      submissionError.value = "";
-      successMessage.value = "";
       try {
         const user = getStoredUser();
         const newTransaction = await transactionStore.createTransaction({
@@ -531,6 +581,7 @@ export default {
           tax: calculatedTax.value,
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
+          accessories: normalizedAccessories.value,
         });
 
         // Refresh cashier status after transaction
@@ -605,6 +656,8 @@ export default {
       bundleSubtotal,
       totalItems,
       totalBundles,
+      totalAccessories,
+      accessorySubtotal,
       cashierStatus,
       getDiscountHint,
       isDiscountReadonly,

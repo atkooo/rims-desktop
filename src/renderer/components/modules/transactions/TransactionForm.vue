@@ -138,9 +138,17 @@
         </div>
       </section>
 
-      <section class="form-section" v-if="!isRental">
+      <section class="form-section">
         <h3>Pilih Paket</h3>
-        <BundleSelector v-model="form.bundles" />
+        <BundleSelector 
+          v-model="form.bundles" 
+          :bundle-type="isRental ? 'rental' : 'sale'"
+        />
+      </section>
+
+      <section class="form-section" v-if="!isRental">
+        <h3>Pilih Aksesoris</h3>
+        <AccessorySelector v-model="form.accessories" />
       </section>
 
       <section class="form-section">
@@ -150,17 +158,25 @@
             <span>Total Item</span>
             <strong>{{ totalItems }}</strong>
           </div>
-          <div class="summary-line" v-if="!isRental">
+          <div class="summary-line">
             <span>Total Paket</span>
             <strong>{{ bundleCount }}</strong>
+          </div>
+          <div class="summary-line" v-if="!isRental">
+            <span>Total Aksesoris</span>
+            <strong>{{ accessoryCount }}</strong>
           </div>
           <div class="summary-line">
             <span>Subtotal</span>
             <strong>{{ formatCurrency(subtotal) }}</strong>
           </div>
-          <div class="summary-line" v-if="!isRental && bundleSubtotal > 0">
+          <div class="summary-line" v-if="bundleSubtotal > 0">
             <span>Subtotal Paket</span>
             <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
+          </div>
+          <div class="summary-line" v-if="!isRental && accessorySubtotal > 0">
+            <span>Subtotal Aksesoris</span>
+            <strong>{{ formatCurrency(accessorySubtotal) }}</strong>
           </div>
           <div class="summary-line" v-if="isRental">
             <span>Total Hari</span>
@@ -250,6 +266,7 @@ import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
+import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { TRANSACTION_TYPE } from "@shared/constants";
@@ -296,6 +313,7 @@ const createDefaultForm = (type = TRANSACTION_TYPE.RENTAL) => {
     paidAmount: 0,
     items: [],
     bundles: [],
+    accessories: [],
     notes: "",
   };
 };
@@ -307,6 +325,7 @@ export default {
     FormInput,
     ItemSelector,
     BundleSelector,
+    AccessorySelector,
   },
   props: {
     modelValue: Boolean,
@@ -374,9 +393,11 @@ export default {
       return basePrice;
     };
 
-    // Calculate bundle price after discount (for sales)
+    // Calculate bundle price after discount
     const calculateBundlePrice = (bundle) => {
-      const basePrice = bundle.price || 0;
+      const basePrice = isRental.value 
+        ? (bundle.rental_price_per_day || 0)
+        : (bundle.price || 0);
 
       // Apply bundle discount if bundle has discount_group
       if (bundle.discount_percentage > 0) {
@@ -400,27 +421,56 @@ export default {
     });
 
     const bundleSubtotal = computed(() => {
-      if (isRental.value) return 0; // Bundles are only for sales
+      const multiplier = isRental.value ? totalDays.value : 1;
       return form.value.bundles.reduce((sum, bundle) => {
         const price = calculateBundlePrice(bundle);
-        return sum + price * (bundle.quantity || 0);
+        return sum + price * (bundle.quantity || 0) * multiplier;
+      }, 0);
+    });
+
+    // Calculate accessory price after discount (for sales)
+    const calculateAccessoryPrice = (accessory) => {
+      const basePrice = accessory.sale_price ?? 0;
+
+      // Apply accessory discount if accessory has discount_group
+      if (accessory.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - accessory.discount_percentage / 100));
+      } else if (accessory.discount_amount > 0) {
+        return Math.max(0, basePrice - accessory.discount_amount);
+      }
+
+      return basePrice;
+    };
+
+    const accessorySubtotal = computed(() => {
+      if (isRental.value) return 0; // Accessories are only for sales
+      return form.value.accessories.reduce((sum, accessory) => {
+        const price = calculateAccessoryPrice(accessory);
+        return sum + price * (accessory.quantity || 1);
       }, 0);
     });
 
     const subtotal = computed(() => {
-      if (!form.value.items.length && !form.value.bundles.length) {
+      if (!form.value.items.length && !form.value.bundles.length && !form.value.accessories.length) {
         if (isEdit.value) {
           return Number(props.editData?.total_amount ?? 0);
         }
         return 0;
       }
-      if (isRental.value) return itemSubtotal.value;
-      return itemSubtotal.value + bundleSubtotal.value;
+      if (isRental.value) return itemSubtotal.value + bundleSubtotal.value;
+      return itemSubtotal.value + bundleSubtotal.value + accessorySubtotal.value;
     });
 
     const bundleCount = computed(() =>
       form.value.bundles.reduce(
         (sum, bundle) => sum + (bundle.quantity || 0),
+        0,
+      ),
+    );
+
+    const accessoryCount = computed(() =>
+      form.value.accessories.reduce(
+        (sum, accessory) => sum + (accessory.quantity || 1),
         0,
       ),
     );
@@ -495,6 +545,18 @@ export default {
         quantity: Math.max(1, Number(bundle.quantity) || 1),
       })),
     );
+
+    const normalizedAccessories = computed(() => {
+      return form.value.accessories.map((accessory) => {
+        const price = calculateAccessoryPrice(accessory);
+        return {
+          accessoryId: accessory.id,
+          quantity: accessory.quantity || 1,
+          salePrice: price,
+          subtotal: price * (accessory.quantity || 1),
+        };
+      });
+    });
 
     const formatCurrency = (value) => {
       return new Intl.NumberFormat("id-ID", {
@@ -779,9 +841,12 @@ export default {
       if (
         !isEdit.value &&
         form.value.items.length === 0 &&
-        form.value.bundles.length === 0
+        form.value.bundles.length === 0 &&
+        (!isRental.value && form.value.accessories.length === 0)
       ) {
-        newErrors.items = "Pilih minimal 1 item atau paket";
+        newErrors.items = isRental.value 
+          ? "Pilih minimal 1 item atau paket"
+          : "Pilih minimal 1 item, paket, atau aksesoris";
       }
       errors.value = newErrors;
       return Object.keys(newErrors).length === 0;
@@ -830,6 +895,7 @@ export default {
               totalDays: totalDays.value,
               subtotal: subtotal.value,
               deposit: Number(form.value.deposit) || 0,
+              bundles: normalizedBundles.value,
             });
           } else {
             await transactionStore.createTransaction({
@@ -839,6 +905,7 @@ export default {
               discount: Number(form.value.discount) || 0,
               tax: Number(form.value.tax) || 0,
               bundles: normalizedBundles.value,
+              accessories: normalizedAccessories.value,
             });
           }
         }
@@ -869,6 +936,8 @@ export default {
       totalItems,
       bundleSubtotal,
       bundleCount,
+      accessorySubtotal,
+      accessoryCount,
       fixedTypeLabel,
       formatCurrency,
       getDiscountHint,

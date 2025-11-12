@@ -158,6 +158,16 @@
         </div>
 
         <div class="form-section">
+          <h3 class="section-title">Paket yang Dipilih</h3>
+          <p class="section-description">
+            Tambahkan paket sewa yang tersedia.
+          </p>
+          <div class="form-content">
+            <BundleSelector v-model="form.bundles" bundle-type="rental" />
+          </div>
+        </div>
+
+        <div class="form-section">
           <h3 class="section-title">Catatan</h3>
           <p class="section-description">
             Apa pun yang penting agar customer dan tim backend tahu penggunaan
@@ -188,7 +198,7 @@
           <span>Total Estimasi Pembayaran</span>
           <strong>{{ formatCurrency(totalAmount) }}</strong>
           <p class="summary-description">
-            {{ totalItems }} item • {{ totalDays }} hari sewa
+            {{ totalItems }} item • {{ totalBundles }} paket • {{ totalDays }} hari sewa
           </p>
         </div>
         <div class="summary-grid summary-grid--stacked">
@@ -196,9 +206,17 @@
             <span>Jumlah Item</span>
             <strong>{{ totalItems }}</strong>
           </div>
+          <div class="summary-card" v-if="totalBundles > 0">
+            <span>Jumlah Paket</span>
+            <strong>{{ totalBundles }}</strong>
+          </div>
           <div class="summary-card">
             <span>Total Hari</span>
             <strong>{{ totalDays }}</strong>
+          </div>
+          <div class="summary-card" v-if="bundleSubtotal > 0">
+            <span>Subtotal Paket</span>
+            <strong>{{ formatCurrency(bundleSubtotal * totalDays) }}</strong>
           </div>
           <div class="summary-card">
             <span>Deposit</span>
@@ -231,6 +249,7 @@ import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
+import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
@@ -259,6 +278,7 @@ const createDefaultForm = () => {
     tax: 0,
     notes: "",
     items: [],
+    bundles: [],
   };
 };
 
@@ -268,6 +288,7 @@ export default {
     AppButton,
     FormInput,
     ItemSelector,
+    BundleSelector,
   },
   setup() {
     const router = useRouter();
@@ -296,6 +317,17 @@ export default {
       return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     });
 
+    // Calculate bundle price for rental
+    const calculateBundlePrice = (bundle) => {
+      const basePrice = bundle.rental_price_per_day || 0;
+      if (bundle.discount_percentage > 0) {
+        return Math.round(basePrice * (1 - bundle.discount_percentage / 100));
+      } else if (bundle.discount_amount > 0) {
+        return Math.max(0, basePrice - bundle.discount_amount);
+      }
+      return basePrice;
+    };
+
     const baseSubtotal = computed(() =>
       form.value.items.reduce((sum, item) => {
         const price = item.rental_price_per_day ?? item.price ?? 0;
@@ -303,7 +335,14 @@ export default {
       }, 0),
     );
 
-    const subtotal = computed(() => baseSubtotal.value * totalDays.value);
+    const bundleSubtotal = computed(() =>
+      form.value.bundles.reduce((sum, bundle) => {
+        const price = calculateBundlePrice(bundle);
+        return sum + price * (bundle.quantity || 0);
+      }, 0),
+    );
+
+    const subtotal = computed(() => (baseSubtotal.value + bundleSubtotal.value) * totalDays.value);
 
     // Calculate tax automatically based on tax percentage from settings
     const calculatedTax = computed(() => {
@@ -326,6 +365,13 @@ export default {
 
     const totalItems = computed(() =>
       form.value.items.reduce((sum, item) => sum + (item.quantity || 0), 0),
+    );
+
+    const totalBundles = computed(() =>
+      form.value.bundles.reduce(
+        (sum, bundle) => sum + (bundle.quantity || 0),
+        0,
+      ),
     );
 
     const normalizedItems = computed(() =>
@@ -374,8 +420,8 @@ export default {
         newErrors.plannedReturnDate =
           "Tanggal kembali harus sama atau setelah tanggal sewa";
       }
-      if (form.value.items.length === 0) {
-        newErrors.items = "Pilih minimal 1 item";
+      if (form.value.items.length === 0 && form.value.bundles.length === 0) {
+        newErrors.items = "Pilih minimal 1 item atau paket";
       }
       errors.value = newErrors;
       return Object.keys(newErrors).length === 0;
@@ -404,6 +450,10 @@ export default {
           deposit: Number(form.value.deposit) || 0,
           tax: calculatedTax.value,
           items: normalizedItems.value,
+          bundles: form.value.bundles.map((bundle) => ({
+            bundleId: bundle.id,
+            quantity: Math.max(1, Number(bundle.quantity) || 1),
+          })),
         });
 
         // Refresh cashier status after transaction
@@ -484,6 +534,8 @@ export default {
       totalAmount,
       totalDays,
       totalItems,
+      totalBundles,
+      bundleSubtotal,
       cashierStatus,
       calculatedTax,
       taxHint,

@@ -1,66 +1,59 @@
 <template>
   <AppDialog
     v-model="visible"
-    :title="bundleType === 'rental' ? 'Cari Paket Sewa' : 'Cari Paket Penjualan'"
+    title="Cari Aksesoris"
     :show-footer="false"
-    :max-width="600"
+    :max-width="540"
   >
     <div class="picker-dialog">
       <div class="picker-controls">
         <FormInput
-          id="bundleSearch"
-          label="Cari paket"
+          id="accessorySearch"
+          label="Cari aksesoris"
           v-model="search"
-          placeholder="Masukkan nama atau kode..."
+          placeholder="Masukkan kata kunci..."
         />
-        <div class="form-group">
-          <label for="statusFilter" class="form-label">Filter Status</label>
-          <select
-            id="statusFilter"
-            v-model="statusFilter"
-            class="filter-dropdown"
-          >
-            <option value="">Semua Status Aktif</option>
-            <option value="open">Tersedia</option>
-            <option value="soldout">Habis</option>
-          </select>
-        </div>
       </div>
 
       <div class="picker-list">
-        <div v-if="!filteredBundles.length" class="empty-state">
-          Tidak ada paket yang cocok.
+        <div v-if="!filteredAccessories.length" class="empty-state">
+          Tidak ada aksesoris yang cocok.
         </div>
         <div
-          v-for="bundle in filteredBundles"
-          :key="bundle.id"
+          v-for="accessory in filteredAccessories"
+          :key="accessory.id"
           class="picker-row"
-          :class="{ unavailable: bundle.available_quantity <= 0 }"
+          :class="{ unavailable: !isAvailable(accessory) }"
         >
           <div class="picker-meta">
             <Icon name="box" :size="20" class="picker-icon" />
             <div>
-              <div class="picker-name">{{ bundle.name }}</div>
+              <div class="picker-name">{{ accessory.name }}</div>
               <div class="picker-detail">
-                {{ bundle.code }} · 
-                {{ props.bundleType === "rental" 
-                  ? formatCurrency(bundle.rental_price_per_day || 0) + "/hari"
-                  : formatCurrency(bundle.price || 0) }}
+                {{ formatCurrency(accessory.sale_price ?? 0) }}
+                <span
+                  v-if="accessory.discount_percentage > 0 || accessory.discount_amount > 0"
+                  class="discount-badge"
+                >
+                  (Diskon:
+                  {{
+                    accessory.discount_percentage > 0
+                      ? accessory.discount_percentage + "%"
+                      : formatCurrency(accessory.discount_amount)
+                  }})
+                </span>
               </div>
             </div>
           </div>
           <div class="picker-actions">
-            <span
-              class="status-chip"
-              :class="bundle.available_quantity <= 0 ? 'soldout' : 'available'"
-            >
-              {{ bundle.available_quantity <= 0 ? "Habis" : "Tersedia" }}
+            <span class="status-chip" :class="isAvailable(accessory) ? 'available' : 'unavailable'">
+              {{ isAvailable(accessory) ? "Tersedia" : "Tidak Tersedia" }}
             </span>
             <AppButton
               variant="primary"
               size="small"
-              :disabled="bundle.available_quantity <= 0"
-              @click="selectBundle(bundle)"
+              :disabled="!isAvailable(accessory)"
+              @click="selectAccessory(accessory)"
             >
               Pilih
             </AppButton>
@@ -73,14 +66,14 @@
 
 <script>
 import { computed, ref, watch } from "vue";
-import { useBundleStore } from "@/store/bundles";
+import { fetchAccessories } from "@/services/masterData";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 
 export default {
-  name: "BundlePickerDialog",
+  name: "AccessoryPickerDialog",
   components: {
     AppDialog,
     AppButton,
@@ -93,17 +86,12 @@ export default {
       type: Array,
       default: () => [],
     },
-    bundleType: {
-      type: String,
-      default: "sale", // "sale" or "rental"
-    },
   },
   emits: ["update:modelValue", "select"],
   setup(props, { emit }) {
-    const bundleStore = useBundleStore();
+    const accessories = ref([]);
+    const loading = ref(false);
     const search = ref("");
-    const statusFilter = ref("");
-
     const visible = computed({
       get: () => props.modelValue,
       set: (value) => emit("update:modelValue", value),
@@ -111,27 +99,24 @@ export default {
 
     const excludedSet = computed(() => new Set(props.excludedIds));
 
-    const filteredBundles = computed(() => {
+    const isAvailable = (accessory) => {
+      return (
+        accessory.is_active &&
+        accessory.is_available_for_sale &&
+        (accessory.available_quantity ?? 0) > 0
+      );
+    };
+
+    const filteredAccessories = computed(() => {
       const term = search.value.toLowerCase();
-      const bundles = props.bundleType === "rental" 
-        ? bundleStore.rentalBundles 
-        : bundleStore.saleBundles;
-      
-      return bundles
-        .filter((bundle) => !excludedSet.value.has(bundle.id))
-        .filter((bundle) => {
+      return accessories.value
+        .filter((accessory) => !excludedSet.value.has(accessory.id))
+        .filter((accessory) => {
           if (!term) return true;
           return (
-            bundle.name.toLowerCase().includes(term) ||
-            (bundle.code || "").toLowerCase().includes(term)
+            accessory.name.toLowerCase().includes(term) ||
+            (accessory.code && accessory.code.toLowerCase().includes(term))
           );
-        })
-        .filter((bundle) => {
-          if (!statusFilter.value) return true;
-          if (statusFilter.value === "open") {
-            return bundle.available_quantity > 0;
-          }
-          return bundle.available_quantity <= 0;
         })
         .slice(0, 80);
     });
@@ -143,29 +128,39 @@ export default {
       }).format(value || 0);
     };
 
-    const selectBundle = (bundle) => {
-      emit("select", { ...bundle });
+    const loadAccessories = async () => {
+      if (accessories.value.length > 0) return;
+      loading.value = true;
+      try {
+        accessories.value = await fetchAccessories();
+      } catch (error) {
+        console.error("Gagal memuat aksesoris:", error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const selectAccessory = (accessory) => {
+      emit("select", { ...accessory });
       visible.value = false;
     };
 
     watch(
       () => props.modelValue,
       (value) => {
-        if (value && !bundleStore.bundles.length) {
-          bundleStore.fetchBundles().catch((error) => {
-            console.error("Gagal memuat paket:", error);
-          });
+        if (value) {
+          loadAccessories();
         }
       },
     );
 
     return {
       search,
-      statusFilter,
+      filteredAccessories,
       visible,
-      filteredBundles,
       formatCurrency,
-      selectBundle,
+      selectAccessory,
+      isAvailable,
     };
   },
 };
@@ -187,40 +182,6 @@ export default {
 
 .picker-controls :deep(.form-group) {
   margin-bottom: 0;
-}
-
-.picker-controls > .form-group {
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.picker-controls :deep(.form-label),
-.picker-controls > .form-group > .form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #374151;
-  font-size: 0.9rem;
-}
-
-.filter-dropdown {
-  width: 100%;
-  max-width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  font-size: 1rem;
-  box-sizing: border-box;
-  appearance: none;
-  cursor: pointer;
-}
-
-.filter-dropdown:focus {
-  outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
 .picker-list {
@@ -288,7 +249,7 @@ export default {
   color: #166534;
 }
 
-.status-chip.soldout {
+.status-chip.unavailable {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -298,4 +259,11 @@ export default {
   color: #6b7280;
   text-align: center;
 }
+
+.discount-badge {
+  font-size: 0.75rem;
+  color: #16a34a;
+  margin-left: 0.25rem;
+}
 </style>
+

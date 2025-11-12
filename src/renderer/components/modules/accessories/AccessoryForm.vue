@@ -103,8 +103,8 @@
 
       <div class="form-switches">
         <label class="switch">
-          <input type="checkbox" v-model="form.is_available_for_rent" />
-          <span>Bisa Disewa</span>
+          <input type="checkbox" v-model="form.is_available_for_rent" disabled />
+          <span>Bisa Disewa (Aksesoris tidak bisa disewa)</span>
         </label>
         <label class="switch">
           <input type="checkbox" v-model="form.is_available_for_sale" />
@@ -268,7 +268,7 @@ export default {
         available_quantity: availableQty,
         min_stock_alert: Math.max(0, toInteger(form.value.min_stock_alert)),
         discount_group_id: form.value.discount_group_id || null,
-        is_available_for_rent: !!form.value.is_available_for_rent,
+        is_available_for_rent: false, // Aksesoris tidak bisa disewa
         is_available_for_sale: !!form.value.is_available_for_sale,
         is_active: !!form.value.is_active,
       };

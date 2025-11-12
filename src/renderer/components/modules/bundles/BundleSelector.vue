@@ -66,6 +66,7 @@
     <BundlePickerDialog
       v-model="pickerOpen"
       :excluded-ids="selectedBundles.map((bundle) => bundle.id)"
+      :bundle-type="bundleType"
       @select="selectBundle"
     />
   </div>
@@ -89,6 +90,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    bundleType: {
+      type: String,
+      default: "sale", // "sale" or "rental"
+    },
   },
   emits: ["update:modelValue"],
   setup(props, { emit }) {
@@ -104,7 +109,9 @@ export default {
 
     // Calculate price after bundle discount
     const calculateBundlePrice = (bundle) => {
-      const basePrice = bundle.price || 0;
+      const basePrice = props.bundleType === "rental" 
+        ? (bundle.rental_price_per_day || 0)
+        : (bundle.price || 0);
 
       // Apply bundle discount if bundle has discount_group
       if (bundle.discount_percentage > 0) {

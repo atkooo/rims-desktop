@@ -84,6 +84,9 @@ function setupAccessoryHandlers() {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
+      // Force is_available_for_rent to false for accessories
+      const isAvailableForRent = false;
+
       const result = await database.execute(insertSql, [
         code,
         name,
@@ -94,7 +97,7 @@ function setupAccessoryHandlers() {
         stockQuantity,
         availableQuantity,
         Math.max(0, toInteger(payload.min_stock_alert)),
-        toBoolean(payload.is_available_for_rent) ? 1 : 0,
+        isAvailableForRent ? 1 : 0, // Always false for accessories
         toBoolean(payload.is_available_for_sale) ? 1 : 0,
         toBoolean(payload.is_active) ? 1 : 0,
         discountGroupId,
@@ -219,8 +222,10 @@ function setupAccessoryHandlers() {
         }
       }
 
+      // Force is_available_for_rent to false for accessories
+      updates.is_available_for_rent = 0;
+
       const booleanFields = [
-        "is_available_for_rent",
         "is_available_for_sale",
         "is_active",
       ];

@@ -115,7 +115,8 @@ function setupTransactionViewHandlers() {
       SELECT
         sd.id,
         st.transaction_code,
-        i.name AS item_name,
+        COALESCE(i.name, a.name) AS item_name,
+        CASE WHEN sd.item_id IS NOT NULL THEN 'item' ELSE 'accessory' END AS item_type,
         sd.quantity,
         sd.sale_price,
         sd.subtotal,
@@ -123,6 +124,7 @@ function setupTransactionViewHandlers() {
       FROM sales_transaction_details sd
       LEFT JOIN sales_transactions st ON sd.sales_transaction_id = st.id
       LEFT JOIN items i ON sd.item_id = i.id
+      LEFT JOIN accessories a ON sd.accessory_id = a.id
       ORDER BY sd.id DESC
     `,
     "sales transaction details",
