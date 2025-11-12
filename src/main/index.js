@@ -8,7 +8,6 @@ const setupBundleHandlers = require("./handlers/bundleHandlers");
 const setupCustomerHandlers = require("./handlers/customerHandlers");
 const {
   setupTransactionHandlers,
-  setupBookingHandlers,
   setupPaymentHandlers,
   setupStockMovementHandlers,
 } = require("./handlers/transactionHandlers");
@@ -112,7 +111,6 @@ app.whenReady().then(async () => {
   setupBundleHandlers();
   setupCustomerHandlers();
   setupTransactionHandlers();
-  setupBookingHandlers();
   setupPaymentHandlers();
   setupStockMovementHandlers();
   setupSettingsHandlers();

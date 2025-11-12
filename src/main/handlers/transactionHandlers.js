@@ -194,21 +194,17 @@ function setupTransactionHandlers() {
         const transactionCode = generateTransactionCode(transactionData.type);
 
         if (transactionData.type === "RENTAL") {
-          // Get booking_id if provided
-          const bookingId = transactionData.bookingId || null;
-
           // Insert rental transaction
           result = await database.execute(
             `INSERT INTO rental_transactions (
-              transaction_code, customer_id, user_id, booking_id, rental_date, 
+              transaction_code, customer_id, user_id, rental_date, 
               planned_return_date, total_days, subtotal, deposit, tax,
               total_amount, status, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               transactionData.customerId,
               transactionData.userId,
-              bookingId,
               transactionData.rentalDate,
               transactionData.plannedReturnDate,
               transactionData.totalDays,
@@ -221,14 +217,6 @@ function setupTransactionHandlers() {
               cashierSessionId,
             ],
           );
-
-          // Update booking status to 'fulfilled' if booking_id is provided
-          if (bookingId) {
-            await database.execute(
-              "UPDATE bookings SET status = 'fulfilled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-              [bookingId],
-            );
-          }
 
           // Insert rental transaction items
           for (const item of transactionData.items) {
@@ -634,160 +622,6 @@ function setupTransactionHandlers() {
   });
 }
 
-// Bookings CRUD Handlers
-function setupBookingHandlers() {
-  // Generate booking code
-  function generateBookingCode() {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const random = Math.floor(Math.random() * 9999)
-      .toString()
-      .padStart(4, "0");
-    return `BKG${year}${month}${day}${random}`;
-  }
-
-  // Create booking
-  ipcMain.handle("bookings:create", async (event, bookingData) => {
-    try {
-      if (!validator.isValidDate(bookingData.bookingDate)) {
-        throw new Error("Tanggal booking tidak valid");
-      }
-      if (!validator.isValidDate(bookingData.plannedStartDate)) {
-        throw new Error("Tanggal mulai tidak valid");
-      }
-      if (!validator.isValidDate(bookingData.plannedEndDate)) {
-        throw new Error("Tanggal selesai tidak valid");
-      }
-      if (!validator.isPositiveNumber(bookingData.quantity)) {
-        throw new Error("Jumlah harus berupa angka positif");
-      }
-
-      const bookingCode = generateBookingCode();
-      const result = await database.execute(
-        `INSERT INTO bookings (
-          booking_code, customer_id, user_id, item_id, quantity,
-          booking_date, planned_start_date, planned_end_date,
-          estimated_price, deposit, status, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          bookingCode,
-          bookingData.customerId,
-          bookingData.userId,
-          bookingData.itemId,
-          bookingData.quantity,
-          bookingData.bookingDate,
-          bookingData.plannedStartDate,
-          bookingData.plannedEndDate,
-          bookingData.estimatedPrice || 0,
-          bookingData.deposit || 0,
-          bookingData.status || "pending",
-          bookingData.notes || null,
-        ],
-      );
-
-      const newBooking = await database.queryOne(
-        `SELECT b.*, c.name AS customer_name, u.full_name AS user_name, i.name AS item_name
-         FROM bookings b
-         LEFT JOIN customers c ON b.customer_id = c.id
-         LEFT JOIN users u ON b.user_id = u.id
-         LEFT JOIN items i ON b.item_id = i.id
-         WHERE b.id = ?`,
-        [result.id],
-      );
-
-      return newBooking;
-    } catch (error) {
-      logger.error("Error creating booking:", error);
-      throw error;
-    }
-  });
-
-  // Update booking
-  ipcMain.handle("bookings:update", async (event, id, bookingData) => {
-    try {
-      const updateFields = [];
-      const updateValues = [];
-
-      if (bookingData.customerId !== undefined) {
-        updateFields.push("customer_id = ?");
-        updateValues.push(bookingData.customerId);
-      }
-      if (bookingData.itemId !== undefined) {
-        updateFields.push("item_id = ?");
-        updateValues.push(bookingData.itemId);
-      }
-      if (bookingData.quantity !== undefined) {
-        updateFields.push("quantity = ?");
-        updateValues.push(bookingData.quantity);
-      }
-      if (bookingData.bookingDate !== undefined) {
-        updateFields.push("booking_date = ?");
-        updateValues.push(bookingData.bookingDate);
-      }
-      if (bookingData.plannedStartDate !== undefined) {
-        updateFields.push("planned_start_date = ?");
-        updateValues.push(bookingData.plannedStartDate);
-      }
-      if (bookingData.plannedEndDate !== undefined) {
-        updateFields.push("planned_end_date = ?");
-        updateValues.push(bookingData.plannedEndDate);
-      }
-      if (bookingData.estimatedPrice !== undefined) {
-        updateFields.push("estimated_price = ?");
-        updateValues.push(bookingData.estimatedPrice);
-      }
-      if (bookingData.deposit !== undefined) {
-        updateFields.push("deposit = ?");
-        updateValues.push(bookingData.deposit);
-      }
-      if (bookingData.status !== undefined) {
-        updateFields.push("status = ?");
-        updateValues.push(bookingData.status);
-      }
-      if (bookingData.notes !== undefined) {
-        updateFields.push("notes = ?");
-        updateValues.push(bookingData.notes);
-      }
-
-      if (updateFields.length > 0) {
-        updateFields.push("updated_at = CURRENT_TIMESTAMP");
-        updateValues.push(id);
-        await database.execute(
-          `UPDATE bookings SET ${updateFields.join(", ")} WHERE id = ?`,
-          updateValues,
-        );
-      }
-
-      const updatedBooking = await database.queryOne(
-        `SELECT b.*, c.name AS customer_name, u.full_name AS user_name, i.name AS item_name
-         FROM bookings b
-         LEFT JOIN customers c ON b.customer_id = c.id
-         LEFT JOIN users u ON b.user_id = u.id
-         LEFT JOIN items i ON b.item_id = i.id
-         WHERE b.id = ?`,
-        [id],
-      );
-
-      return updatedBooking;
-    } catch (error) {
-      logger.error("Error updating booking:", error);
-      throw error;
-    }
-  });
-
-  // Delete booking
-  ipcMain.handle("bookings:delete", async (event, id) => {
-    try {
-      await database.execute("DELETE FROM bookings WHERE id = ?", [id]);
-      return true;
-    } catch (error) {
-      logger.error("Error deleting booking:", error);
-      throw error;
-    }
-  });
-}
 
 // Payments CRUD Handlers
 function setupPaymentHandlers() {
@@ -1056,7 +890,6 @@ function setupStockMovementHandlers() {
 
 module.exports = {
   setupTransactionHandlers,
-  setupBookingHandlers,
   setupPaymentHandlers,
   setupStockMovementHandlers,
 };

@@ -15,12 +15,6 @@ export const menuGroups = [
         permission: "transactions.sales.view",
       },
       {
-        to: "/transactions/bookings",
-        label: "Booking Jadwal",
-        icon: "calendar",
-        permission: "transactions.bookings.view",
-      },
-      {
         to: "/transactions/cashier",
         label: "Buka Kasir",
         icon: "money",

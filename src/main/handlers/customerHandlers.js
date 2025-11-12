@@ -512,16 +512,14 @@ function setupCustomerHandlers() {
         `
           SELECT
             (SELECT COUNT(1) FROM rental_transactions WHERE customer_id = ?) AS rentals,
-            (SELECT COUNT(1) FROM sales_transactions WHERE customer_id = ?) AS sales,
-            (SELECT COUNT(1) FROM bookings WHERE customer_id = ?) AS bookings
+            (SELECT COUNT(1) FROM sales_transactions WHERE customer_id = ?) AS sales
         `,
-        [id, id, id],
+        [id, id],
       );
 
       if (
         (usage?.rentals ?? 0) > 0 ||
-        (usage?.sales ?? 0) > 0 ||
-        (usage?.bookings ?? 0) > 0
+        (usage?.sales ?? 0) > 0
       ) {
         throw new Error(
           "Tidak dapat menghapus pelanggan yang sudah memiliki transaksi",

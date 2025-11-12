@@ -129,32 +129,6 @@ function setupTransactionViewHandlers() {
   );
 
   register(
-    "transactions:getBookingsView",
-    () => `
-      SELECT
-        b.id,
-        b.booking_code,
-        c.name AS customer_name,
-        u.full_name AS user_name,
-        i.name AS item_name,
-        b.quantity,
-        b.booking_date,
-        b.planned_start_date,
-        b.planned_end_date,
-        b.estimated_price,
-        b.deposit,
-        b.status,
-        b.notes
-      FROM bookings b
-      LEFT JOIN customers c ON b.customer_id = c.id
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN items i ON b.item_id = i.id
-      ORDER BY b.booking_date DESC
-    `,
-    "bookings",
-  );
-
-  register(
     "transactions:getStockMovementsView",
     () => `
       SELECT

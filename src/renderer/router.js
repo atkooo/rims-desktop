@@ -26,7 +26,6 @@ import StockAlertsView from "./views/reports/StockAlertsView.vue";
 import TopCustomersView from "./views/reports/TopCustomersView.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
-import BookingsView from "./views/transaction/BookingsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
 import CashierView from "./views/transaction/CashierView.vue";
 import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
@@ -57,7 +56,6 @@ const routePermissions = {
   "/transactions/rentals/new": "transactions.rentals.create",
   "/transactions/sales": "transactions.sales.view",
   "/transactions/sales/new": "transactions.sales.create",
-  "/transactions/bookings": "transactions.bookings.view",
   "/transactions/stock-movements": "transactions.stock-movements.view",
   "/transactions/cashier": "transactions.cashier.manage",
   "/reports": "reports.view",
@@ -163,11 +161,6 @@ const routes = [
     name: "transaction-sale-payment",
     component: () =>
       import("./views/transaction/SaleTransactionPaymentView.vue"),
-  },
-  {
-    path: "/transactions/bookings",
-    name: "transactions-bookings",
-    component: BookingsView,
   },
   {
     path: "/transactions/stock-movements",

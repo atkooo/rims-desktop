@@ -316,16 +316,6 @@ function setupItemHandlers() {
         );
       }
 
-      // Check if item is used in bookings
-      const bookingCheck = await database.queryOne(
-        "SELECT COUNT(*) as count FROM bookings WHERE item_id = ?",
-        [id],
-      );
-      if (bookingCheck && bookingCheck.count > 0) {
-        throw new Error(
-          "Tidak dapat menghapus item yang digunakan dalam booking",
-        );
-      }
 
       // Check if item is used in stock movements
       const stockMovementCheck = await database.queryOne(

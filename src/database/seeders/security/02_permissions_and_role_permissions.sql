@@ -56,11 +56,6 @@ INSERT INTO permissions (name, slug, description, module) VALUES
 ('Delete Sales Transactions', 'transactions.sales.delete', 'Akses untuk menghapus transaksi penjualan', 'transactions'),
 ('Process Sales Payment', 'transactions.sales.payment', 'Akses untuk memproses pembayaran penjualan', 'transactions'),
 
-('View Bookings', 'transactions.bookings.view', 'Akses untuk melihat booking', 'transactions'),
-('Create Bookings', 'transactions.bookings.create', 'Akses untuk membuat booking', 'transactions'),
-('Update Bookings', 'transactions.bookings.update', 'Akses untuk mengubah booking', 'transactions'),
-('Delete Bookings', 'transactions.bookings.delete', 'Akses untuk menghapus booking', 'transactions'),
-
 ('View Stock Movements', 'transactions.stock-movements.view', 'Akses untuk melihat pergerakan stok', 'transactions'),
 ('Create Stock Movements', 'transactions.stock-movements.create', 'Akses untuk membuat pergerakan stok', 'transactions'),
 ('Update Stock Movements', 'transactions.stock-movements.update', 'Akses untuk mengubah pergerakan stok', 'transactions'),
@@ -117,7 +112,7 @@ AND p.slug NOT IN (
     'master.categories.delete', 'master.items.delete', 'master.item-sizes.delete',
     'master.accessories.delete', 'master.bundles.delete', 'master.customers.delete',
     'master.discount-groups.delete',
-    'transactions.rentals.delete', 'transactions.sales.delete', 'transactions.bookings.delete',
+    'transactions.rentals.delete', 'transactions.sales.delete',
     'transactions.stock-movements.delete'
 );
 
@@ -136,7 +131,6 @@ AND p.slug IN (
     'transactions.rentals.payment',
     'transactions.sales.view', 'transactions.sales.create', 'transactions.sales.update',
     'transactions.sales.payment',
-    'transactions.bookings.view', 'transactions.bookings.create', 'transactions.bookings.update',
     'transactions.stock-movements.view', 'transactions.cashier.manage',
     'reports.view', 'reports.daily-sales.view', 'reports.items-stock.view',
     'reports.stock-alerts.view', 'reports.top-customers.view',
@@ -157,7 +151,6 @@ AND p.slug IN (
     'transactions.rentals.payment',
     'transactions.sales.view', 'transactions.sales.create', 'transactions.sales.update',
     'transactions.sales.payment',
-    'transactions.bookings.view', 'transactions.bookings.create', 'transactions.bookings.update',
     'transactions.cashier.manage'
 );
 

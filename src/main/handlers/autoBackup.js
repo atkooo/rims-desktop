@@ -52,14 +52,32 @@ async function createBackup() {
     // Ensure backup directory exists
     await fs.mkdir(BACKUPS_DIR, { recursive: true });
 
-    // Close current database connection and wait for it to fully close
-    await database.close();
+    // Use VACUUM INTO to create backup without closing database
+    // This is safer than closing and copying, as it doesn't interrupt other operations
+    // Escape single quotes and backslashes in the path for SQL
+    const escapedPath = backupFile.replace(/\\/g, '/').replace(/'/g, "''");
+    try {
+      await database.execSqlScript(
+        `VACUUM INTO '${escapedPath}'`,
+        "auto-backup"
+      );
+    } catch (vacuumError) {
+      // If VACUUM INTO fails (not supported in older SQLite versions),
+      // fall back to closing and copying
+      logger.warn("VACUUM INTO not supported, using file copy method:", vacuumError.message);
+      
+      // Close current database connection and wait for it to fully close
+      await database.close();
 
-    // Copy database file
-    await fs.copyFile(DATABASE_FILE, backupFile);
+      // Small delay to ensure database file is fully released by SQLite
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Reconnect to database
-    await database.connect();
+      // Copy database file
+      await fs.copyFile(DATABASE_FILE, backupFile);
+
+      // Reconnect to database
+      await database.connect();
+    }
 
     // Clean up old backups
     await cleanOldBackups();
@@ -91,14 +109,14 @@ async function createBackup() {
   } catch (error) {
     logger.error("Error creating auto backup:", error);
 
-    // Try to reconnect to database if backup failed
+    // Ensure database is connected (in case it was closed during fallback)
     try {
       await database.connect();
-    } catch (connError) {
-      logger.error("Error reconnecting to database:", connError);
+    } catch (reconnectError) {
+      logger.error("Error reconnecting to database:", reconnectError);
     }
 
-    // Log failed backup into backup_history
+    // Log failed backup into backup_history (only if database is connected)
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const backupFile = path.join(

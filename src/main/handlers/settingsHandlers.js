@@ -215,14 +215,32 @@ function setupSettingsHandlers() {
       // Ensure backup directory exists
       await fs.mkdir(BACKUPS_DIR, { recursive: true });
 
-      // Close current database connection and wait for it to fully close
-      await database.close();
+      // Use VACUUM INTO to create backup without closing database
+      // This is safer than closing and copying, as it doesn't interrupt other operations
+      // Escape single quotes and backslashes in the path for SQL
+      const escapedPath = backupFile.replace(/\\/g, '/').replace(/'/g, "''");
+      try {
+        await database.execSqlScript(
+          `VACUUM INTO '${escapedPath}'`,
+          "backup"
+        );
+      } catch (vacuumError) {
+        // If VACUUM INTO fails (not supported in older SQLite versions),
+        // fall back to closing and copying
+        logger.warn("VACUUM INTO not supported, using file copy method:", vacuumError.message);
+        
+        // Close current database connection and wait for it to fully close
+        await database.close();
 
-      // Copy database file
-      await fs.copyFile(DATABASE_FILE, backupFile);
+        // Small delay to ensure database file is fully released by SQLite
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Reconnect to database
-      await database.connect();
+        // Copy database file
+        await fs.copyFile(DATABASE_FILE, backupFile);
+
+        // Reconnect to database
+        await database.connect();
+      }
 
       // Record backup history (manual)
       try {
@@ -245,26 +263,119 @@ function setupSettingsHandlers() {
       return true;
     } catch (error) {
       logger.error("Error creating backup:", error);
+      
+      // Ensure database is connected (in case it was closed during fallback)
+      try {
+        await database.connect();
+      } catch (reconnectError) {
+        logger.error("Failed to reconnect database after backup error:", reconnectError);
+      }
+      
       throw error;
     }
   });
 
   // Restore backup
   ipcMain.handle("backup:restore", async (event, backupFile) => {
+    let databaseWasClosed = false;
     try {
       const backupPath = path.join(BACKUPS_DIR, backupFile);
 
       // Verify backup file exists
       await fs.access(backupPath);
 
+      logger.info("Starting backup restore from:", backupFile);
+
       // Close current database connection and wait for it to fully close
       await database.close();
+      databaseWasClosed = true;
+      logger.info("Database connection closed for restore");
 
-      // Copy backup file to database location
-      await fs.copyFile(backupPath, DATABASE_FILE);
+      // Longer delay to ensure database file is fully released by SQLite
+      // Windows may need more time to release file handles
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Try to copy backup file with retry mechanism
+      // Windows may hold file locks for a short time after close
+      let copySuccess = false;
+      let copyRetries = 5;
+      let lastError = null;
+      
+      while (!copySuccess && copyRetries > 0) {
+        try {
+          // Copy backup file to database location
+          logger.info(`Copying backup file to database location... (${copyRetries} retries left)`);
+          await fs.copyFile(backupPath, DATABASE_FILE);
+          logger.info("Backup file copied successfully");
+          copySuccess = true;
+        } catch (copyError) {
+          lastError = copyError;
+          copyRetries--;
+          
+          // Get error message for checking and reporting
+          const errorMessage = copyError?.message || copyError?.toString() || String(copyError) || "Unknown error";
+          
+          if (copyRetries > 0) {
+            // Check if error is related to file lock
+            const isLockError = errorMessage.includes("locked") || 
+                               errorMessage.includes("EBUSY") || 
+                               errorMessage.includes("EACCES") ||
+                               errorMessage.includes("EPERM") ||
+                               errorMessage.includes("ENOENT");
+            
+            if (isLockError) {
+              logger.warn(`Database file still locked, waiting 300ms before retry... (${copyRetries} retries left)`);
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            } else {
+              // Different error, don't retry
+              logger.error("Copy error (not lock-related):", errorMessage);
+              throw copyError;
+            }
+          } else {
+            // All retries exhausted
+            logger.error("Failed to copy backup file after all retries:", errorMessage);
+            throw new Error(`Failed to copy backup file after multiple attempts: ${errorMessage}. Please ensure no other application is using the database file.`);
+          }
+        }
+      }
+
+      // Additional delay after copy to ensure file system has written the file
+      // Windows may need more time to flush file changes
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Reset initialized flag so ensureSchema will run with fresh connection
+      // This is important after restore as the database file has been replaced
+      database.resetInitialized();
+      logger.info("Database initialized flag reset after restore");
 
       // Reconnect to database
+      logger.info("Reconnecting to database...");
       await database.connect();
+      databaseWasClosed = false;
+      logger.info("Database reconnected successfully");
+
+      // Verify database connection is ready by running a test query
+      // Wait a bit before verification to ensure connection is stable
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      try {
+        await database.queryOne("SELECT 1 AS test");
+        logger.info("Database connection verified and ready");
+      } catch (verifyError) {
+        logger.warn("Database connection verification failed, retrying:", verifyError.message);
+        // Wait a bit more and try to reconnect
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await database.connect();
+        logger.info("Database reconnected after verification failure");
+        
+        // Verify again
+        try {
+          await database.queryOne("SELECT 1 AS test");
+          logger.info("Database connection verified after retry");
+        } catch (secondVerifyError) {
+          logger.error("Database connection verification failed on retry:", secondVerifyError.message);
+          throw new Error("Failed to establish valid database connection after restore");
+        }
+      }
 
       // Log activity for restore
       try {
@@ -273,14 +384,37 @@ function setupSettingsHandlers() {
            VALUES (NULL, 'BACKUP_RESTORE', 'backup', ?, NULL)`,
           [`Restore from: ${backupFile}`],
         );
+        logger.info("Restore activity logged successfully");
       } catch (logErr) {
-        logger.warn("Failed to record restore activity:", logErr);
+        logger.warn("Failed to record restore activity (non-critical):", logErr.message);
+        // Don't fail the restore if logging fails
       }
 
       logger.info("Backup restored successfully from:", backupFile);
       return true;
     } catch (error) {
       logger.error("Error restoring backup:", error);
+      
+      // Always ensure database is reconnected if it was closed
+      if (databaseWasClosed) {
+        try {
+          // Wait a bit before reconnecting to ensure cleanup
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await database.connect();
+          logger.info("Database reconnected after restore error");
+        } catch (reconnectError) {
+          logger.error("Failed to reconnect database after restore error:", reconnectError);
+          // Try one more time after a longer delay
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await database.connect();
+            logger.info("Database reconnected on second attempt");
+          } catch (secondReconnectError) {
+            logger.error("Failed to reconnect database on second attempt:", secondReconnectError);
+          }
+        }
+      }
+      
       throw error;
     }
   });

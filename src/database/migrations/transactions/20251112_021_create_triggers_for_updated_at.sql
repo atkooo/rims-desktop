@@ -19,15 +19,6 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for bookings
-CREATE TRIGGER IF NOT EXISTS update_bookings_updated_at 
-AFTER UPDATE ON bookings
-BEGIN
-    UPDATE bookings 
-    SET updated_at = CURRENT_TIMESTAMP 
-    WHERE id = NEW.id;
-END;
-
 -- Trigger for items
 CREATE TRIGGER IF NOT EXISTS update_items_updated_at 
 AFTER UPDATE ON items

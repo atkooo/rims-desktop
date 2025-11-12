@@ -14,7 +14,15 @@ class Database {
 
   // Koneksi ke database
   async connect() {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
+    
+    // If already connected, return the connection
     if (this.db) return this.db;
+    
+    // If already connecting, wait for that connection
     if (this.connectingPromise) return this.connectingPromise;
 
     this.connectingPromise = new Promise((resolve, reject) => {
@@ -45,10 +53,18 @@ class Database {
 
   // Query dengan Promise
   async query(sql, params = []) {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database connection is not available"));
+        return;
+      }
       this.db.all(sql, params, (err, rows) => {
         if (err) {
           logger.error("Error executing query:", { sql, error: err });
@@ -62,10 +78,18 @@ class Database {
 
   // Single result query
   async queryOne(sql, params = []) {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database connection is not available"));
+        return;
+      }
       this.db.get(sql, params, (err, row) => {
         if (err) {
           logger.error("Error executing query:", { sql, error: err });
@@ -79,10 +103,18 @@ class Database {
 
   // Execute query (insert, update, delete)
   async execute(sql, params = []) {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database connection is not available"));
+        return;
+      }
       this.db.run(sql, params, function (err) {
         if (err) {
           logger.error("Error executing statement:", { sql, error: err });
@@ -96,19 +128,34 @@ class Database {
 
   // Close connection
   async close() {
-    if (!this.db) return;
-    if (this.closingPromise) return this.closingPromise;
+    if (!this.db) {
+      // If already closed or closing, wait for close to complete
+      if (this.closingPromise) {
+        return this.closingPromise;
+      }
+      return;
+    }
+    
+    // If already closing, wait for it
+    if (this.closingPromise) {
+      return this.closingPromise;
+    }
 
     const dbToClose = this.db;
-    this.db = null;
-    this.initialized = false;
-
+    
+    // Don't set this.db to null yet - wait until close completes
+    // This prevents race conditions where other operations might try to use the db
+    
     this.closingPromise = new Promise((resolve) => {
       dbToClose.close((err) => {
         if (err) {
           logger.error("Error closing database:", err);
+        } else {
+          logger.info("Database connection closed");
         }
-        logger.info("Database connection closed");
+        // Now we can safely set db to null
+        this.db = null;
+        this.initialized = false;
         this.closingPromise = null;
         resolve();
       });
@@ -121,8 +168,15 @@ class Database {
     if (this.initialized) return;
 
     try {
+      // Ensure we have a database connection before running migrations
+      if (!this.db) {
+        throw new Error("Database connection is not available for migrations");
+      }
+      
       const { runMigrations } = require("../../database/migrate");
-      await runMigrations();
+      // Pass our database connection to runMigrations so it uses the same connection
+      // This prevents issues with multiple connections and ensures consistency
+      await runMigrations(this.db);
 
       // Seed only if database is empty (no users yet)
       const row = await this.queryOne("SELECT COUNT(1) AS count FROM users");
@@ -139,11 +193,25 @@ class Database {
     }
   }
 
+  // Reset initialized flag (useful after restore)
+  resetInitialized() {
+    this.initialized = false;
+    logger.info("Database initialized flag reset");
+  }
+
   async tableExists(tableName) {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database connection is not available"));
+        return;
+      }
       this.db.get(
         "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
         [tableName],
@@ -159,10 +227,18 @@ class Database {
   }
 
   async execSqlScript(sql, label) {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database connection is not available"));
+        return;
+      }
       this.db.exec(sql, (err) => {
         if (err) {
           logger.error(`Error executing ${label} SQL script:`, err);
@@ -176,6 +252,10 @@ class Database {
 
   // Transaction helpers
   async beginTransaction() {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
@@ -183,6 +263,10 @@ class Database {
   }
 
   async commit() {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }
@@ -190,6 +274,10 @@ class Database {
   }
 
   async rollback() {
+    // Wait for any closing operation to complete first
+    if (this.closingPromise) {
+      await this.closingPromise;
+    }
     if (!this.db) {
       await this.connect();
     }

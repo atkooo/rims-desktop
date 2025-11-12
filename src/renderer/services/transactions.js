@@ -16,29 +16,12 @@ export function fetchSalesDetails() {
   return ipcRenderer.invoke("transactions:getSalesDetailsView");
 }
 
-export function fetchBookings() {
-  return ipcRenderer.invoke("transactions:getBookingsView");
-}
-
 export function fetchStockMovements() {
   return ipcRenderer.invoke("transactions:getStockMovementsView");
 }
 
 export function fetchPayments() {
   return ipcRenderer.invoke("transactions:getPaymentsView");
-}
-
-// Bookings CRUD
-export function createBooking(bookingData) {
-  return ipcRenderer.invoke("bookings:create", bookingData);
-}
-
-export function updateBooking(id, bookingData) {
-  return ipcRenderer.invoke("bookings:update", id, bookingData);
-}
-
-export function deleteBooking(id) {
-  return ipcRenderer.invoke("bookings:delete", id);
 }
 
 // Payments CRUD
