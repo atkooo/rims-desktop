@@ -45,3 +45,8 @@ export function createStockMovement(movementData) {
 export function deleteStockMovement(id) {
   return ipcRenderer.invoke("stockMovements:delete", id);
 }
+
+// Cancel transaction
+export function cancelTransaction(id, transactionType) {
+  return ipcRenderer.invoke("transactions:cancel", id, transactionType);
+}

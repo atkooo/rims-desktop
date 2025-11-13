@@ -216,6 +216,15 @@
       </div>
     </section>
   </div>
+
+  <!-- Payment Modal -->
+  <PaymentModal
+    v-model="showPaymentModal"
+    :transaction-id="savedTransactionId"
+    transaction-type="rental"
+    @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose"
+  />
 </template>
 
 <script>
@@ -224,6 +233,7 @@ import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
+import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
@@ -263,6 +273,7 @@ export default {
     AppButton,
     ItemSelector,
     BundleSelector,
+    PaymentModal,
   },
   setup() {
     const router = useRouter();
@@ -274,6 +285,8 @@ export default {
     const errors = ref({});
     const cashierStatus = ref(null);
     const taxPercentage = ref(0);
+    const showPaymentModal = ref(false);
+    const savedTransactionId = ref(null);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -444,12 +457,10 @@ export default {
         // Refresh cashier status after transaction
         await loadCashierStatus();
 
-        // Redirect to payment page
+        // Show payment modal
         if (newTransaction && newTransaction.id) {
-          router.push({
-            name: "transaction-rental-payment",
-            params: { id: newTransaction.id },
-          });
+          savedTransactionId.value = newTransaction.id;
+          showPaymentModal.value = true;
         } else {
           // Fallback: show success message
           showSuccess("Transaksi berhasil disimpan.");
@@ -494,6 +505,43 @@ export default {
       }
     };
 
+    const handlePaymentSuccess = (data) => {
+      if (!data.partial) {
+        // Payment is complete
+        showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
+        // Reset form and close modal
+        form.value = createDefaultForm();
+        errors.value = {};
+        showPaymentModal.value = false;
+        savedTransactionId.value = null;
+        // Redirect to transactions list
+        setTimeout(() => {
+          router.push({ name: "transactions-rentals" });
+        }, 1500);
+      } else {
+        // Partial payment, keep modal open
+        showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
+      }
+    };
+
+    const handlePaymentModalClose = (data) => {
+      showPaymentModal.value = false;
+      savedTransactionId.value = null;
+      
+      // If modal closed without payment (unpaid)
+      if (data?.unpaid) {
+        showError("Transaksi belum dibayar. Silakan lakukan pembayaran dari daftar transaksi.");
+        // Redirect to transactions list after a short delay
+        setTimeout(() => {
+          router.push({ name: "transactions-rentals" });
+        }, 2000);
+      }
+      
+      // Reset form after payment modal is closed
+      form.value = createDefaultForm();
+      errors.value = {};
+    };
+
     // Watch subtotal to recalculate tax
     watch(
       () => [subtotal.value, form.value.deposit],
@@ -530,6 +578,10 @@ export default {
       handleSubmit,
       resetForm,
       goBack,
+      showPaymentModal,
+      savedTransactionId,
+      handlePaymentSuccess,
+      handlePaymentModalClose,
     };
   },
 };

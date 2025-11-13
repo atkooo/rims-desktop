@@ -30,6 +30,10 @@
           <strong>{{ stats.totalRentals }}</strong>
         </div>
         <div class="summary-card">
+          <span>Pending</span>
+          <strong>{{ stats.pendingRentals }}</strong>
+        </div>
+        <div class="summary-card">
           <span>Aktif</span>
           <strong>{{ stats.activeRentals }}</strong>
         </div>
@@ -50,8 +54,9 @@
       <div class="filters">
         <select v-model="filters.status" class="filter-select">
           <option value="">Semua Status Sewa</option>
+          <option value="pending">Pending (Belum Bayar)</option>
           <option value="active">Aktif</option>
-          <option value="completed">Selesai</option>
+          <option value="returned">Dikembalikan</option>
           <option value="overdue">Terlambat</option>
           <option value="cancelled">Dibatalkan</option>
         </select>
@@ -60,7 +65,6 @@
           <option value="">Semua Status Pembayaran</option>
           <option value="paid">Lunas</option>
           <option value="unpaid">Belum Lunas</option>
-          <option value="partial">Sebagian</option>
         </select>
       </div>
 
@@ -104,18 +108,28 @@
                       v-if="!isPaid(row)"
                       type="button"
                       class="action-menu-item"
-                      @click="continuePayment(row)"
-                    >
-                      <Icon name="credit-card" :size="16" />
-                      <span>Lanjutkan Pembayaran</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="action-menu-item"
                       @click="handleEdit(row)"
                     >
                       <Icon name="edit" :size="16" />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      v-if="!isPaid(row)"
+                      type="button"
+                      class="action-menu-item"
+                      @click="openPaymentModal(row)"
+                    >
+                      <Icon name="credit-card" :size="16" />
+                      <span>Bayar</span>
+                    </button>
+                    <button
+                      v-if="!isPaid(row) && row.status !== 'cancelled'"
+                      type="button"
+                      class="action-menu-item danger"
+                      @click="handleCancel(row)"
+                    >
+                      <Icon name="x-circle" :size="16" />
+                      <span>Cancel</span>
                     </button>
                   </div>
                 </transition>
@@ -134,6 +148,15 @@
     @saved="handleSaved"
     fixed-type
   />
+
+  <!-- Payment Modal -->
+  <PaymentModal
+    v-model="showPaymentModal"
+    :transaction-id="selectedTransactionId"
+    transaction-type="rental"
+    @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose"
+  />
 </template>
 
 <script>
@@ -143,13 +166,15 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
 import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
-import { fetchRentalTransactions } from "@/services/transactions";
+import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
+import { fetchRentalTransactions, cancelTransaction } from "@/services/transactions";
 import { useTransactionStore } from "@/store/transactions";
 import { TRANSACTION_TYPE } from "@shared/constants";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, AppTable, Icon, TransactionForm },
+  components: { AppButton, AppTable, Icon, TransactionForm, PaymentModal },
   setup() {
     const rentals = ref([]);
     const loading = ref(false);
@@ -160,6 +185,9 @@ export default {
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const showPaymentModal = ref(false);
+    const selectedTransactionId = ref(null);
+    const { showSuccess, showError } = useNotification();
     const filters = ref({
       status: "",
       paymentStatus: "",
@@ -195,11 +223,30 @@ export default {
         format: formatCurrency,
         sortable: true,
       },
-      { key: "status", label: "Status Sewa", sortable: true },
+      { 
+        key: "status", 
+        label: "Status Sewa", 
+        sortable: true,
+        format: (value) => getRentalStatusLabel(value)
+      },
     ];
+
+    const getRentalStatusLabel = (status) => {
+      const labels = {
+        pending: "Pending (Belum Bayar)",
+        active: "Aktif",
+        returned: "Dikembalikan",
+        cancelled: "Dibatalkan",
+        overdue: "Terlambat",
+      };
+      return labels[status] || status;
+    };
 
     const stats = computed(() => {
       const totalRentals = rentals.value.length;
+      const pendingRentals = rentals.value.filter(
+        (rental) => rental.status === "pending",
+      ).length;
       const activeRentalsCount = rentals.value.filter(
         (rental) => rental.status === "active",
       ).length;
@@ -212,6 +259,7 @@ export default {
       );
       return {
         totalRentals,
+        pendingRentals,
         activeRentals: activeRentalsCount,
         overdueRentals,
         totalAmount,
@@ -289,6 +337,11 @@ export default {
     };
 
     const handleEdit = (rental) => {
+      // Cek apakah transaksi sudah dibayar
+      if (isPaid(rental)) {
+        alert("Transaksi yang sudah dibayar tidak dapat di-edit.");
+        return;
+      }
       openMenuId.value = null;
       editingRental.value = rental;
       showForm.value = true;
@@ -331,6 +384,54 @@ export default {
       await loadData();
     };
 
+    const openPaymentModal = (rental) => {
+      openMenuId.value = null;
+      if (!rental.id) return;
+      selectedTransactionId.value = rental.id;
+      showPaymentModal.value = true;
+    };
+
+    const handlePaymentSuccess = (data) => {
+      if (!data.partial) {
+        showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
+        showPaymentModal.value = false;
+        selectedTransactionId.value = null;
+        loadData();
+      } else {
+        showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
+        loadData();
+      }
+    };
+
+    const handlePaymentModalClose = (data) => {
+      showPaymentModal.value = false;
+      selectedTransactionId.value = null;
+      
+      // If modal closed without payment (unpaid), just refresh data
+      if (data?.unpaid) {
+        loadData(); // Refresh to show updated status
+      }
+    };
+
+    const handleCancel = async (rental) => {
+      openMenuId.value = null;
+      
+      if (!rental.id) return;
+      
+      // Konfirmasi cancel
+      if (!confirm(`Apakah Anda yakin ingin membatalkan transaksi ${rental.transaction_code}? Stok akan dikembalikan.`)) {
+        return;
+      }
+
+      try {
+        await cancelTransaction(rental.id, "rental");
+        showSuccess("Transaksi berhasil di-cancel. Stok telah dikembalikan.");
+        await loadData();
+      } catch (error) {
+        showError(error.message || "Gagal membatalkan transaksi.");
+      }
+    };
+
     onMounted(() => {
       document.addEventListener("click", closeActionMenu);
       loadData();
@@ -359,11 +460,17 @@ export default {
       TRANSACTION_TYPE,
       handleRefresh,
       goToRentalDetail,
-      continuePayment,
       isPaid,
       toggleActionMenu,
       getMenuPosition,
+      showPaymentModal,
+      selectedTransactionId,
+      openPaymentModal,
+      handlePaymentSuccess,
+      handlePaymentModalClose,
+      handleCancel,
       filters,
+      getRentalStatusLabel,
     };
   },
 };
@@ -425,6 +532,15 @@ export default {
 
 .action-menu-item:hover {
   background: #f9fafb;
+}
+
+.action-menu-item.danger {
+  color: #dc2626;
+}
+
+.action-menu-item.danger:hover {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .action-menu-item .icon {

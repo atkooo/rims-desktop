@@ -136,12 +136,6 @@ const routes = [
     component: RentalTransactionDetailView,
   },
   {
-    path: "/transactions/rentals/:id/payment",
-    name: "transaction-rental-payment",
-    component: () =>
-      import("./views/transaction/RentalTransactionPaymentView.vue"),
-  },
-  {
     path: "/transactions/sales",
     name: "transactions-sales",
     component: SalesTransactionsView,
@@ -155,12 +149,6 @@ const routes = [
     path: "/transactions/sales/:code",
     name: "transaction-sale-detail",
     component: SaleTransactionDetailView,
-  },
-  {
-    path: "/transactions/sales/:id/payment",
-    name: "transaction-sale-payment",
-    component: () =>
-      import("./views/transaction/SaleTransactionPaymentView.vue"),
   },
   {
     path: "/transactions/stock-movements",

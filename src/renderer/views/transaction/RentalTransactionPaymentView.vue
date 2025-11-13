@@ -164,7 +164,7 @@
         <form @submit.prevent="handlePayment" class="payment-form">
           <div class="form-grid">
             <div class="field-group">
-              <label for="paymentAmount">Jumlah Pembayaran</label>
+              <label for="paymentAmount">Jumlah Bayar</label>
               <input
                 id="paymentAmount"
                 :value="formatNumberInput(paymentForm.amount)"
@@ -172,9 +172,19 @@
                 type="text"
                 class="form-input"
                 :class="{ error: errors.amount }"
+                placeholder="Masukkan jumlah bayar"
               />
               <div v-if="errors.amount" class="error-message">
                 {{ errors.amount }}
+              </div>
+              <div v-if="!errors.amount && paymentForm.amount > 0" class="payment-hint">
+                Minimum: {{ formatCurrency(remainingAmount) }}
+              </div>
+            </div>
+            <div class="field-group" v-if="changeAmount > 0">
+              <label>Kembalian</label>
+              <div class="change-display">
+                <strong>{{ formatCurrency(changeAmount) }}</strong>
               </div>
             </div>
             <div class="field-group">
@@ -211,11 +221,26 @@
               />
             </div>
           </div>
+          <div class="payment-summary-form">
+            <div class="summary-form-row">
+              <span>Total:</span>
+              <strong>{{ formatCurrency(remainingAmount) }}</strong>
+            </div>
+            <div class="summary-form-row" v-if="paymentForm.amount > 0">
+              <span>Bayar:</span>
+              <strong>{{ formatCurrency(paymentForm.amount) }}</strong>
+            </div>
+            <div class="summary-form-row change-row" v-if="changeAmount > 0">
+              <span>Kembalian:</span>
+              <strong>{{ formatCurrency(changeAmount) }}</strong>
+            </div>
+          </div>
           <div class="form-actions">
             <AppButton
               type="submit"
               variant="primary"
               :loading="paymentLoading"
+              :disabled="paymentForm.amount < remainingAmount"
             >
               Proses Pembayaran
             </AppButton>
@@ -224,7 +249,7 @@
               variant="secondary"
               @click="fillFullAmount"
             >
-              Bayar Penuh
+              Bayar Pas
             </AppButton>
           </div>
         </form>
@@ -316,7 +341,6 @@ export default {
     const getPaymentStatusLabel = (status) => {
       const labels = {
         paid: "Lunas",
-        partial: "Sebagian",
         unpaid: "Belum Dibayar",
       };
       return labels[status] || status;
@@ -324,6 +348,7 @@ export default {
 
     const getRentalStatusLabel = (status) => {
       const labels = {
+        pending: "Pending (Belum Bayar)",
         active: "Aktif",
         returned: "Dikembalikan",
         cancelled: "Dibatalkan",
@@ -347,6 +372,12 @@ export default {
         0,
         transaction.value.total_amount - transaction.value.paid_amount,
       );
+    });
+
+    const changeAmount = computed(() => {
+      if (!paymentForm.value.amount || paymentForm.value.amount <= 0) return 0;
+      if (paymentForm.value.amount < remainingAmount.value) return 0;
+      return paymentForm.value.amount - remainingAmount.value;
     });
 
     const loadTransaction = async () => {
@@ -399,8 +430,8 @@ export default {
       const newErrors = {};
       if (!paymentForm.value.amount || paymentForm.value.amount <= 0) {
         newErrors.amount = "Jumlah pembayaran harus diisi";
-      } else if (paymentForm.value.amount > remainingAmount.value) {
-        newErrors.amount = `Jumlah pembayaran tidak boleh melebihi sisa (${formatCurrency(remainingAmount.value)})`;
+      } else if (paymentForm.value.amount < remainingAmount.value) {
+        newErrors.amount = `Jumlah pembayaran tidak boleh kurang dari total (${formatCurrency(remainingAmount.value)})`;
       }
       if (!paymentForm.value.paymentMethod) {
         newErrors.paymentMethod = "Metode pembayaran harus dipilih";
@@ -441,7 +472,8 @@ export default {
         };
 
         // If payment is complete, show success and offer to print receipt
-        if (remainingAmount.value === 0) {
+        const newRemaining = transaction.value.total_amount - (transaction.value.paid_amount + paymentForm.value.amount);
+        if (newRemaining <= 0) {
           // Wait a bit then offer to print
           setTimeout(() => {
             if (
@@ -483,6 +515,7 @@ export default {
       paymentLoading,
       errors,
       remainingAmount,
+      changeAmount,
       formatCurrency,
       formatNumberInput,
       handleAmountInput,
@@ -566,11 +599,6 @@ export default {
 .status-badge.paid {
   background-color: #dcfce7;
   color: #166534;
-}
-
-.status-badge.partial {
-  background-color: #fef3c7;
-  color: #92400e;
 }
 
 .status-badge.unpaid {
@@ -679,6 +707,55 @@ export default {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
+}
+
+.payment-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.change-display {
+  padding: 0.75rem;
+  background-color: #dcfce7;
+  border: 1px solid #16a34a;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.change-display strong {
+  font-size: 1.25rem;
+  color: #166534;
+  font-weight: 700;
+}
+
+.payment-summary-form {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.summary-form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.summary-form-row.change-row {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.summary-form-row.change-row strong {
+  color: #16a34a;
+  font-size: 1.25rem;
 }
 
 .success-message {

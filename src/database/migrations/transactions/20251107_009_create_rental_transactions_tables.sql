@@ -17,7 +17,7 @@ CREATE TABLE rental_transactions (
     late_fee DECIMAL(15,2) DEFAULT 0,
     discount DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
-    status VARCHAR(20) CHECK (status IN ('active','returned','cancelled','overdue')) DEFAULT 'active',
+    status VARCHAR(20) CHECK (status IN ('pending','active','returned','cancelled','overdue')) DEFAULT 'pending',
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

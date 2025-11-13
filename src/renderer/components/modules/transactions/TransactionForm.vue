@@ -294,7 +294,6 @@ const paymentMethods = [
 
 const paymentStatusOptions = [
   { value: "unpaid", label: "Belum Dibayar" },
-  { value: "partial", label: "Pembayaran Parsial" },
   { value: "paid", label: "Lunas" },
 ];
 
@@ -881,6 +880,23 @@ export default {
 
     const handleSubmit = async () => {
       if (!validateForm()) return;
+      
+      // Cek payment status jika edit mode
+      if (isEdit.value && props.editData) {
+        const paymentStatus = (
+          props.editData.payment_status ||
+          props.editData.paymentStatus ||
+          ""
+        )
+          .toString()
+          .toLowerCase();
+        
+        if (paymentStatus === "paid") {
+          alert("Transaksi yang sudah dibayar tidak dapat di-edit.");
+          return;
+        }
+      }
+      
       loading.value = true;
       try {
         const user = getStoredUser();

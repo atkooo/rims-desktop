@@ -287,9 +287,7 @@ async function generateInvoicePDF(transactionId, transactionType) {
     const statusText =
       paymentStatus === "paid"
         ? "LUNAS"
-        : paymentStatus === "partial"
-          ? "SEBAGIAN"
-          : "BELUM DIBAYAR";
+        : "BELUM DIBAYAR";
     doc.text(`Status: ${statusText}`, margin, yPos);
 
     // Notes

@@ -74,18 +74,25 @@ export const useTransactionStore = defineStore("transactions", {
           // Map backend status to UI constants
           let status = t.status;
           if (isRental) {
-            if (status === "active" || status === "overdue") {
+            if (status === "pending") {
               status = TRANSACTION_STATUS.PENDING;
+            } else if (status === "active" || status === "overdue") {
+              status = TRANSACTION_STATUS.PENDING; // Active/overdue masih pending return
             } else if (status === "returned") {
               status = TRANSACTION_STATUS.COMPLETED;
             } else if (status === "cancelled") {
               status = TRANSACTION_STATUS.CANCELLED;
             }
           } else {
-            const pay = t.payment_status ?? status;
-            if (pay === "paid") status = TRANSACTION_STATUS.COMPLETED;
-            else if (pay === "partial" || pay === "unpaid")
-              status = TRANSACTION_STATUS.PENDING;
+            // For sales transactions, check status first (cancelled takes priority)
+            if (status === "cancelled") {
+              status = TRANSACTION_STATUS.CANCELLED;
+            } else {
+              const pay = t.payment_status ?? status;
+              if (pay === "paid") status = TRANSACTION_STATUS.COMPLETED;
+              else if (pay === "unpaid")
+                status = TRANSACTION_STATUS.PENDING;
+            }
           }
 
           const transactionType = isRental ? "RENTAL" : "SALE";

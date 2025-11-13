@@ -151,10 +151,12 @@ async function runMigrations(providedDb = null) {
             
             // If error is about duplicate column, it means column already exists
             // This is acceptable for ALTER TABLE ADD COLUMN operations
+            // Also handle "no such table" errors for migrations that only apply to existing databases
             if (
               errorMsg.includes("duplicate column") ||
               errorMsg.includes("already exists") ||
-              errorMsg.includes("SQLITE_MISUSE")
+              errorMsg.includes("SQLITE_MISUSE") ||
+              errorMsg.includes("no such table")
             ) {
               // Check if it's a column already exists error by trying to query the table schema
               try {
@@ -174,6 +176,16 @@ async function runMigrations(providedDb = null) {
               } catch (pragmaError) {
                 // If we can't check, re-throw the original error
               }
+            }
+            
+            // Handle "no such table" errors - this means migration is for existing databases only
+            // and can be skipped for fresh installs
+            if (errorMsg.includes("no such table")) {
+              console.log(
+                `Info: Table doesn't exist yet (fresh install). Skipping migration statement that requires existing table.`,
+              );
+              executed = true;
+              break;
             }
             
             // Re-throw other errors if no more retries

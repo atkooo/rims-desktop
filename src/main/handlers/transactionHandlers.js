@@ -72,9 +72,8 @@ function setupTransactionHandlers() {
                     'rental' as transaction_type,
                     COALESCE(SUM(p.amount), 0) as actual_paid_amount,
                     CASE 
-                      WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
                       WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
-                      ELSE 'partial'
+                      ELSE 'unpaid'
                     END as calculated_payment_status
                 FROM rental_transactions rt
                 LEFT JOIN customers c ON rt.customer_id = c.id
@@ -93,9 +92,8 @@ function setupTransactionHandlers() {
                     'sale' as transaction_type,
                     COALESCE(SUM(p.amount), 0) as actual_paid_amount,
                     CASE 
-                      WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
                       WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
-                      ELSE 'partial'
+                      ELSE 'unpaid'
                     END as calculated_payment_status
                 FROM sales_transactions st
                 LEFT JOIN customers c ON st.customer_id = c.id
@@ -212,7 +210,7 @@ function setupTransactionHandlers() {
               transactionData.deposit,
               transactionData.tax || 0,
               transactionData.totalAmount,
-              "active",
+              "pending", // Status awal: pending (belum dibayar), akan diupdate ke 'active' setelah pembayaran
               transactionData.notes,
               cashierSessionId,
             ],
@@ -304,8 +302,8 @@ function setupTransactionHandlers() {
           result = await database.execute(
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
-              subtotal, discount, tax, total_amount, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              subtotal, discount, tax, total_amount, notes, cashier_session_id, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               transactionCode,
               customerId,
@@ -317,6 +315,7 @@ function setupTransactionHandlers() {
               transactionData.totalAmount,
               transactionData.notes,
               cashierSessionId,
+              "pending", // Status awal: pending (belum dibayar)
             ],
           );
 
@@ -532,6 +531,45 @@ function setupTransactionHandlers() {
         );
         const isRental = !!rentalCheck;
 
+        // Cek payment status sebelum update
+        let paymentStatus = null;
+        if (isRental) {
+          const rental = await database.queryOne(
+            `SELECT rt.*, 
+             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+             CASE 
+               WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
+               ELSE 'unpaid'
+             END as calculated_payment_status
+             FROM rental_transactions rt
+             LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+             WHERE rt.id = ?
+             GROUP BY rt.id`,
+            [id],
+          );
+          paymentStatus = rental?.calculated_payment_status || 'unpaid';
+        } else {
+          const sale = await database.queryOne(
+            `SELECT st.*,
+             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+             CASE 
+               WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
+               ELSE 'unpaid'
+             END as calculated_payment_status
+             FROM sales_transactions st
+             LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+             WHERE st.id = ?
+             GROUP BY st.id`,
+            [id],
+          );
+          paymentStatus = sale?.calculated_payment_status || 'unpaid';
+        }
+
+        // Cegah update jika status sudah paid
+        if (paymentStatus === 'paid') {
+          throw new Error("Transaksi yang sudah dibayar tidak dapat di-edit.");
+        }
+
         if (isRental) {
           // Update rental transaction
           const updateFields = [];
@@ -670,6 +708,180 @@ function setupTransactionHandlers() {
       throw error;
     }
   });
+
+  // Cancel transaction (only for unpaid transactions)
+  ipcMain.handle("transactions:cancel", async (event, id, transactionType) => {
+    try {
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        const isRental = transactionType === "rental" || transactionType === "RENTAL";
+
+        if (isRental) {
+          // Get rental transaction with payment status
+          const rental = await database.queryOne(
+            `SELECT rt.*, 
+             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+             CASE 
+               WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
+               ELSE 'unpaid'
+             END as calculated_payment_status
+             FROM rental_transactions rt
+             LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+             WHERE rt.id = ?
+             GROUP BY rt.id`,
+            [id],
+          );
+
+          if (!rental) {
+            throw new Error("Transaksi sewa tidak ditemukan");
+          }
+
+          // Cek payment status
+          if (rental.calculated_payment_status === "paid") {
+            throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
+          }
+
+          // Cek status saat ini
+          if (rental.status === "cancelled") {
+            throw new Error("Transaksi sudah di-cancel sebelumnya.");
+          }
+
+          // Get transaction details untuk restore stock
+          const details = await database.query(
+            `SELECT item_id, quantity FROM rental_transaction_details WHERE rental_transaction_id = ?`,
+            [id],
+          );
+
+          // Restore stock untuk setiap item
+          for (const detail of details) {
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+              [detail.item_id],
+            );
+
+            if (itemBefore) {
+              const stockBefore = itemBefore.available_quantity || 0;
+              const stockAfter = stockBefore + detail.quantity;
+
+              // Update available_quantity
+              await database.execute(
+                "UPDATE items SET available_quantity = ? WHERE id = ?",
+                [stockAfter, detail.item_id],
+              );
+
+              // Create stock movement record
+              await database.execute(
+                `INSERT INTO stock_movements (
+                  item_id, movement_type, reference_type, reference_id,
+                  quantity, stock_before, stock_after, user_id, notes
+                ) VALUES (?, 'IN', 'rental_cancellation', ?, ?, ?, ?, NULL, ?)`,
+                [
+                  detail.item_id,
+                  id,
+                  detail.quantity,
+                  stockBefore,
+                  stockAfter,
+                  `Cancel rental transaction: ${rental.transaction_code}`,
+                ],
+              );
+            }
+          }
+
+          // Update status to cancelled
+          await database.execute(
+            "UPDATE rental_transactions SET status = 'cancelled' WHERE id = ?",
+            [id],
+          );
+        } else {
+          // Sales transaction
+          const sale = await database.queryOne(
+            `SELECT st.*,
+             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
+             CASE 
+               WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
+               ELSE 'unpaid'
+             END as calculated_payment_status
+             FROM sales_transactions st
+             LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+             WHERE st.id = ?
+             GROUP BY st.id`,
+            [id],
+          );
+
+          if (!sale) {
+            throw new Error("Transaksi penjualan tidak ditemukan");
+          }
+
+          // Cek payment status
+          if (sale.calculated_payment_status === "paid") {
+            throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
+          }
+
+          // Cek status saat ini
+          if (sale.status === "cancelled") {
+            throw new Error("Transaksi sudah di-cancel sebelumnya.");
+          }
+
+          // Get transaction details untuk restore stock
+          const details = await database.query(
+            `SELECT item_id, quantity FROM sales_transaction_details WHERE sales_transaction_id = ?`,
+            [id],
+          );
+
+          // Restore stock untuk setiap item
+          for (const detail of details) {
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+              [detail.item_id],
+            );
+
+            if (itemBefore) {
+              const stockBefore = itemBefore.available_quantity || 0;
+              const stockAfter = stockBefore + detail.quantity;
+
+              // Update available_quantity dan stock_quantity
+              await database.execute(
+                "UPDATE items SET available_quantity = ?, stock_quantity = stock_quantity + ? WHERE id = ?",
+                [stockAfter, detail.quantity, detail.item_id],
+              );
+
+              // Create stock movement record
+              await database.execute(
+                `INSERT INTO stock_movements (
+                  item_id, movement_type, reference_type, reference_id,
+                  quantity, stock_before, stock_after, user_id, notes
+                ) VALUES (?, 'IN', 'sale_cancellation', ?, ?, ?, ?, NULL, ?)`,
+                [
+                  detail.item_id,
+                  id,
+                  detail.quantity,
+                  stockBefore,
+                  stockAfter,
+                  `Cancel sale transaction: ${sale.transaction_code}`,
+                ],
+              );
+            }
+          }
+
+          // Update status to cancelled
+          await database.execute(
+            "UPDATE sales_transactions SET status = 'cancelled' WHERE id = ?",
+            [id],
+          );
+        }
+
+        await database.execute("COMMIT");
+        return true;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error cancelling transaction:", error);
+      throw error;
+    }
+  });
 }
 
 
@@ -725,6 +937,27 @@ function setupPaymentHandlers() {
           paymentData.notes || null,
         ],
       );
+
+      // Update rental transaction status to 'active' after first payment
+      if (paymentData.transactionType === 'rental') {
+        const rental = await database.queryOne(
+          `SELECT rt.*, 
+           COALESCE(SUM(p.amount), 0) as total_paid
+           FROM rental_transactions rt
+           LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+           WHERE rt.id = ?
+           GROUP BY rt.id`,
+          [paymentData.transactionId],
+        );
+        
+        // Update status to 'active' if it was 'pending' (unpaid) and now has payment
+        if (rental && rental.status === 'pending' && rental.total_paid > 0) {
+          await database.execute(
+            `UPDATE rental_transactions SET status = 'active' WHERE id = ?`,
+            [paymentData.transactionId],
+          );
+        }
+      }
 
       const newPayment = await database.queryOne(
         `SELECT p.*, u.full_name AS user_name

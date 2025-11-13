@@ -13,6 +13,7 @@ CREATE TABLE sales_transactions (
     tax DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
     change_amount DECIMAL(15,2) DEFAULT 0,
+    status VARCHAR(20) CHECK (status IN ('pending','completed','cancelled')) DEFAULT 'pending',
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

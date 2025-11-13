@@ -52,7 +52,6 @@
           <option value="">Semua Status Pembayaran</option>
           <option value="paid">Lunas</option>
           <option value="unpaid">Belum Lunas</option>
-          <option value="partial">Sebagian</option>
         </select>
       </div>
 
@@ -97,21 +96,31 @@
                       <span>Detail</span>
                     </button>
                     <button
-                      v-if="!isPaid(row)"
-                      type="button"
-                      class="action-menu-item"
-                      @click="continuePayment(row)"
-                    >
-                      <Icon name="credit-card" :size="16" />
-                      <span>Lanjutkan Pembayaran</span>
-                    </button>
-                    <button
+                      v-if="canEdit(row)"
                       type="button"
                       class="action-menu-item"
                       @click="handleEdit(row)"
                     >
                       <Icon name="edit" :size="16" />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      v-if="canEdit(row)"
+                      type="button"
+                      class="action-menu-item"
+                      @click="openPaymentModal(row)"
+                    >
+                      <Icon name="credit-card" :size="16" />
+                      <span>Bayar</span>
+                    </button>
+                    <button
+                      v-if="canEdit(row)"
+                      type="button"
+                      class="action-menu-item danger"
+                      @click="handleCancel(row)"
+                    >
+                      <Icon name="x-circle" :size="16" />
+                      <span>Cancel</span>
                     </button>
                   </div>
                 </transition>
@@ -130,6 +139,14 @@
     @saved="handleSaved"
     fixed-type
   />
+
+  <!-- Payment Modal -->
+  <PaymentModal
+    v-model="showPaymentModal"
+    :transaction-id="selectedTransactionId"
+    @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose"
+  />
 </template>
 
 <script>
@@ -139,13 +156,15 @@ import Icon from "@/components/ui/Icon.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
-import { fetchSalesTransactions } from "@/services/transactions";
+import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
+import { fetchSalesTransactions, cancelTransaction } from "@/services/transactions";
 import { useTransactionStore } from "@/store/transactions";
 import { TRANSACTION_TYPE } from "@shared/constants";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "SalesTransactionsView",
-  components: { AppButton, AppTable, Icon, TransactionForm },
+  components: { AppButton, AppTable, Icon, TransactionForm, PaymentModal },
   setup() {
     const sales = ref([]);
     const loading = ref(false);
@@ -156,6 +175,9 @@ export default {
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const showPaymentModal = ref(false);
+    const selectedTransactionId = ref(null);
+    const { showSuccess, showError } = useNotification();
     const filters = ref({
       paymentStatus: "",
     });
@@ -168,6 +190,11 @@ export default {
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
+    const formatStatus = (value, row) => {
+      if (isCancelled(row)) return "Dibatalkan";
+      const paymentStatus = (row.payment_status || row.paymentStatus || "").toString().toLowerCase();
+      return paymentStatus === "paid" ? "Lunas" : "Belum Lunas";
+    };
     const columns = [
       { key: "transaction_code", label: "Kode", sortable: true },
       { key: "customer_name", label: "Customer", sortable: true },
@@ -183,26 +210,25 @@ export default {
         format: formatCurrency,
         sortable: true,
       },
-      { key: "payment_status", label: "Status Pembayaran", sortable: true },
+      { 
+        key: "payment_status", 
+        label: "Status Pembayaran", 
+        format: formatStatus,
+        sortable: true 
+      },
     ];
 
     const filteredSales = computed(() => {
       let items = sales.value;
-
-      // Filter by payment status
       if (filters.value.paymentStatus) {
         items = items.filter((item) => {
-          const paymentStatus = (
-            item.payment_status ||
-            item.paymentStatus ||
-            ""
-          )
+          if (isCancelled(item)) return false;
+          const paymentStatus = (item.payment_status || item.paymentStatus || "")
             .toString()
             .toLowerCase();
           return paymentStatus === filters.value.paymentStatus.toLowerCase();
         });
       }
-
       return items;
     });
 
@@ -249,20 +275,22 @@ export default {
       });
     };
 
-    const continuePayment = (sale) => {
-      openMenuId.value = null;
-      if (!sale.id) return;
-      router.push({
-        name: "transaction-sale-payment",
-        params: { id: sale.id },
-      });
+    const isCancelled = (sale) => {
+      if (!sale) return false;
+      const status = (sale.status || "").toString().toLowerCase();
+      return status === "cancelled";
     };
 
     const isPaid = (sale) => {
+      if (!sale || isCancelled(sale)) return false;
       const status = (sale.payment_status || sale.paymentStatus || "")
         .toString()
         .toLowerCase();
       return status === "paid";
+    };
+
+    const canEdit = (sale) => {
+      return !isPaid(sale) && !isCancelled(sale);
     };
 
     const openCreateSale = () => {
@@ -271,6 +299,11 @@ export default {
     };
 
     const handleEdit = (sale) => {
+      // Cek apakah transaksi sudah dibayar
+      if (isPaid(sale)) {
+        alert("Transaksi yang sudah dibayar tidak dapat di-edit.");
+        return;
+      }
       openMenuId.value = null;
       editingSale.value = sale;
       showForm.value = true;
@@ -313,6 +346,54 @@ export default {
       await loadData();
     };
 
+    const openPaymentModal = (sale) => {
+      openMenuId.value = null;
+      if (!sale?.id || isCancelled(sale)) return;
+      selectedTransactionId.value = sale.id;
+      showPaymentModal.value = true;
+    };
+
+    const handlePaymentSuccess = (data) => {
+      if (!data.partial) {
+        showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
+        showPaymentModal.value = false;
+        selectedTransactionId.value = null;
+        loadData();
+      } else {
+        showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
+        loadData();
+      }
+    };
+
+    const handlePaymentModalClose = (data) => {
+      showPaymentModal.value = false;
+      selectedTransactionId.value = null;
+      
+      // If modal closed without payment (unpaid), just refresh data
+      if (data?.unpaid) {
+        loadData(); // Refresh to show updated status
+      }
+    };
+
+    const handleCancel = async (sale) => {
+      openMenuId.value = null;
+      
+      if (!sale.id) return;
+      
+      // Konfirmasi cancel
+      if (!confirm(`Apakah Anda yakin ingin membatalkan transaksi ${sale.transaction_code}? Stok akan dikembalikan.`)) {
+        return;
+      }
+
+      try {
+        await cancelTransaction(sale.id, "sale");
+        showSuccess("Transaksi berhasil di-cancel. Stok telah dikembalikan.");
+        await loadData();
+      } catch (error) {
+        showError(error.message || "Gagal membatalkan transaksi.");
+      }
+    };
+
     onMounted(() => {
       document.addEventListener("click", closeActionMenu);
       loadData();
@@ -335,13 +416,20 @@ export default {
       formatDate,
       openMenuId,
       goToSaleDetail,
-      continuePayment,
       isPaid,
+      isCancelled,
+      canEdit,
       showForm,
       editingSale,
       openCreateSale,
       handleEdit,
       handleSaved,
+      showPaymentModal,
+      selectedTransactionId,
+      openPaymentModal,
+      handlePaymentSuccess,
+      handlePaymentModalClose,
+      handleCancel,
       TRANSACTION_TYPE,
       toggleActionMenu,
       getMenuPosition,
@@ -407,6 +495,15 @@ export default {
 
 .action-menu-item:hover {
   background: #f9fafb;
+}
+
+.action-menu-item.danger {
+  color: #dc2626;
+}
+
+.action-menu-item.danger:hover {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .action-menu-item .icon {

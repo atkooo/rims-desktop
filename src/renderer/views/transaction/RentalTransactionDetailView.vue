@@ -87,6 +87,12 @@
             <span>Sesi Kasir</span>
             <strong>{{ rental.cashier_session_code }}</strong>
           </div>
+          <div v-if="!isPaid(rental)" class="detail-item payment-action">
+            <AppButton variant="primary" @click="openPaymentModal">
+              <Icon name="credit-card" :size="18" />
+              Bayar Sekarang
+            </AppButton>
+          </div>
         </div>
       </div>
     </section>
@@ -137,20 +143,32 @@
       </table>
     </section>
   </div>
+
+  <!-- Payment Modal -->
+  <PaymentModal
+    v-model="showPaymentModal"
+    :transaction-id="rental?.id"
+    transaction-type="rental"
+    @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose"
+  />
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
+import Icon from "@/components/ui/Icon.vue";
+import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import {
   fetchRentalTransactions,
   fetchRentalDetails,
 } from "@/services/transactions";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "RentalTransactionDetailView",
-  components: { AppButton },
+  components: { AppButton, Icon, PaymentModal },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -161,6 +179,8 @@ export default {
     const error = ref("");
     const detailsLoading = ref(false);
     const detailError = ref("");
+    const showPaymentModal = ref(false);
+    const { showSuccess } = useNotification();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -223,8 +243,53 @@ export default {
       }
     };
 
-    const refresh = () => loadRental();
-    const goBack = () => router.back();
+    const refresh = () => {
+      loadRental();
+      loadDetails(true);
+    };
+    const goBack = () => router.push({ name: "transactions-rentals" });
+
+    const isPaid = (rental) => {
+      if (!rental) return false;
+      const status = (rental.payment_status || rental.paymentStatus || "")
+        .toString()
+        .toLowerCase();
+      return status === "paid";
+    };
+
+    const openPaymentModal = () => {
+      if (!rental.value?.id) return;
+      showPaymentModal.value = true;
+    };
+
+    const handlePaymentSuccess = (data) => {
+      if (!data.partial) {
+        // Payment is complete
+        showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
+        showPaymentModal.value = false;
+        // Redirect to transactions list after a short delay
+        setTimeout(() => {
+          router.push({ name: "transactions-rentals" });
+        }, 1500);
+      } else {
+        // Partial payment, keep modal open
+        showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
+        loadRental(); // Reload to update payment status
+      }
+    };
+
+    const handlePaymentModalClose = (data) => {
+      showPaymentModal.value = false;
+      
+      // If modal closed without payment (unpaid)
+      if (data?.unpaid) {
+        showSuccess("Transaksi belum dibayar. Anda dapat melakukan pembayaran nanti dari daftar transaksi.");
+        // Redirect to transactions list after a short delay
+        setTimeout(() => {
+          router.push({ name: "transactions-rentals" });
+        }, 2000);
+      }
+    };
 
     watch(code, (newCode, oldCode) => {
       if (newCode !== oldCode) {
@@ -247,6 +312,11 @@ export default {
       error,
       goBack,
       refresh,
+      isPaid,
+      showPaymentModal,
+      openPaymentModal,
+      handlePaymentSuccess,
+      handlePaymentModalClose,
     };
   },
 };
@@ -314,6 +384,16 @@ export default {
 .detail-item.remaining-row {
   color: #dc2626;
   font-weight: 600;
+}
+
+.detail-item.payment-action {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detail-item.payment-action button {
+  width: 100%;
 }
 
 .detail-state {

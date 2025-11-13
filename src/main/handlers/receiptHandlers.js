@@ -394,9 +394,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       const statusText =
         paymentStatus === "paid"
           ? "LUNAS"
-          : paymentStatus === "partial"
-            ? "SEBAGIAN"
-            : "BELUM DIBAYAR";
+          : "BELUM DIBAYAR";
       doc.setFont("helvetica", "bold");
       doc.text(`Status: ${statusText}`, margin, yPos);
       yPos += 4;

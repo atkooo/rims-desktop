@@ -35,9 +35,8 @@ function setupTransactionViewHandlers() {
         rt.total_amount,
         COALESCE(SUM(p.amount), 0) as paid_amount,
         CASE 
-          WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
           WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
-          ELSE 'partial'
+          ELSE 'unpaid'
         END as payment_status,
         rt.status,
         rt.notes,
@@ -91,10 +90,10 @@ function setupTransactionViewHandlers() {
         st.total_amount,
         COALESCE(SUM(p.amount), 0) as paid_amount,
         CASE 
-          WHEN COALESCE(SUM(p.amount), 0) = 0 THEN 'unpaid'
           WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
-          ELSE 'partial'
+          ELSE 'unpaid'
         END as payment_status,
+        COALESCE(st.status, 'pending') as status,
         st.notes,
         st.cashier_session_id,
         cs.session_code AS cashier_session_code

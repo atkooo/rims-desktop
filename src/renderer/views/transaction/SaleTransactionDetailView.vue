@@ -46,7 +46,7 @@
           <h4>Pembayaran</h4>
           <div class="detail-item">
             <span>Status</span>
-            <strong>{{ sale.payment_status || "-" }}</strong>
+            <strong>{{ displayStatus(sale) }}</strong>
           </div>
           <div class="detail-item">
             <span>Subtotal</span>
@@ -77,6 +77,12 @@
           <div v-if="sale.cashier_session_code" class="detail-item">
             <span>Sesi Kasir</span>
             <strong>{{ sale.cashier_session_code }}</strong>
+          </div>
+          <div v-if="!isPaid(sale)" class="detail-item payment-action">
+            <AppButton variant="primary" @click="openPaymentModal">
+              <Icon name="credit-card" :size="18" />
+              Bayar Sekarang
+            </AppButton>
           </div>
         </div>
       </div>
@@ -126,20 +132,31 @@
       </table>
     </section>
   </div>
+
+  <!-- Payment Modal -->
+  <PaymentModal
+    v-model="showPaymentModal"
+    :transaction-id="sale?.id"
+    @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose"
+  />
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
+import Icon from "@/components/ui/Icon.vue";
+import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import {
   fetchSalesTransactions,
   fetchSalesDetails,
 } from "@/services/transactions";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "SaleTransactionDetailView",
-  components: { AppButton },
+  components: { AppButton, Icon, PaymentModal },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -150,6 +167,8 @@ export default {
     const error = ref("");
     const detailsLoading = ref(false);
     const detailError = ref("");
+    const showPaymentModal = ref(false);
+    const { showSuccess } = useNotification();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -214,8 +233,67 @@ export default {
       }
     };
 
-    const refresh = () => loadSale();
+    const refresh = () => {
+      loadSale();
+      loadDetails(true);
+    };
     const goBack = () => router.back();
+
+    const isPaid = (sale) => {
+      if (!sale) return false;
+      const status = (sale.payment_status || sale.paymentStatus || "")
+        .toString()
+        .toLowerCase();
+      return status === "paid";
+    };
+
+    const displayStatus = (sale) => {
+      if (!sale) return "-";
+      // Check if transaction is cancelled
+      const status = (sale.status || "").toString().toLowerCase();
+      if (status === "cancelled" || status === "CANCELLED") {
+        return "Dibatalkan";
+      }
+      // Otherwise show payment status
+      const paymentStatus = (sale.payment_status || sale.paymentStatus || "").toString().toLowerCase();
+      if (paymentStatus === "paid") return "Lunas";
+      if (paymentStatus === "unpaid") return "Belum Lunas";
+      return paymentStatus || "-";
+    };
+
+    const openPaymentModal = () => {
+      if (!sale.value?.id) return;
+      showPaymentModal.value = true;
+    };
+
+    const handlePaymentSuccess = (data) => {
+      if (!data.partial) {
+        // Payment is complete
+        showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
+        showPaymentModal.value = false;
+        // Redirect to transactions list after a short delay
+        setTimeout(() => {
+          router.push({ name: "transactions-sales" });
+        }, 1500);
+      } else {
+        // Partial payment, keep modal open
+        showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
+        loadSale(); // Reload to update payment status
+      }
+    };
+
+    const handlePaymentModalClose = (data) => {
+      showPaymentModal.value = false;
+      
+      // If modal closed without payment (unpaid)
+      if (data?.unpaid) {
+        showSuccess("Transaksi belum dibayar. Anda dapat melakukan pembayaran nanti dari daftar transaksi.");
+        // Redirect to transactions list after a short delay
+        setTimeout(() => {
+          router.push({ name: "transactions-sales" });
+        }, 2000);
+      }
+    };
 
     watch(code, (newCode, oldCode) => {
       if (newCode !== oldCode) {
@@ -239,6 +317,12 @@ export default {
       error,
       goBack,
       refresh,
+      isPaid,
+      displayStatus,
+      showPaymentModal,
+      openPaymentModal,
+      handlePaymentSuccess,
+      handlePaymentModalClose,
     };
   },
 };
@@ -310,6 +394,16 @@ export default {
 
 .detail-item .discount {
   color: #16a34a;
+}
+
+.detail-item.payment-action {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detail-item.payment-action button {
+  width: 100%;
 }
 
 .detail-state {

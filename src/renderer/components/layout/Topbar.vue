@@ -359,7 +359,7 @@ const pendingTransactionsList = computed(() => {
 const awaitingPayments = computed(() => {
   return (transactionStore.transactions || []).filter((t) => {
     const pay = (t.payment_status || t.status || "").toString().toLowerCase();
-    return ["pending", "partial", "unpaid"].includes(pay);
+    return ["pending", "unpaid"].includes(pay);
   }).length;
 });
 
@@ -367,7 +367,7 @@ const awaitingPaymentsList = computed(() => {
   return (transactionStore.transactions || [])
     .filter((t) => {
       const pay = (t.payment_status || t.status || "").toString().toLowerCase();
-      return ["pending", "partial", "unpaid"].includes(pay);
+      return ["pending", "unpaid"].includes(pay);
     })
     .slice(0, 10)
     .sort((a, b) => {
@@ -456,7 +456,6 @@ const handlePaymentClick = (transaction) => {
 const getPaymentStatusLabel = (status) => {
   const statusLower = (status || "").toString().toLowerCase();
   if (statusLower === "unpaid") return "Belum Dibayar";
-  if (statusLower === "partial") return "Pembayaran Parsial";
   if (statusLower === "pending") return "Menunggu";
   return "Belum Dibayar";
 };
@@ -464,7 +463,6 @@ const getPaymentStatusLabel = (status) => {
 const getPaymentStatusClass = (status) => {
   const statusLower = (status || "").toString().toLowerCase();
   if (statusLower === "unpaid") return "unpaid";
-  if (statusLower === "partial") return "partial";
   if (statusLower === "pending") return "pending";
   return "unpaid";
 };
@@ -1320,11 +1318,6 @@ watch(paymentMenuOpen, async (isOpen) => {
 .payment-status--unpaid {
   background: #fee2e2;
   color: #dc2626;
-}
-
-.payment-status--partial {
-  background: #fef3c7;
-  color: #d97706;
 }
 
 .payment-status--pending {
