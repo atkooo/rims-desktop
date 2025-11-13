@@ -141,14 +141,6 @@
     </section>
   </div>
 
-  <TransactionForm
-    v-model="showForm"
-    :edit-data="editingRental"
-    :default-type="TRANSACTION_TYPE.RENTAL"
-    @saved="handleSaved"
-    fixed-type
-  />
-
   <!-- Payment Modal -->
   <PaymentModal
     v-model="showPaymentModal"
@@ -165,23 +157,19 @@ import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
-import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchRentalTransactions, cancelTransaction } from "@/services/transactions";
 import { useTransactionStore } from "@/store/transactions";
-import { TRANSACTION_TYPE } from "@shared/constants";
 import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, AppTable, Icon, TransactionForm, PaymentModal },
+  components: { AppButton, AppTable, Icon, PaymentModal },
   setup() {
     const rentals = ref([]);
     const loading = ref(false);
     const error = ref("");
     const transactionStore = useTransactionStore();
-    const showForm = ref(false);
-    const editingRental = ref(null);
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -361,8 +349,13 @@ export default {
       }
       
       openMenuId.value = null;
-      editingRental.value = rental;
-      showForm.value = true;
+      // Redirect to edit page instead of opening modal
+      if (rental.transaction_code) {
+        router.push({
+          name: "transaction-rental-edit",
+          params: { code: rental.transaction_code },
+        });
+      }
     };
 
     const toggleActionMenu = async (itemId) => {
@@ -394,12 +387,6 @@ export default {
       if (!event.target.closest(".action-menu-wrapper")) {
         openMenuId.value = null;
       }
-    };
-
-    const handleSaved = async () => {
-      showForm.value = false;
-      editingRental.value = null;
-      await loadData();
     };
 
     const openPaymentModal = (rental) => {
@@ -494,13 +481,9 @@ export default {
       formatCurrency,
       formatDate,
       filteredItems,
-      showForm,
-      editingRental,
       openMenuId,
       openCreateRental,
       handleEdit,
-      handleSaved,
-      TRANSACTION_TYPE,
       handleRefresh,
       goToRentalDetail,
       isPaid,

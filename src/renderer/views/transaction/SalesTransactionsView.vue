@@ -132,14 +132,6 @@
     </section>
   </div>
 
-  <TransactionForm
-    v-model="showForm"
-    :edit-data="editingSale"
-    :default-type="TRANSACTION_TYPE.SALE"
-    @saved="handleSaved"
-    fixed-type
-  />
-
   <!-- Payment Modal -->
   <PaymentModal
     v-model="showPaymentModal"
@@ -155,23 +147,19 @@ import { useRouter } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
-import TransactionForm from "@/components/modules/transactions/TransactionForm.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchSalesTransactions, cancelTransaction } from "@/services/transactions";
 import { useTransactionStore } from "@/store/transactions";
-import { TRANSACTION_TYPE } from "@shared/constants";
 import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "SalesTransactionsView",
-  components: { AppButton, AppTable, Icon, TransactionForm, PaymentModal },
+  components: { AppButton, AppTable, Icon, PaymentModal },
   setup() {
     const sales = ref([]);
     const loading = ref(false);
     const error = ref("");
     const transactionStore = useTransactionStore();
-    const showForm = ref(false);
-    const editingSale = ref(null);
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -294,7 +282,6 @@ export default {
     };
 
     const openCreateSale = () => {
-      editingSale.value = null;
       router.push({ name: "transaction-sale-new" });
     };
 
@@ -312,8 +299,13 @@ export default {
       }
       
       openMenuId.value = null;
-      editingSale.value = sale;
-      showForm.value = true;
+      // Redirect to edit page instead of opening modal
+      if (sale.transaction_code) {
+        router.push({
+          name: "transaction-sale-edit",
+          params: { code: sale.transaction_code },
+        });
+      }
     };
 
     const toggleActionMenu = async (itemId) => {
@@ -345,12 +337,6 @@ export default {
       if (!event.target.closest(".action-menu-wrapper")) {
         openMenuId.value = null;
       }
-    };
-
-    const handleSaved = async () => {
-      showForm.value = false;
-      editingSale.value = null;
-      await loadData();
     };
 
     const openPaymentModal = (sale) => {
@@ -451,18 +437,14 @@ export default {
       isPaid,
       isCancelled,
       canEdit,
-      showForm,
-      editingSale,
       openCreateSale,
       handleEdit,
-      handleSaved,
       showPaymentModal,
       selectedTransactionId,
       openPaymentModal,
       handlePaymentSuccess,
       handlePaymentModalClose,
       handleCancel,
-      TRANSACTION_TYPE,
       toggleActionMenu,
       getMenuPosition,
       filters,
