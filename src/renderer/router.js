@@ -32,6 +32,8 @@ import RentalTransactionDetailView from "./views/transaction/RentalTransactionDe
 import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
 import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
 import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
+import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
+import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
 import { getCurrentUser } from "./services/auth.js";
 import {
   hasPermissionSync,
@@ -136,6 +138,11 @@ const routes = [
     component: RentalTransactionDetailView,
   },
   {
+    path: "/transactions/rentals/:code/edit",
+    name: "transaction-rental-edit",
+    component: RentalTransactionEditView,
+  },
+  {
     path: "/transactions/sales",
     name: "transactions-sales",
     component: SalesTransactionsView,
@@ -149,6 +156,11 @@ const routes = [
     path: "/transactions/sales/:code",
     name: "transaction-sale-detail",
     component: SaleTransactionDetailView,
+  },
+  {
+    path: "/transactions/sales/:code/edit",
+    name: "transaction-sale-edit",
+    component: SalesTransactionEditView,
   },
   {
     path: "/transactions/stock-movements",

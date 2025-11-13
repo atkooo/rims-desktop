@@ -90,6 +90,12 @@
               Cetak Struk
             </AppButton>
           </div>
+          <div v-if="!isPaid(sale) && sale.status !== 'cancelled'" class="detail-item edit-action">
+            <AppButton variant="secondary" @click="goToEdit">
+              <Icon name="edit" :size="18" />
+              Edit Transaksi
+            </AppButton>
+          </div>
         </div>
       </div>
     </section>
@@ -265,6 +271,13 @@ export default {
       loadDetails(true);
     };
     const goBack = () => router.back();
+    
+    const goToEdit = () => {
+      router.push({
+        name: "transaction-sale-edit",
+        params: { code: code.value },
+      });
+    };
 
     const isPaid = (sale) => {
       if (!sale) return false;
@@ -347,6 +360,7 @@ export default {
       loading,
       error,
       goBack,
+      goToEdit,
       refresh,
       isPaid,
       displayStatus,

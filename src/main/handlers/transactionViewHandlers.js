@@ -58,6 +58,8 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         rd.id,
+        rd.rental_transaction_id,
+        rd.item_id,
         rt.transaction_code,
         i.name AS item_name,
         rd.quantity,
@@ -113,6 +115,9 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         sd.id,
+        sd.sales_transaction_id,
+        sd.item_id,
+        sd.accessory_id,
         st.transaction_code,
         COALESCE(i.name, a.name) AS item_name,
         CASE WHEN sd.item_id IS NOT NULL THEN 'item' ELSE 'accessory' END AS item_type,
