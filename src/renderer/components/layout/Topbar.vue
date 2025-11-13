@@ -341,13 +341,13 @@ let paymentListenersAttached = false;
 
 const pendingTransactions = computed(() => {
   return (transactionStore.transactions || []).filter(
-    (t) => t.status !== TRANSACTION_STATUS.COMPLETED,
+    (t) => t.status !== TRANSACTION_STATUS.COMPLETED && t.status !== TRANSACTION_STATUS.CANCELLED,
   ).length;
 });
 
 const pendingTransactionsList = computed(() => {
   return (transactionStore.transactions || [])
-    .filter((t) => t.status !== TRANSACTION_STATUS.COMPLETED)
+    .filter((t) => t.status !== TRANSACTION_STATUS.COMPLETED && t.status !== TRANSACTION_STATUS.CANCELLED)
     .slice(0, 10)
     .sort((a, b) => {
       const dateA = new Date(a.transactionDate || a.created_at || 0);
@@ -358,6 +358,8 @@ const pendingTransactionsList = computed(() => {
 
 const awaitingPayments = computed(() => {
   return (transactionStore.transactions || []).filter((t) => {
+    // Exclude cancelled transactions
+    if (t.status === TRANSACTION_STATUS.CANCELLED) return false;
     const pay = (t.payment_status || t.status || "").toString().toLowerCase();
     return ["pending", "unpaid"].includes(pay);
   }).length;
@@ -366,6 +368,8 @@ const awaitingPayments = computed(() => {
 const awaitingPaymentsList = computed(() => {
   return (transactionStore.transactions || [])
     .filter((t) => {
+      // Exclude cancelled transactions
+      if (t.status === TRANSACTION_STATUS.CANCELLED) return false;
       const pay = (t.payment_status || t.status || "").toString().toLowerCase();
       return ["pending", "unpaid"].includes(pay);
     })

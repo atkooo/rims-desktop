@@ -21,6 +21,24 @@
       </div>
     </div>
 
+    <!-- Cancelled Status Banner -->
+    <section v-if="!loading && !error && rental && isCancelled(rental) && showCancelledBanner" class="card-section">
+      <div class="cancelled-banner">
+        <div class="cancelled-banner-content">
+          <div class="cancelled-banner-icon">
+            <Icon name="x-circle" :size="20" />
+          </div>
+          <div class="cancelled-banner-text">
+            <strong>Transaksi Dibatalkan</strong>
+            <span>Transaksi ini telah dibatalkan dan tidak dapat dilakukan pembayaran atau pengeditan.</span>
+          </div>
+          <button class="cancelled-banner-close" @click="showCancelledBanner = false" aria-label="Tutup">
+            <Icon name="x" :size="18" />
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section class="card-section">
       <div v-if="loading" class="detail-state">Memuat detail transaksi...</div>
       <div v-else-if="error" class="error-banner">
@@ -53,7 +71,7 @@
           <h4>Keuangan</h4>
           <div class="detail-item">
             <span>Status</span>
-            <strong>{{ rental.status || "-" }}</strong>
+            <strong>{{ displayStatus(rental) }}</strong>
           </div>
           <div class="detail-item">
             <span>Subtotal</span>
@@ -87,7 +105,7 @@
             <span>Sesi Kasir</span>
             <strong>{{ rental.cashier_session_code }}</strong>
           </div>
-          <div v-if="!isPaid(rental)" class="detail-item payment-action">
+          <div v-if="!isPaid(rental) && !isCancelled(rental)" class="detail-item payment-action">
             <AppButton variant="primary" @click="openPaymentModal">
               <Icon name="credit-card" :size="18" />
               Bayar Sekarang
@@ -203,6 +221,7 @@ export default {
     const detailError = ref("");
     const showPaymentModal = ref(false);
     const showReceiptPreview = ref(false);
+    const showCancelledBanner = ref(true);
     const { showSuccess } = useNotification();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
@@ -297,6 +316,26 @@ export default {
       return status === "paid";
     };
 
+    const isCancelled = (rental) => {
+      if (!rental) return false;
+      const status = (rental.status || "").toString().toLowerCase();
+      return status === "cancelled";
+    };
+
+    const displayStatus = (rental) => {
+      if (!rental) return "-";
+      // Check if transaction is cancelled
+      const status = (rental.status || "").toString().toLowerCase();
+      if (status === "cancelled") {
+        return "Dibatalkan";
+      }
+      // Otherwise show payment status
+      const paymentStatus = (rental.payment_status || rental.paymentStatus || "").toString().toLowerCase();
+      if (paymentStatus === "paid") return "Lunas";
+      if (paymentStatus === "unpaid") return "Belum Lunas";
+      return paymentStatus || "-";
+    };
+
     const openPaymentModal = () => {
       if (!rental.value?.id) return;
       showPaymentModal.value = true;
@@ -358,8 +397,11 @@ export default {
       goToEdit,
       refresh,
       isPaid,
+      isCancelled,
+      displayStatus,
       showPaymentModal,
       showReceiptPreview,
+      showCancelledBanner,
       openPaymentModal,
       handlePaymentSuccess,
       handlePaymentModalClose,
@@ -484,5 +526,81 @@ export default {
 .subtitle {
   color: #6b7280;
   margin: 0.35rem 0 0;
+}
+
+/* Cancelled Status Banner */
+.cancelled-banner {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.cancelled-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.cancelled-banner-icon {
+  flex-shrink: 0;
+  color: #dc2626;
+  margin-top: 0.125rem;
+}
+
+.cancelled-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cancelled-banner-text strong {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #991b1b;
+  display: block;
+}
+
+.cancelled-banner-text span {
+  font-size: 0.875rem;
+  color: #7f1d1d;
+  line-height: 1.5;
+}
+
+.cancelled-banner-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-top: -0.25rem;
+  margin-right: -0.25rem;
+}
+
+.cancelled-banner-close:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.cancelled-banner-close:active {
+  transform: scale(0.95);
+}
+
+.detail-item.edit-action {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detail-item.edit-action button {
+  width: 100%;
 }
 </style>
