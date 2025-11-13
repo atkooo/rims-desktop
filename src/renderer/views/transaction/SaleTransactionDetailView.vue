@@ -84,6 +84,12 @@
               Bayar Sekarang
             </AppButton>
           </div>
+          <div v-if="isPaid(sale)" class="detail-item receipt-action">
+            <AppButton variant="primary" @click="showReceiptPreview = true">
+              <Icon name="printer" :size="18" />
+              Cetak Struk
+            </AppButton>
+          </div>
         </div>
       </div>
     </section>
@@ -140,6 +146,14 @@
     @payment-success="handlePaymentSuccess"
     @close="handlePaymentModalClose"
   />
+
+  <!-- Receipt Preview Dialog -->
+  <ReceiptPreviewDialog
+    v-model="showReceiptPreview"
+    :transaction-id="sale?.id"
+    transaction-type="sale"
+    @printed="handleReceiptPrinted"
+  />
 </template>
 
 <script>
@@ -148,6 +162,7 @@ import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
+import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
 import {
   fetchSalesTransactions,
   fetchSalesDetails,
@@ -156,11 +171,12 @@ import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "SaleTransactionDetailView",
-  components: { AppButton, Icon, PaymentModal },
+  components: { AppButton, Icon, PaymentModal, ReceiptPreviewDialog },
   setup() {
     const route = useRoute();
     const router = useRouter();
     const code = computed(() => route.params.code);
+    const shouldAutoPrintReceipt = computed(() => route.query.printReceipt === "true");
     const sale = ref(null);
     const details = ref([]);
     const loading = ref(false);
@@ -168,6 +184,7 @@ export default {
     const detailsLoading = ref(false);
     const detailError = ref("");
     const showPaymentModal = ref(false);
+    const showReceiptPreview = ref(false);
     const { showSuccess } = useNotification();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
@@ -224,6 +241,16 @@ export default {
         }
         sale.value = found;
         await loadDetails(true);
+        
+        // Auto-open receipt preview if query parameter is set and transaction is paid
+        if (shouldAutoPrintReceipt.value && isPaid(found)) {
+          // Remove query parameter from URL
+          router.replace({ query: {} });
+          // Open receipt preview after a short delay
+          setTimeout(() => {
+            showReceiptPreview.value = true;
+          }, 300);
+        }
       } catch (err) {
         error.value = err.message || "Gagal memuat detail penjualan.";
         sale.value = null;
@@ -266,15 +293,17 @@ export default {
       showPaymentModal.value = true;
     };
 
-    const handlePaymentSuccess = (data) => {
+    const handlePaymentSuccess = async (data) => {
       if (!data.partial) {
         // Payment is complete
         showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
         showPaymentModal.value = false;
-        // Redirect to transactions list after a short delay
+        // Reload sale data to update payment status
+        await loadSale();
+        // Auto-open receipt preview after successful payment
         setTimeout(() => {
-          router.push({ name: "transactions-sales" });
-        }, 1500);
+          showReceiptPreview.value = true;
+        }, 500);
       } else {
         // Partial payment, keep modal open
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
@@ -282,16 +311,18 @@ export default {
       }
     };
 
+    const handleReceiptPrinted = (result) => {
+      if (result && result.success) {
+        showSuccess("Struk berhasil dicetak!");
+      }
+    };
+
     const handlePaymentModalClose = (data) => {
       showPaymentModal.value = false;
       
-      // If modal closed without payment (unpaid)
+      // If modal closed without payment (unpaid), just reload data
       if (data?.unpaid) {
-        showSuccess("Transaksi belum dibayar. Anda dapat melakukan pembayaran nanti dari daftar transaksi.");
-        // Redirect to transactions list after a short delay
-        setTimeout(() => {
-          router.push({ name: "transactions-sales" });
-        }, 2000);
+        loadSale(); // Reload to refresh data
       }
     };
 
@@ -320,9 +351,11 @@ export default {
       isPaid,
       displayStatus,
       showPaymentModal,
+      showReceiptPreview,
       openPaymentModal,
       handlePaymentSuccess,
       handlePaymentModalClose,
+      handleReceiptPrinted,
     };
   },
 };
@@ -402,8 +435,15 @@ export default {
   border-top: 1px solid #e5e7eb;
 }
 
-.detail-item.payment-action button {
+.detail-item.payment-action button,
+.detail-item.receipt-action button {
   width: 100%;
+}
+
+.detail-item.receipt-action {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .detail-state {

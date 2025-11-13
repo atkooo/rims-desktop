@@ -659,11 +659,22 @@ export default {
         form.value = createDefaultForm();
         errors.value = {};
         showPaymentModal.value = false;
+        const transactionCode = data.transaction?.transaction_code;
         savedTransactionId.value = null;
-        // Optionally redirect to transactions list
-        setTimeout(() => {
-          router.push({ name: "transactions-sales" });
-        }, 1500);
+        // Redirect to detail transaction after successful payment
+        if (transactionCode) {
+          setTimeout(() => {
+            router.push({
+              name: "transaction-sale-detail",
+              params: { code: transactionCode },
+              query: { printReceipt: "true" },
+            });
+          }, 500);
+        } else {
+          setTimeout(() => {
+            router.push({ name: "transactions-sales" });
+          }, 1500);
+        }
       } else {
         // Partial payment, keep modal open
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");

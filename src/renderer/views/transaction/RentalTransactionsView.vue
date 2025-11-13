@@ -426,8 +426,20 @@ export default {
       if (!data.partial) {
         showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
         showPaymentModal.value = false;
+        const transactionCode = data.transaction?.transaction_code;
         selectedTransactionId.value = null;
-        loadData();
+        // Redirect to detail transaction after successful payment
+        if (transactionCode) {
+          setTimeout(() => {
+            router.push({
+              name: "transaction-rental-detail",
+              params: { code: transactionCode },
+              query: { printReceipt: "true" },
+            });
+          }, 500);
+        } else {
+          loadData();
+        }
       } else {
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
         loadData();
