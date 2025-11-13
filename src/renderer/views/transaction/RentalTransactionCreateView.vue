@@ -11,9 +11,7 @@
         </div>
         <div class="header-actions">
           <AppButton variant="secondary" @click="goBack">Kembali</AppButton>
-          <AppButton variant="primary" :loading="loading" @click="handleSubmit">
-            Simpan Transaksi
-          </AppButton>
+         
         </div>
       </div>
     </div>

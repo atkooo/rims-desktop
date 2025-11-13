@@ -105,7 +105,7 @@
                       <span>Detail</span>
                     </button>
                     <button
-                      v-if="!isPaid(row)"
+                      v-if="canEdit(row)"
                       type="button"
                       class="action-menu-item"
                       @click="handleEdit(row)"
@@ -114,7 +114,7 @@
                       <span>Edit</span>
                     </button>
                     <button
-                      v-if="!isPaid(row)"
+                      v-if="canEdit(row)"
                       type="button"
                       class="action-menu-item"
                       @click="openPaymentModal(row)"
@@ -123,7 +123,7 @@
                       <span>Bayar</span>
                     </button>
                     <button
-                      v-if="!isPaid(row) && row.status !== 'cancelled'"
+                      v-if="canEdit(row)"
                       type="button"
                       class="action-menu-item danger"
                       @click="handleCancel(row)"
@@ -296,11 +296,22 @@ export default {
       });
     };
 
+    const isCancelled = (rental) => {
+      if (!rental) return false;
+      const status = (rental.status || "").toString().toLowerCase();
+      return status === "cancelled";
+    };
+
     const isPaid = (rental) => {
+      if (!rental || isCancelled(rental)) return false;
       const status = (rental.payment_status || rental.paymentStatus || "")
         .toString()
         .toLowerCase();
       return status === "paid";
+    };
+
+    const canEdit = (rental) => {
+      return !isPaid(rental) && !isCancelled(rental);
     };
 
     const filteredItems = computed(() => {
@@ -337,11 +348,18 @@ export default {
     };
 
     const handleEdit = (rental) => {
-      // Cek apakah transaksi sudah dibayar
-      if (isPaid(rental)) {
-        alert("Transaksi yang sudah dibayar tidak dapat di-edit.");
+      // Cek apakah transaksi sudah dibatalkan
+      if (isCancelled(rental)) {
+        showError("Transaksi yang sudah dibatalkan tidak dapat di-edit.");
         return;
       }
+      
+      // Cek apakah transaksi sudah dibayar
+      if (isPaid(rental)) {
+        showError("Transaksi yang sudah dibayar tidak dapat di-edit.");
+        return;
+      }
+      
       openMenuId.value = null;
       editingRental.value = rental;
       showForm.value = true;
@@ -386,7 +404,20 @@ export default {
 
     const openPaymentModal = (rental) => {
       openMenuId.value = null;
-      if (!rental.id) return;
+      if (!rental?.id) return;
+      
+      // Cek jika transaksi sudah dibatalkan
+      if (isCancelled(rental)) {
+        showError("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+        return;
+      }
+      
+      // Cek jika transaksi sudah dibayar
+      if (isPaid(rental)) {
+        showError("Transaksi yang sudah dibayar tidak dapat dibayar lagi.");
+        return;
+      }
+      
       selectedTransactionId.value = rental.id;
       showPaymentModal.value = true;
     };
@@ -461,6 +492,8 @@ export default {
       handleRefresh,
       goToRentalDetail,
       isPaid,
+      isCancelled,
+      canEdit,
       toggleActionMenu,
       getMenuPosition,
       showPaymentModal,

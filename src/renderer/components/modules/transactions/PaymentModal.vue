@@ -45,7 +45,7 @@
               </div>
 
               <!-- Payment Form -->
-              <form v-if="remainingAmount > 0 && transaction.status !== 'cancelled'" @submit.prevent="handlePayment" class="payment-form">
+              <form v-if="remainingAmount > 0 && transaction.status !== 'cancelled' && !isTransactionPaid" @submit.prevent="handlePayment" class="payment-form">
                 <div class="form-group">
                   <label for="paymentAmount">Jumlah Bayar</label>
                   <input
@@ -144,10 +144,14 @@
                 </div>
               </form>
 
-              <!-- Payment Complete -->
-              <div v-else class="success-message">
+              <!-- Payment Complete or Cancelled -->
+              <div v-else-if="isTransactionPaid" class="success-message">
                 <h3>Pembayaran Lunas</h3>
                 <p>Transaksi ini telah dibayar lunas.</p>
+              </div>
+              <div v-else-if="transaction.status === 'cancelled'" class="error-banner">
+                <h3>Transaksi Dibatalkan</h3>
+                <p>Transaksi ini telah dibatalkan dan tidak dapat dibayar.</p>
               </div>
             </div>
           </div>
@@ -217,8 +221,16 @@ export default {
       if (!transaction.value) return 0;
       return Math.max(
         0,
-        transaction.value.total_amount - (transaction.value.paid_amount || 0),
+        transaction.value.total_amount - (transaction.value.paid_amount || transaction.value.actual_paid_amount || 0),
       );
+    });
+
+    const isTransactionPaid = computed(() => {
+      if (!transaction.value) return false;
+      const paymentStatus = (transaction.value.payment_status || transaction.value.paymentStatus || "").toString().toLowerCase();
+      const paidAmount = Number(transaction.value.paid_amount || transaction.value.actual_paid_amount || 0) || 0;
+      const totalAmount = Number(transaction.value.total_amount || 0) || 0;
+      return paymentStatus === "paid" || paidAmount >= totalAmount;
     });
 
     const changeAmount = computed(() => {
@@ -227,7 +239,7 @@ export default {
       return paymentForm.value.amount - remainingAmount.value;
     });
 
-    const loadTransaction = async () => {
+    const loadTransaction = async (skipPaidValidation = false) => {
       if (!props.transactionId) {
         error.value = "ID transaksi tidak tersedia";
         return;
@@ -256,6 +268,17 @@ export default {
         const status = (found.status || "").toString().toLowerCase();
         if (status === "cancelled") {
           throw new Error("Transaksi ini telah dibatalkan dan tidak dapat dibayar");
+        }
+
+        // Check if transaction is already paid (skip validation if this is reload after payment)
+        if (!skipPaidValidation) {
+          const paymentStatus = (found.payment_status || found.paymentStatus || "").toString().toLowerCase();
+          const paidAmount = Number(found.paid_amount || found.actual_paid_amount || 0) || 0;
+          const totalAmount = Number(found.total_amount || 0) || 0;
+          
+          if (paymentStatus === "paid" || paidAmount >= totalAmount) {
+            throw new Error("Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi");
+          }
         }
 
         transaction.value = found;
@@ -304,8 +327,8 @@ export default {
 
         await createPayment(paymentData);
 
-        // Reload transaction to get updated payment status
-        await loadTransaction();
+        // Reload transaction to get updated payment status (skip paid validation since we just made a payment)
+        await loadTransaction(true);
 
         // Reset form
         paymentForm.value = {
@@ -316,7 +339,10 @@ export default {
         };
 
         // Check if payment is complete
-        const newRemaining = transaction.value.total_amount - (transaction.value.paid_amount || 0);
+        const paidAmount = Number(transaction.value.paid_amount || transaction.value.actual_paid_amount || 0) || 0;
+        const totalAmount = Number(transaction.value.total_amount || 0) || 0;
+        const newRemaining = totalAmount - paidAmount;
+        
         if (newRemaining <= 0) {
           emit("payment-success", { transaction: transaction.value });
           // Close modal after a short delay
@@ -381,6 +407,7 @@ export default {
       paymentLoading,
       errors,
       remainingAmount,
+      isTransactionPaid,
       changeAmount,
       formatCurrency,
       formatNumberInput,

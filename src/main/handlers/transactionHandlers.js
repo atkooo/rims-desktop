@@ -531,8 +531,9 @@ function setupTransactionHandlers() {
         );
         const isRental = !!rentalCheck;
 
-        // Cek payment status sebelum update
+        // Cek payment status dan status transaksi sebelum update
         let paymentStatus = null;
+        let transactionStatus = null;
         if (isRental) {
           const rental = await database.queryOne(
             `SELECT rt.*, 
@@ -548,6 +549,7 @@ function setupTransactionHandlers() {
             [id],
           );
           paymentStatus = rental?.calculated_payment_status || 'unpaid';
+          transactionStatus = rental?.status || null;
         } else {
           const sale = await database.queryOne(
             `SELECT st.*,
@@ -563,6 +565,12 @@ function setupTransactionHandlers() {
             [id],
           );
           paymentStatus = sale?.calculated_payment_status || 'unpaid';
+          transactionStatus = sale?.status || null;
+        }
+
+        // Cegah update jika status sudah cancelled
+        if (transactionStatus === 'cancelled') {
+          throw new Error("Transaksi yang sudah dibatalkan tidak dapat di-edit.");
         }
 
         // Cegah update jika status sudah paid
@@ -897,6 +905,57 @@ function setupPaymentHandlers() {
         throw new Error("Transaksi referensi harus diisi");
       }
 
+      // Cek status transaksi sebelum membuat pembayaran
+      if (paymentData.transactionType === 'rental') {
+        const rental = await database.queryOne(
+          `SELECT rt.*, 
+           COALESCE(SUM(p.amount), 0) as total_paid
+           FROM rental_transactions rt
+           LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+           WHERE rt.id = ?
+           GROUP BY rt.id`,
+          [paymentData.transactionId],
+        );
+        
+        if (!rental) {
+          throw new Error("Transaksi sewa tidak ditemukan");
+        }
+        
+        // Cek jika transaksi sudah dibatalkan
+        if (rental.status === 'cancelled') {
+          throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+        }
+        
+        // Cek jika transaksi sudah lunas
+        if (rental.total_paid >= rental.total_amount) {
+          throw new Error("Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.");
+        }
+      } else {
+        const sale = await database.queryOne(
+          `SELECT st.*,
+           COALESCE(SUM(p.amount), 0) as total_paid
+           FROM sales_transactions st
+           LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+           WHERE st.id = ?
+           GROUP BY st.id`,
+          [paymentData.transactionId],
+        );
+        
+        if (!sale) {
+          throw new Error("Transaksi penjualan tidak ditemukan");
+        }
+        
+        // Cek jika transaksi sudah dibatalkan
+        if (sale.status === 'cancelled') {
+          throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+        }
+        
+        // Cek jika transaksi sudah lunas
+        if (sale.total_paid >= sale.total_amount) {
+          throw new Error("Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.");
+        }
+      }
+
       // Validasi cashier session untuk pembayaran cash
       if (!paymentData.paymentMethod || paymentData.paymentMethod === "cash") {
         if (!paymentData.userId) {
@@ -940,6 +999,7 @@ function setupPaymentHandlers() {
 
       // Update rental transaction status to 'active' after first payment
       if (paymentData.transactionType === 'rental') {
+        // Re-fetch rental with updated payment total
         const rental = await database.queryOne(
           `SELECT rt.*, 
            COALESCE(SUM(p.amount), 0) as total_paid

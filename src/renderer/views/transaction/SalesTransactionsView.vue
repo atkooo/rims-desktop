@@ -299,11 +299,18 @@ export default {
     };
 
     const handleEdit = (sale) => {
-      // Cek apakah transaksi sudah dibayar
-      if (isPaid(sale)) {
-        alert("Transaksi yang sudah dibayar tidak dapat di-edit.");
+      // Cek apakah transaksi sudah dibatalkan
+      if (isCancelled(sale)) {
+        showError("Transaksi yang sudah dibatalkan tidak dapat di-edit.");
         return;
       }
+      
+      // Cek apakah transaksi sudah dibayar
+      if (isPaid(sale)) {
+        showError("Transaksi yang sudah dibayar tidak dapat di-edit.");
+        return;
+      }
+      
       openMenuId.value = null;
       editingSale.value = sale;
       showForm.value = true;
@@ -348,7 +355,20 @@ export default {
 
     const openPaymentModal = (sale) => {
       openMenuId.value = null;
-      if (!sale?.id || isCancelled(sale)) return;
+      if (!sale?.id) return;
+      
+      // Cek jika transaksi sudah dibatalkan
+      if (isCancelled(sale)) {
+        showError("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+        return;
+      }
+      
+      // Cek jika transaksi sudah dibayar
+      if (isPaid(sale)) {
+        showError("Transaksi yang sudah dibayar tidak dapat dibayar lagi.");
+        return;
+      }
+      
       selectedTransactionId.value = sale.id;
       showPaymentModal.value = true;
     };
