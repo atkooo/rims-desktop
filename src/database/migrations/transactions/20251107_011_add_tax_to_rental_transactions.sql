@@ -9,3 +9,4 @@ ALTER TABLE rental_transactions ADD COLUMN tax DECIMAL(15,2) DEFAULT 0;
 -- CHECK (tax >= 0)
 
 
+
