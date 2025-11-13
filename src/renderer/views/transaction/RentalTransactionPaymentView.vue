@@ -165,14 +165,17 @@
           <div class="form-grid">
             <div class="field-group">
               <label for="paymentAmount">Jumlah Pembayaran</label>
-              <FormInput
+              <input
                 id="paymentAmount"
-                type="number"
-                min="0"
-                :max="remainingAmount"
-                v-model.number="paymentForm.amount"
-                :error="errors.amount"
+                :value="formatNumberInput(paymentForm.amount)"
+                @input="handleAmountInput"
+                type="text"
+                class="form-input"
+                :class="{ error: errors.amount }"
               />
+              <div v-if="errors.amount" class="error-message">
+                {{ errors.amount }}
+              </div>
             </div>
             <div class="field-group">
               <label for="paymentMethod">Metode Pembayaran</label>
@@ -236,9 +239,6 @@
             <AppButton variant="primary" @click="showReceiptPreview = true">
               <i class="fas fa-eye"></i> Preview Struk
             </AppButton>
-            <AppButton variant="secondary" @click="goBack">
-              Kembali ke Daftar
-            </AppButton>
           </div>
         </div>
       </section>
@@ -267,6 +267,7 @@ import {
   fetchPayments,
 } from "@/services/transactions";
 import { getStoredUser } from "@/services/auth";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 export default {
   name: "RentalTransactionPaymentView",
@@ -303,6 +304,14 @@ export default {
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handler for amount
+    const handleAmountInput = createInputHandler(
+      (value) => (paymentForm.value.amount = value)
+    );
 
     const getPaymentStatusLabel = (status) => {
       const labels = {
@@ -475,6 +484,8 @@ export default {
       errors,
       remainingAmount,
       formatCurrency,
+      formatNumberInput,
+      handleAmountInput,
       formatDate,
       getPaymentStatusLabel,
       getRentalStatusLabel,

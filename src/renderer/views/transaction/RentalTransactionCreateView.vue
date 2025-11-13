@@ -123,22 +123,30 @@
           <h3 class="section-title">Deposit & Pajak</h3>
           <div class="form-content">
             <div class="form-grid">
-              <FormInput
-                id="deposit"
-                label="Deposit"
-                type="number"
-                min="0"
-                v-model.number="form.deposit"
-              />
-              <FormInput
-                id="tax"
-                label="Pajak"
-                type="number"
-                min="0"
-                v-model.number="form.tax"
-                :readonly="true"
-                :hint="taxHint"
-              />
+              <div class="field-group">
+                <label for="deposit" class="form-label">Deposit</label>
+                <input
+                  id="deposit"
+                  :value="formatNumberInput(form.deposit)"
+                  @input="handleDepositInput"
+                  type="text"
+                  class="form-input"
+                />
+              </div>
+              <div class="field-group">
+                <label for="tax" class="form-label">Pajak</label>
+                <input
+                  id="tax"
+                  :value="formatNumberInput(form.tax)"
+                  @input="handleTaxInput"
+                  type="text"
+                  class="form-input"
+                  readonly
+                />
+                <div v-if="taxHint" class="form-hint">
+                  {{ taxHint }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -257,6 +265,7 @@ import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 const toDateInput = (value) => {
   if (!value) return "";
@@ -307,6 +316,17 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value || 0);
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handleDepositInput = createInputHandler(
+      (value) => (form.value.deposit = value)
+    );
+    const handleTaxInput = createInputHandler(
+      (value) => (form.value.tax = value)
+    );
 
     const totalDays = computed(() => {
       const from = new Date(form.value.rentalDate);
@@ -531,6 +551,9 @@ export default {
       errors,
       loading,
       formatCurrency,
+      formatNumberInput,
+      handleDepositInput,
+      handleTaxInput,
       totalAmount,
       totalDays,
       totalItems,

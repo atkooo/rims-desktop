@@ -26,22 +26,34 @@
             <option value="sale">Sale</option>
           </select>
         </div>
-        <FormInput
-          id="price"
-          label="Harga Paket"
-          type="number"
-          step="0.01"
-          v-model="form.price"
-          :error="errors.price"
-        />
-        <FormInput
-          id="rentalPrice"
-          label="Harga Sewa / Hari"
-          type="number"
-          step="0.01"
-          v-model="form.rental_price_per_day"
-          :error="errors.rental_price_per_day"
-        />
+        <div class="form-group">
+          <label for="price" class="form-label">Harga Paket</label>
+          <input
+            id="price"
+            :value="formatNumberInput(form.price)"
+            @input="handlePriceInput"
+            type="text"
+            class="form-input"
+            :class="{ error: errors.price }"
+          />
+          <div v-if="errors.price" class="error-message">
+            {{ errors.price }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
+          <input
+            id="rentalPrice"
+            :value="formatNumberInput(form.rental_price_per_day)"
+            @input="handleRentalPriceInput"
+            type="text"
+            class="form-input"
+            :class="{ error: errors.rental_price_per_day }"
+          />
+          <div v-if="errors.rental_price_per_day" class="error-message">
+            {{ errors.rental_price_per_day }}
+          </div>
+        </div>
         <FormInput
           id="stockQty"
           label="Total Stok"
@@ -106,6 +118,7 @@ import {
   updateBundle,
   fetchDiscountGroups,
 } from "@/services/masterData";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 const defaultForm = () => ({
   code: "",
@@ -151,6 +164,17 @@ export default {
     });
 
     const isEdit = computed(() => !!props.editData);
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handlePriceInput = createInputHandler(
+      (value) => (form.value.price = value)
+    );
+    const handleRentalPriceInput = createInputHandler(
+      (value) => (form.value.rental_price_per_day = value)
+    );
 
     const resetForm = () => {
       if (props.editData) {
@@ -300,6 +324,9 @@ export default {
       handleSubmit,
       discountGroups,
       formatCurrency,
+      formatNumberInput,
+      handlePriceInput,
+      handleRentalPriceInput,
     };
   },
 };

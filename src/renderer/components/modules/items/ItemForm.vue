@@ -34,14 +34,21 @@
 
         <!-- Harga & Status -->
         <div class="form-pair">
-          <FormInput
-            id="price"
-            label="Harga"
-            type="number"
-            v-model.number="form.price"
-            :error="errors.price"
-            required
-          />
+          <div class="form-group">
+            <label for="price" class="form-label">Harga</label>
+            <input
+              id="price"
+              :value="formatNumberInput(form.price)"
+              @input="handlePriceInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.price }"
+              required
+            />
+            <div v-if="errors.price" class="error-message">
+              {{ errors.price }}
+            </div>
+          </div>
 
           <div class="form-group">
             <label class="form-label">Status</label>
@@ -140,13 +147,20 @@
             v-model.number="form.weeklyRate"
             :error="errors.weeklyRate"
           />
-          <FormInput
-            id="deposit"
-            label="Deposit"
-            type="number"
-            v-model.number="form.deposit"
-            :error="errors.deposit"
-          />
+          <div class="form-group">
+            <label for="deposit" class="form-label">Deposit</label>
+            <input
+              id="deposit"
+              :value="formatNumberInput(form.deposit)"
+              @input="handleDepositInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.deposit }"
+            />
+            <div v-if="errors.deposit" class="error-message">
+              {{ errors.deposit }}
+            </div>
+          </div>
         </div>
       </div>
     </form>
@@ -161,6 +175,7 @@ import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import { ipcRenderer } from "@/services/ipc";
 import { fetchDiscountGroups } from "@/services/masterData";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 const defaultForm = () => ({
   name: "",
@@ -207,6 +222,17 @@ export default {
         .replace(/^-+|-+$/g, "")
         .replace(/-+/g, "-")
         .slice(0, 20);
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handlePriceInput = createInputHandler(
+      (value) => (form.value.price = value)
+    );
+    const handleDepositInput = createInputHandler(
+      (value) => (form.value.deposit = value)
+    );
 
     const syncAutoCode = () => {
       const base = form.value.name?.trim() || "";
@@ -343,6 +369,9 @@ export default {
       categories,
       discountGroups,
       formatCurrency,
+      formatNumberInput,
+      handlePriceInput,
+      handleDepositInput,
     };
   },
 };

@@ -133,26 +133,32 @@
           <h3 class="section-title">Detail Pembayaran</h3>
           <div class="form-grid">
             <div class="field-group">
-              <FormInput
+              <label for="discount" class="form-label">Diskon</label>
+              <input
                 id="discount"
-                label="Diskon"
-                type="number"
-                min="0"
-                v-model.number="form.discount"
-                :hint="getDiscountHint()"
+                :value="formatNumberInput(form.discount)"
+                @input="handleDiscountInput"
+                type="text"
+                class="form-input"
                 :readonly="isDiscountReadonly"
               />
+              <div v-if="getDiscountHint()" class="form-hint">
+                {{ getDiscountHint() }}
+              </div>
             </div>
             <div class="field-group">
-              <FormInput
+              <label for="tax" class="form-label">Pajak</label>
+              <input
                 id="tax"
-                label="Pajak"
-                type="number"
-                min="0"
-                v-model.number="form.tax"
-                :readonly="true"
-                :hint="taxHint"
+                :value="formatNumberInput(form.tax)"
+                @input="handleTaxInput"
+                type="text"
+                class="form-input"
+                readonly
               />
+              <div v-if="taxHint" class="form-hint">
+                {{ taxHint }}
+              </div>
             </div>
           </div>
         </div>
@@ -238,6 +244,7 @@ import { getCurrentSession } from "@/services/cashier";
 import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 const toDateInput = (value) => {
   if (!value) return "";
@@ -283,6 +290,17 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value || 0);
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handleDiscountInput = createInputHandler(
+      (value) => (form.value.discount = value)
+    );
+    const handleTaxInput = createInputHandler(
+      (value) => (form.value.tax = value)
+    );
 
     // Calculate item price after discount
     const calculateItemPrice = (item) => {
@@ -651,6 +669,9 @@ export default {
       errors,
       loading,
       formatCurrency,
+      formatNumberInput,
+      handleDiscountInput,
+      handleTaxInput,
       totalAmount,
       baseSubtotal,
       bundleSubtotal,

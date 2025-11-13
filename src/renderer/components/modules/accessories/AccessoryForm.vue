@@ -15,30 +15,48 @@
           :error="errors.name"
           required
         />
-        <FormInput
-          id="purchasePrice"
-          label="Harga Beli"
-          type="number"
-          step="0.01"
-          v-model="form.purchase_price"
-          :error="errors.purchase_price"
-        />
-        <FormInput
-          id="rentalPrice"
-          label="Harga Sewa / Hari"
-          type="number"
-          step="0.01"
-          v-model="form.rental_price_per_day"
-          :error="errors.rental_price_per_day"
-        />
-        <FormInput
-          id="salePrice"
-          label="Harga Jual"
-          type="number"
-          step="0.01"
-          v-model="form.sale_price"
-          :error="errors.sale_price"
-        />
+        <div class="form-group">
+          <label for="purchasePrice" class="form-label">Harga Beli</label>
+          <input
+            id="purchasePrice"
+            :value="formatNumberInput(form.purchase_price)"
+            @input="handlePurchasePriceInput"
+            type="text"
+            class="form-input"
+            :class="{ error: errors.purchase_price }"
+          />
+          <div v-if="errors.purchase_price" class="error-message">
+            {{ errors.purchase_price }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
+          <input
+            id="rentalPrice"
+            :value="formatNumberInput(form.rental_price_per_day)"
+            @input="handleRentalPriceInput"
+            type="text"
+            class="form-input"
+            :class="{ error: errors.rental_price_per_day }"
+          />
+          <div v-if="errors.rental_price_per_day" class="error-message">
+            {{ errors.rental_price_per_day }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="salePrice" class="form-label">Harga Jual</label>
+          <input
+            id="salePrice"
+            :value="formatNumberInput(form.sale_price)"
+            @input="handleSalePriceInput"
+            type="text"
+            class="form-input"
+            :class="{ error: errors.sale_price }"
+          />
+          <div v-if="errors.sale_price" class="error-message">
+            {{ errors.sale_price }}
+          </div>
+        </div>
         <FormInput
           id="stockQty"
           label="Total Stok"
@@ -125,6 +143,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 import {
   createAccessory,
   updateAccessory,
@@ -184,6 +203,20 @@ export default {
     });
 
     const isEdit = computed(() => !!props.editData);
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handlePurchasePriceInput = createInputHandler(
+      (value) => (form.value.purchase_price = value)
+    );
+    const handleRentalPriceInput = createInputHandler(
+      (value) => (form.value.rental_price_per_day = value)
+    );
+    const handleSalePriceInput = createInputHandler(
+      (value) => (form.value.sale_price = value)
+    );
 
     const resetForm = () => {
       if (props.editData) {
@@ -360,6 +393,10 @@ export default {
       handleSubmit,
       discountGroups,
       formatCurrency,
+      formatNumberInput,
+      handlePurchasePriceInput,
+      handleRentalPriceInput,
+      handleSalePriceInput,
     };
   },
 };

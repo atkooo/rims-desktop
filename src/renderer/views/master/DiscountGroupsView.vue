@@ -100,10 +100,9 @@
         <div class="form-group" v-if="discountType === 'amount'">
           <label>Jumlah Diskon <span class="required">*</span></label>
           <input
-            v-model.number="form.discount_amount"
-            type="number"
-            min="0"
-            step="100"
+            :value="formatNumberInput(form.discount_amount)"
+            @input="handleDiscountAmountInput"
+            type="text"
             required
           />
           <small class="form-hint">Masukkan jumlah diskon dalam Rupiah</small>
@@ -174,6 +173,7 @@ import { ref, onMounted, watch } from "vue";
 import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 import {
   fetchDiscountGroups,
   createDiscountGroup,
@@ -201,6 +201,14 @@ export default {
     const selectedDiscountGroup = ref(null);
     const isEdit = ref(false);
     const discountType = ref("percentage");
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handler for discount amount
+    const handleDiscountAmountInput = createInputHandler(
+      (value) => (form.value.discount_amount = value)
+    );
 
     const form = ref({
       name: "",
@@ -393,6 +401,10 @@ export default {
       isEdit,
       discountType,
       formError,
+
+      // Format & Handlers
+      formatNumberInput,
+      handleDiscountAmountInput,
 
       // Methods
       openCreateDialog,

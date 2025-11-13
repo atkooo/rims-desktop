@@ -166,6 +166,8 @@
         transaksi aktif.
       </p>
     </AppDialog>
+
+    <ItemForm v-model="showForm" @saved="handleFormSaved" />
   </div>
 </template>
 
@@ -178,6 +180,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
+import ItemForm from "@/components/modules/items/ItemForm.vue";
 
 export default {
   name: "ItemsPage",
@@ -187,6 +190,7 @@ export default {
     AppTable,
     AppDialog,
     Icon,
+    ItemForm,
   },
 
   setup() {
@@ -198,6 +202,7 @@ export default {
     const showDeleteConfirm = ref(false);
     const deleteLoading = ref(false);
     const itemToDelete = ref(null);
+    const showForm = ref(false);
 
     // Filter state
     const filters = ref({
@@ -347,6 +352,11 @@ export default {
       }
     };
 
+    const handleFormSaved = async () => {
+      showForm.value = false;
+      await itemStore.fetchItems();
+    };
+
     // Load data
     const loadCategories = async () => {
       try {
@@ -398,12 +408,14 @@ export default {
       showDeleteConfirm,
       deleteLoading,
       itemToDelete,
+      showForm,
       formatCurrency,
       handleViewDetail,
       toggleActionMenu,
       getMenuPosition,
       promptDelete,
       confirmDelete,
+      handleFormSaved,
     };
   },
 };

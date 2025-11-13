@@ -78,10 +78,9 @@
           <label for="openingBalance">Saldo Awal (Rp)</label>
           <input
             id="openingBalance"
-            v-model.number="openForm.openingBalance"
-            type="number"
-            step="0.01"
-            min="0"
+            :value="formatNumberInput(openForm.openingBalance)"
+            @input="handleOpeningBalanceInput"
+            type="text"
             class="form-input"
             :class="{ error: errors.openingBalance }"
             placeholder="Masukkan saldo awal kasir"
@@ -177,10 +176,9 @@
               <label for="actualBalance">Saldo Akhir Aktual (Rp)</label>
               <input
                 id="actualBalance"
-                v-model.number="closeForm.actualBalance"
-                type="number"
-                step="0.01"
-                min="0"
+                :value="formatNumberInput(closeForm.actualBalance)"
+                @input="handleActualBalanceInput"
+                type="text"
                 class="form-input"
                 :class="{ error: closeErrors.actualBalance }"
                 placeholder="Masukkan saldo akhir yang sebenarnya"
@@ -250,6 +248,7 @@ import {
   closeSession,
 } from "@/services/cashier";
 import { getCurrentUser } from "@/services/auth";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 export default {
   name: "CashierView",
@@ -295,6 +294,19 @@ export default {
 
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Handle opening balance input
+    const handleOpeningBalanceInput = createInputHandler(
+      (value) => (openForm.value.openingBalance = value)
+    );
+
+    // Handle actual balance input
+    const handleActualBalanceInput = createInputHandler(
+      (value) => (closeForm.value.actualBalance = value)
+    );
 
     const columns = [
       { key: "session_code", label: "Kode Sesi" },
@@ -457,6 +469,9 @@ export default {
       formatCurrency,
       formatDateTime,
       formatDate,
+      formatNumberInput,
+      handleOpeningBalanceInput,
+      handleActualBalanceInput,
       columns,
       loadData,
       handleOpenSession,

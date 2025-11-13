@@ -2,11 +2,6 @@
   <div class="data-page master-page">
     <div class="page-header">
       <div>
-        <div class="breadcrumb-nav">
-          <router-link to="/master/bundles" class="breadcrumb-link">
-            ← Kembali ke Daftar Paket
-          </router-link>
-        </div>
         <h1>Detail Paket</h1>
         <p class="subtitle" v-if="bundle">
           Informasi lengkap untuk {{ bundle.name }}
@@ -345,25 +340,6 @@ export default {
 </script>
 
 <style scoped>
-.breadcrumb-nav {
-  margin-bottom: 0.5rem;
-}
-
-.breadcrumb-link {
-  color: #4338ca;
-  text-decoration: none;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  transition: color 0.2s;
-}
-
-.breadcrumb-link:hover {
-  color: #6366f1;
-  text-decoration: underline;
-}
-
 .header-actions {
   display: flex;
   flex-wrap: wrap;

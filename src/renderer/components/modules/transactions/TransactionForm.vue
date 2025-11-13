@@ -205,41 +205,47 @@
         <h3>Detail Pembayaran</h3>
         <div class="form-grid">
           <div class="field-group" v-if="isRental">
-            <FormInput
+            <label for="deposit" class="form-label">Deposit</label>
+            <input
               id="deposit"
-              label="Deposit"
-              type="number"
-              min="0"
-              v-model.number="form.deposit"
+              :value="formatNumberInput(form.deposit)"
+              @input="handleDepositInput"
+              type="text"
+              class="form-input"
             />
           </div>
           <div class="field-group" v-if="!isRental">
-            <FormInput
+            <label for="discount" class="form-label">Diskon</label>
+            <input
               id="discount"
-              label="Diskon"
-              type="number"
-              min="0"
-              v-model.number="form.discount"
-              :hint="getDiscountHint()"
+              :value="formatNumberInput(form.discount)"
+              @input="handleDiscountInput"
+              type="text"
+              class="form-input"
               :readonly="isDiscountReadonly"
             />
+            <div v-if="getDiscountHint()" class="form-hint">
+              {{ getDiscountHint() }}
+            </div>
           </div>
           <div class="field-group" v-if="!isRental">
-            <FormInput
+            <label for="tax" class="form-label">Pajak</label>
+            <input
               id="tax"
-              label="Pajak"
-              type="number"
-              min="0"
-              v-model.number="form.tax"
+              :value="formatNumberInput(form.tax)"
+              @input="handleTaxInput"
+              type="text"
+              class="form-input"
             />
           </div>
           <div class="field-group">
-            <FormInput
+            <label for="paidAmount" class="form-label">Jumlah Dibayar</label>
+            <input
               id="paidAmount"
-              label="Jumlah Dibayar"
-              type="number"
-              min="0"
-              v-model.number="form.paidAmount"
+              :value="formatNumberInput(form.paidAmount)"
+              @input="handlePaidAmountInput"
+              type="text"
+              class="form-input"
             />
           </div>
         </div>
@@ -270,6 +276,7 @@ import AccessorySelector from "@/components/modules/accessories/AccessorySelecto
 import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { TRANSACTION_TYPE } from "@shared/constants";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 
 const transactionTypeOptions = [
   { value: TRANSACTION_TYPE.RENTAL, label: "Sewa & Pengembalian" },
@@ -564,6 +571,23 @@ export default {
         currency: "IDR",
       }).format(value || 0);
     };
+
+    // Use number format composable
+    const { formatNumberInput, createInputHandler } = useNumberFormat();
+
+    // Create input handlers for number fields
+    const handleDepositInput = createInputHandler(
+      (value) => (form.value.deposit = value)
+    );
+    const handleDiscountInput = createInputHandler(
+      (value) => (form.value.discount = value)
+    );
+    const handleTaxInput = createInputHandler(
+      (value) => (form.value.tax = value)
+    );
+    const handlePaidAmountInput = createInputHandler(
+      (value) => (form.value.paidAmount = value)
+    );
 
     const loadCustomers = async () => {
       try {
@@ -940,6 +964,11 @@ export default {
       accessoryCount,
       fixedTypeLabel,
       formatCurrency,
+      formatNumberInput,
+      handleDepositInput,
+      handleDiscountInput,
+      handleTaxInput,
+      handlePaidAmountInput,
       getDiscountHint,
       isDiscountReadonly,
       handleSubmit,
@@ -1048,5 +1077,41 @@ export default {
   color: #6b7280;
   font-weight: normal;
   font-size: 0.85em;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input[readonly] {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+  border-color: #d1d5db;
+}
+
+.form-hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
 }
 </style>
