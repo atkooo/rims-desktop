@@ -60,9 +60,13 @@
           </div>
         </div>
 
-        <!-- Harga Jual & Harga Sewa -->
+        <!-- Harga Jual & Harga Sewa (ditampilkan berdasarkan tipe item) -->
         <div class="form-pair">
-          <div class="form-group">
+          <!-- Harga Jual: tampilkan jika SALE atau BOTH -->
+          <div 
+            v-if="form.type === 'SALE' || form.type === 'BOTH'" 
+            class="form-group"
+          >
             <label for="salePrice" class="form-label">Harga Jual</label>
             <input
               id="salePrice"
@@ -77,7 +81,11 @@
             </div>
           </div>
 
-          <div class="form-group">
+          <!-- Harga Sewa: tampilkan jika RENTAL atau BOTH -->
+          <div 
+            v-if="form.type === 'RENTAL' || form.type === 'BOTH'" 
+            class="form-group"
+          >
             <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
             <input
               id="rentalPrice"
@@ -160,10 +168,44 @@
             {{ errors.size_id }}
           </div>
         </div>
+
+        <!-- Informasi Stok -->
+        <div class="form-pair">
+          <div class="form-group">
+            <label for="stockQuantity" class="form-label">Total Stok</label>
+            <input
+              id="stockQuantity"
+              type="number"
+              v-model.number="form.stock_quantity"
+              min="0"
+              class="form-input"
+              :class="{ error: errors.stock_quantity }"
+            />
+            <div v-if="errors.stock_quantity" class="error-message">
+              {{ errors.stock_quantity }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="availableQuantity" class="form-label">Stok Tersedia</label>
+            <input
+              id="availableQuantity"
+              type="number"
+              v-model.number="form.available_quantity"
+              min="0"
+              :max="form.stock_quantity || 0"
+              class="form-input"
+              :class="{ error: errors.available_quantity }"
+            />
+            <div v-if="errors.available_quantity" class="error-message">
+              {{ errors.available_quantity }}
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Informasi Rental -->
-      <div v-if="form.type === 'RENTAL'" class="form-section">
+      <div v-if="form.type === 'RENTAL' || form.type === 'BOTH'" class="form-section">
         <h3>Informasi Rental</h3>
         <div class="form-grid-rental">
           <FormInput
@@ -209,6 +251,7 @@ import FormInput from "@/components/ui/FormInput.vue";
 import { ipcRenderer } from "@/services/ipc";
 import { fetchDiscountGroups } from "@/services/masterData";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { useItemType } from "@/composables/useItemType";
 
 const defaultForm = () => ({
   name: "",
@@ -225,6 +268,11 @@ const defaultForm = () => ({
   size_id: null,
   category_id: null,
   discount_group_id: null,
+  stock_quantity: 0,
+  available_quantity: 0,
+  is_available_for_rent: true,
+  is_available_for_sale: false,
+  is_active: true,
 });
 
 export default {
@@ -237,6 +285,7 @@ export default {
   emits: ["update:modelValue", "saved"],
   setup(props, { emit }) {
     const itemStore = useItemStore();
+    const { getAvailabilityByType } = useItemType();
     const loading = ref(false);
     const errors = ref({});
     const form = ref(defaultForm());
@@ -298,6 +347,8 @@ export default {
               props.editData.rental_price_per_day ??
               props.editData.dailyRate ??
               0,
+            stock_quantity: props.editData.stock_quantity ?? 0,
+            available_quantity: props.editData.available_quantity ?? 0,
             size_id:
               props.editData.size_id ??
               props.editData.sizeId ??
@@ -326,12 +377,36 @@ export default {
         e.price = "Harga harus > 0";
       if (!form.value.category_id) e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
-      if (form.value.type === "RENTAL") {
+      
+      // Validasi stok
+      const stockQty = Number(form.value.stock_quantity) || 0;
+      const availableQty = Number(form.value.available_quantity) || 0;
+      
+      if (stockQty < 0) {
+        e.stock_quantity = "Stok tidak boleh negatif";
+      }
+      if (availableQty < 0) {
+        e.available_quantity = "Stok tersedia tidak boleh negatif";
+      }
+      if (availableQty > stockQty) {
+        e.available_quantity = "Stok tersedia tidak boleh melebihi total stok";
+      }
+      
+      // Validasi berdasarkan tipe item
+      if (form.value.type === "SALE" || form.value.type === "BOTH") {
+        if (!form.value.sale_price || form.value.sale_price <= 0)
+          e.sale_price = "Harga jual harus > 0";
+      }
+      
+      if (form.value.type === "RENTAL" || form.value.type === "BOTH") {
+        if (!form.value.rental_price_per_day || form.value.rental_price_per_day <= 0)
+          e.rental_price_per_day = "Harga sewa per hari harus > 0";
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
           e.dailyRate = "Harga per hari harus > 0";
         if (!form.value.deposit || form.value.deposit <= 0)
           e.deposit = "Deposit harus > 0";
       }
+      
       errors.value = e;
       return Object.keys(e).length === 0;
     };
@@ -351,6 +426,17 @@ export default {
         loading.value = false;
       }
     };
+
+    // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
+    watch(
+      () => form.value.type,
+      (newType) => {
+        const availability = getAvailabilityByType(newType);
+        form.value.is_available_for_rent = availability.is_available_for_rent;
+        form.value.is_available_for_sale = availability.is_available_for_sale;
+      },
+      { immediate: true }
+    );
 
     watch(
       () => props.modelValue,

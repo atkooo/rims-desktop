@@ -132,7 +132,10 @@
 
       <section class="form-section">
         <h3>Pilih Item</h3>
-        <ItemSelector v-model="form.items" />
+        <ItemSelector 
+          v-model="form.items" 
+          :transaction-type="isRental ? 'RENTAL' : 'SALE'" 
+        />
         <div v-if="errors.items" class="error-message">
           {{ errors.items }}
         </div>

@@ -80,21 +80,23 @@
             </div>
           </div>
           <div class="detail-item">
-            <label>Harga Sewa / Hari</label>
+            <label>Harga Dasar</label>
             <div class="detail-value">
-              {{ formatCurrency(item.rental_price_per_day) }}
+              {{ formatCurrency(item.price) }}
             </div>
           </div>
-          <div class="detail-item">
+          <!-- Harga Jual: tampilkan jika SALE atau BOTH -->
+          <div v-if="showSalePrice" class="detail-item">
             <label>Harga Jual</label>
             <div class="detail-value">
               {{ formatCurrency(item.sale_price) }}
             </div>
           </div>
-          <div class="detail-item">
-            <label>Harga</label>
+          <!-- Harga Sewa: tampilkan jika RENTAL atau BOTH -->
+          <div v-if="showRentalPrice" class="detail-item">
+            <label>Harga Sewa / Hari</label>
             <div class="detail-value">
-              {{ formatCurrency(item.price) }}
+              {{ formatCurrency(item.rental_price_per_day) }}
             </div>
           </div>
         </div>
@@ -138,7 +140,8 @@
       <section class="card-section">
         <h2 class="section-title">Status & Ketersediaan</h2>
         <div class="detail-grid">
-          <div class="detail-item">
+          <!-- Bisa Disewa: hanya tampilkan jika RENTAL atau BOTH -->
+          <div v-if="showCanBeRented" class="detail-item">
             <label>Bisa Disewa</label>
             <div class="detail-value">
               <span
@@ -149,7 +152,8 @@
               </span>
             </div>
           </div>
-          <div class="detail-item">
+          <!-- Bisa Dijual: hanya tampilkan jika SALE atau BOTH -->
+          <div v-if="showCanBeSold" class="detail-item">
             <label>Bisa Dijual</label>
             <div class="detail-value">
               <span
@@ -203,22 +207,30 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import ItemForm from "@/components/modules/items/ItemForm.vue";
 import { fetchItemById } from "@/services/masterData";
+import { useItemType } from "@/composables/useItemType";
 
 export default {
   name: "ItemDetailView",
   components: { AppButton, ItemForm },
   setup() {
     const route = useRoute();
+    const { canBeSold, canBeRented } = useItemType();
     const item = ref(null);
     const loading = ref(false);
     const error = ref("");
     const showForm = ref(false);
     const editingItem = ref(null);
+
+    // Computed untuk kondisi tampilan
+    const showSalePrice = computed(() => item.value && canBeSold(item.value.type));
+    const showRentalPrice = computed(() => item.value && canBeRented(item.value.type));
+    const showCanBeRented = computed(() => item.value && canBeRented(item.value.type));
+    const showCanBeSold = computed(() => item.value && canBeSold(item.value.type));
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -244,6 +256,7 @@ export default {
       const typeMap = {
         RENTAL: "rental",
         SALE: "sale",
+        BOTH: "both",
         HYBRID: "hybrid",
       };
       return typeMap[type] || "";
@@ -314,6 +327,10 @@ export default {
       formatDateTime,
       getTypeClass,
       getStatusClass,
+      showSalePrice,
+      showRentalPrice,
+      showCanBeRented,
+      showCanBeSold,
     };
   },
 };
@@ -430,6 +447,11 @@ export default {
 }
 
 .status-badge.hybrid {
+  background-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+.status-badge.both {
   background-color: #e9d5ff;
   color: #6b21a8;
 }

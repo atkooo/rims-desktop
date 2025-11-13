@@ -9,6 +9,7 @@ export const TRANSACTION_STATUS = {
 export const ITEM_TYPE = {
   RENTAL: "RENTAL",
   SALE: "SALE",
+  BOTH: "BOTH", // Item bisa digunakan untuk rental dan sale
 };
 
 // Constants untuk tipe transaksi

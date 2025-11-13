@@ -69,162 +69,150 @@
       </div>
     </section>
 
-    <section class="card-section form-page-grid">
-      <div class="form-panel">
-
-        <div class="form-section">
-          <h3 class="section-title">Detail Customer & Jadwal</h3>
-          <div class="form-grid">
-            <div class="field-group">
-              <label for="customerId"
-                >Customer <span class="optional-label">(Opsional)</span></label
-              >
-              <select
-                id="customerId"
-                v-model="form.customerId"
-                class="form-select"
-                :class="{ error: errors.customerId }"
-              >
-                <option value="">Tanpa Customer</option>
-                <option
-                  v-for="customer in customers"
-                  :key="customer.id"
-                  :value="customer.id"
-                >
-                  {{ customer.name }}
-                  {{ customer.code ? `(${customer.code})` : "" }}
-                </option>
-              </select>
-              <div v-if="errors.customerId" class="error-message">
-                {{ errors.customerId }}
-              </div>
-            </div>
-            <div class="field-group">
-              <FormInput
-                id="saleDate"
-                label="Tanggal Penjualan"
-                type="date"
-                v-model="form.saleDate"
-                :error="errors.saleDate"
-              />
-            </div>
-          </div>
+    <section class="card-section cashier-form-container">
+      <!-- Header Info - Minimalist -->
+      <div class="cashier-header-row">
+        <div class="cashier-field-inline">
+          <label for="customerId" class="cashier-label-inline">Customer:</label>
+          <select
+            id="customerId"
+            v-model="form.customerId"
+            class="cashier-select-inline"
+            :class="{ error: errors.customerId }"
+          >
+            <option value="">Tanpa Customer</option>
+            <option
+              v-for="customer in customers"
+              :key="customer.id"
+              :value="customer.id"
+            >
+              {{ customer.name }}
+              {{ customer.code ? `(${customer.code})` : "" }}
+            </option>
+          </select>
         </div>
-
-        <div class="form-section">
-          <h3 class="section-title">Pilih Item</h3>
-          <ItemSelector v-model="form.items" />
-          <div v-if="errors.items" class="error-message">
-            {{ errors.items }}
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3 class="section-title">Pilih Paket</h3>
-          <BundleSelector v-model="form.bundles" />
-        </div>
-
-        <div class="form-section">
-          <h3 class="section-title">Pilih Aksesoris</h3>
-          <AccessorySelector v-model="form.accessories" />
-        </div>
-
-        <div class="form-section payment-section">
-          <h3 class="section-title">Detail Pembayaran</h3>
-          <div class="form-grid">
-            <div class="field-group">
-              <label for="discount" class="form-label">Diskon</label>
-              <input
-                id="discount"
-                :value="formatNumberInput(form.discount)"
-                @input="handleDiscountInput"
-                type="text"
-                class="form-input"
-                :readonly="isDiscountReadonly"
-              />
-              <div v-if="getDiscountHint()" class="form-hint">
-                {{ getDiscountHint() }}
-              </div>
-            </div>
-            <div class="field-group">
-              <label for="tax" class="form-label">Pajak</label>
-              <input
-                id="tax"
-                :value="formatNumberInput(form.tax)"
-                @input="handleTaxInput"
-                type="text"
-                class="form-input"
-                readonly
-              />
-              <div v-if="taxHint" class="form-hint">
-                {{ taxHint }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3 class="section-title">Catatan</h3>
-          <FormInput
-            id="notes"
-            label="Catatan"
-            type="textarea"
-            v-model="form.notes"
+        <div class="cashier-field-inline">
+          <label for="saleDate" class="cashier-label-inline">Tanggal:</label>
+          <input
+            id="saleDate"
+            type="date"
+            v-model="form.saleDate"
+            class="cashier-input-inline"
+            :class="{ error: errors.saleDate }"
           />
-        </div>
-
-        <div class="form-actions">
-          <AppButton variant="secondary" @click="resetForm" :disabled="loading">
-            Kosongkan Formulir
-          </AppButton>
-          <AppButton variant="primary" :loading="loading" @click="handleSubmit">
-            Simpan Penjualan
-          </AppButton>
         </div>
       </div>
 
-      <aside class="summary-panel">
-        <div class="summary-card highlight">
-          <span>Total Estimasi Penjualan</span>
-          <strong>{{ formatCurrency(totalAmount) }}</strong>
-          <p class="summary-description">
-            {{ totalItems }} item • {{ totalBundles }} paket • {{ totalAccessories }} aksesoris
-          </p>
+      <!-- Main Content - Full Width Table -->
+      <div class="cashier-main-content">
+        <!-- Items Table - Full Width -->
+        <div class="cashier-items-wrapper">
+          <div class="cashier-section-header-minimal">
+            <span class="cashier-section-title-minimal">Item Penjualan</span>
+            <span v-if="errors.items" class="error-text-minimal">{{ errors.items }}</span>
+          </div>
+          <ItemSelector v-model="form.items" transaction-type="SALE" />
         </div>
-        <div class="summary-grid summary-grid--stacked">
-          <div class="summary-card">
-            <span>Subtotal Item</span>
-            <strong>{{ formatCurrency(baseSubtotal) }}</strong>
+
+        <!-- Bottom Section: Summary + Payment + Actions -->
+        <div class="cashier-bottom-section">
+          <!-- Summary - Compact -->
+          <div class="cashier-summary-compact">
+            <div class="cashier-total-box">
+              <div class="cashier-total-label-minimal">Total Penjualan</div>
+              <div class="cashier-total-value">{{ formatCurrency(totalAmount) }}</div>
+              <div class="cashier-total-info">
+                {{ totalItems }} item{{ totalBundles > 0 ? ` • ${totalBundles} paket` : '' }}{{ totalAccessories > 0 ? ` • ${totalAccessories} aksesoris` : '' }}
+              </div>
+            </div>
+            <div class="cashier-breakdown-minimal">
+              <div class="cashier-breakdown-item">
+                <span>Subtotal:</span>
+                <span>{{ formatCurrency(baseSubtotal) }}</span>
+              </div>
+              <div v-if="bundleSubtotal > 0" class="cashier-breakdown-item">
+                <span>Paket:</span>
+                <span>{{ formatCurrency(bundleSubtotal) }}</span>
+              </div>
+              <div v-if="accessorySubtotal > 0" class="cashier-breakdown-item">
+                <span>Aksesoris:</span>
+                <span>{{ formatCurrency(accessorySubtotal) }}</span>
+              </div>
+              <div v-if="Number(form.discount) > 0" class="cashier-breakdown-item discount">
+                <span>Diskon:</span>
+                <span>- {{ formatCurrency(Number(form.discount) || 0) }}</span>
+              </div>
+              <div v-if="calculatedTax > 0" class="cashier-breakdown-item tax">
+                <span>Pajak:</span>
+                <span>+ {{ formatCurrency(calculatedTax) }}</span>
+              </div>
+            </div>
           </div>
-          <div class="summary-card">
-            <span>Subtotal Paket</span>
-            <strong>{{ formatCurrency(bundleSubtotal) }}</strong>
+
+          <!-- Payment & Optional - Compact -->
+          <div class="cashier-payment-compact">
+            <div class="cashier-payment-fields">
+              <div class="cashier-field-small">
+                <label for="discount" class="cashier-label-small">Diskon</label>
+                <input
+                  id="discount"
+                  :value="formatNumberInput(form.discount)"
+                  @input="handleDiscountInput"
+                  type="text"
+                  class="cashier-input-small"
+                  :readonly="isDiscountReadonly"
+                />
+              </div>
+              <div class="cashier-field-small">
+                <label for="tax" class="cashier-label-small">Pajak</label>
+                <input
+                  id="tax"
+                  :value="formatNumberInput(form.tax)"
+                  @input="handleTaxInput"
+                  type="text"
+                  class="cashier-input-small"
+                  readonly
+                />
+              </div>
+            </div>
+            
+            <!-- Optional Sections - Collapsible -->
+            <details class="cashier-details-minimal">
+              <summary class="cashier-summary-minimal">Paket, Aksesoris & Catatan</summary>
+              <div class="cashier-details-content-minimal">
+                <div class="cashier-optional-item">
+                  <label class="cashier-label-minimal">Paket</label>
+                  <BundleSelector v-model="form.bundles" />
+                </div>
+                <div class="cashier-optional-item">
+                  <label class="cashier-label-minimal">Aksesoris</label>
+                  <AccessorySelector v-model="form.accessories" />
+                </div>
+                <div class="cashier-optional-item">
+                  <label for="notes" class="cashier-label-minimal">Catatan</label>
+                  <textarea
+                    id="notes"
+                    v-model="form.notes"
+                    class="cashier-textarea-minimal"
+                    rows="2"
+                    placeholder="Catatan khusus..."
+                  ></textarea>
+                </div>
+              </div>
+            </details>
           </div>
-          <div class="summary-card" v-if="accessorySubtotal > 0">
-            <span>Subtotal Aksesoris</span>
-            <strong>{{ formatCurrency(accessorySubtotal) }}</strong>
-          </div>
-          <div class="summary-card">
-            <span>Diskon</span>
-            <strong>- {{ formatCurrency(Number(form.discount) || 0) }}</strong>
-          </div>
-          <div class="summary-card">
-            <span>Pajak</span>
-            <strong>+ {{ formatCurrency(calculatedTax) }}</strong>
+
+          <!-- Actions -->
+          <div class="cashier-actions-minimal">
+            <AppButton variant="secondary" @click="resetForm" :disabled="loading" size="medium">
+              Reset
+            </AppButton>
+            <AppButton variant="primary" :loading="loading" @click="handleSubmit" size="large">
+              Simpan Penjualan
+            </AppButton>
           </div>
         </div>
-        <div class="summary-note">
-          <h3>Catatan Kasir</h3>
-          <ul>
-            <li>Sertakan catatan jika ada request pelanggan khusus.</li>
-            <li>Periksa kembali jumlah bundle sebelum menyimpan.</li>
-            <li>Pembayaran dapat dilakukan setelah transaksi dibuat.</li>
-          </ul>
-          <AppButton variant="success" @click="goBack"
-            >Lihat Daftar Penjualan</AppButton
-          >
-        </div>
-      </aside>
+      </div>
     </section>
   </div>
 </template>
@@ -846,6 +834,308 @@ export default {
   font-size: 0.85rem;
 }
 
+/* Cashier Minimalist Layout - Full Width Table */
+.cashier-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Header Row - Minimalist */
+.cashier-header-row {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.cashier-field-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cashier-label-inline {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.cashier-input-inline,
+.cashier-select-inline {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+  min-width: 150px;
+}
+
+.cashier-input-inline:focus,
+.cashier-select-inline:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.cashier-input-inline.error,
+.cashier-select-inline.error {
+  border-color: #dc2626;
+}
+
+/* Main Content - Full Width */
+.cashier-main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Items Section - Full Width */
+.cashier-items-wrapper {
+  width: 100%;
+  min-width: 0;
+}
+
+.cashier-section-header-minimal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cashier-section-title-minimal {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.error-text-minimal {
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+/* Bottom Section - Summary + Payment + Actions */
+.cashier-bottom-section {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 200px;
+  gap: 1rem;
+  align-items: start;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Summary - Compact */
+.cashier-summary-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cashier-total-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.cashier-total-label-minimal {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.cashier-total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.cashier-total-info {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.cashier-breakdown-minimal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.cashier-breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  color: #6b7280;
+}
+
+.cashier-breakdown-item span:last-child {
+  font-weight: 600;
+  color: #111827;
+}
+
+.cashier-breakdown-item.discount span:last-child {
+  color: #16a34a;
+}
+
+.cashier-breakdown-item.tax span:last-child {
+  color: #3b82f6;
+}
+
+/* Payment Section - Compact */
+.cashier-payment-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cashier-payment-fields {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.cashier-field-small {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.cashier-label-small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.cashier-input-small {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: white;
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+.cashier-input-small:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.cashier-field-minimal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.cashier-label-minimal {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.cashier-textarea-minimal {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.cashier-textarea-minimal:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Optional Details - Minimalist */
+.cashier-details-minimal {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cashier-summary-minimal {
+  padding: 0.5rem 0.75rem;
+  background-color: #f9fafb;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #374151;
+  list-style: none;
+  user-select: none;
+}
+
+.cashier-summary-minimal::-webkit-details-marker {
+  display: none;
+}
+
+.cashier-summary-minimal::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.2s;
+  font-size: 0.65rem;
+}
+
+.cashier-details-minimal[open] .cashier-summary-minimal::before {
+  transform: rotate(90deg);
+}
+
+.cashier-details-content-minimal {
+  padding: 0.75rem;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cashier-optional-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Actions - Minimalist */
+.cashier-actions-minimal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .cashier-bottom-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .cashier-actions-minimal {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* Legacy styles for backward compatibility */
 .form-page-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);

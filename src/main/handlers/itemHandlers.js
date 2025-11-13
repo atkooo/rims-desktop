@@ -4,6 +4,17 @@ const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 const { normalizeCode } = require("../helpers/codeUtils");
 
+// Helper function untuk memastikan available_quantity tidak melebihi stock_quantity
+function sanitizeAvailable(stock, available) {
+  const toInteger = (val) => {
+    const num = Number(val);
+    return Number.isNaN(num) ? 0 : Math.max(0, Math.floor(num));
+  };
+  const stockQty = Math.max(0, toInteger(stock));
+  const availableQty = Math.max(0, toInteger(available));
+  return Math.min(stockQty, availableQty);
+}
+
 // Setup item handlers
 function setupItemHandlers() {
   // Get all items
@@ -55,6 +66,23 @@ function setupItemHandlers() {
       // Get sale_price from itemData
       const salePrice = itemData.sale_price ?? 0;
 
+      // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
+      const itemType = itemData.type ?? "RENTAL";
+      const getAvailabilityByType = (type) => {
+        if (type === "RENTAL") {
+          return { is_available_for_rent: true, is_available_for_sale: false };
+        } else if (type === "SALE") {
+          return { is_available_for_rent: false, is_available_for_sale: true };
+        } else if (type === "BOTH") {
+          return { is_available_for_rent: true, is_available_for_sale: true };
+        }
+        return { is_available_for_rent: true, is_available_for_sale: false };
+      };
+      
+      const availability = getAvailabilityByType(itemType);
+      const isAvailableForRent = availability.is_available_for_rent;
+      const isAvailableForSale = availability.is_available_for_sale;
+
       // Validate discount_group_id if provided
       let discountGroupId = null;
       if (
@@ -76,6 +104,15 @@ function setupItemHandlers() {
         }
       }
 
+      // Handle stock_quantity and available_quantity with validation
+      const stockQuantity = Math.max(0, Number(itemData.stock_quantity) || 0);
+      const requestedAvailable = itemData.available_quantity !== undefined 
+        ? Number(itemData.available_quantity) || 0
+        : stockQuantity; // Default to stock_quantity if not provided
+      
+      // Sanitize available_quantity to not exceed stock_quantity
+      const availableQuantity = sanitizeAvailable(stockQuantity, requestedAvailable);
+
       const result = await database.execute(
         `INSERT INTO items (
             code,
@@ -88,20 +125,30 @@ function setupItemHandlers() {
             size_id,
             category_id,
             rental_price_per_day,
-            discount_group_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            discount_group_id,
+            stock_quantity,
+            available_quantity,
+            is_available_for_rent,
+            is_available_for_sale,
+            is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
           itemData.description ?? null,
           itemData.price,
           salePrice,
-          itemData.type ?? "RENTAL",
+          itemType,
           itemData.status ?? "AVAILABLE",
           itemData.size_id ?? null,
           itemData.category_id,
           rentalPricePerDay,
           discountGroupId,
+          stockQuantity,
+          availableQuantity,
+          isAvailableForRent ? 1 : 0,
+          isAvailableForSale ? 1 : 0,
+          (itemData.is_active ?? true) ? 1 : 0,
         ],
       );
 
@@ -210,6 +257,24 @@ function setupItemHandlers() {
 
       const normalizedUpdates = {};
 
+      // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item jika type di-update
+      if (updates.type !== undefined) {
+        const getAvailabilityByType = (type) => {
+          if (type === "RENTAL") {
+            return { is_available_for_rent: 1, is_available_for_sale: 0 };
+          } else if (type === "SALE") {
+            return { is_available_for_rent: 0, is_available_for_sale: 1 };
+          } else if (type === "BOTH") {
+            return { is_available_for_rent: 1, is_available_for_sale: 1 };
+          }
+          return { is_available_for_rent: 1, is_available_for_sale: 0 };
+        };
+        
+        const availability = getAvailabilityByType(updates.type);
+        normalizedUpdates.is_available_for_rent = availability.is_available_for_rent;
+        normalizedUpdates.is_available_for_sale = availability.is_available_for_sale;
+      }
+
       // Map dailyRate or rental_price_per_day to rental_price_per_day
       // Priority: rental_price_per_day > dailyRate
       if (updates.rental_price_per_day !== undefined) {
@@ -242,14 +307,51 @@ function setupItemHandlers() {
         }
       }
 
+      // Handle stock_quantity and available_quantity with validation
+      if (updates.stock_quantity !== undefined) {
+        normalizedUpdates.stock_quantity = Math.max(0, Number(updates.stock_quantity) || 0);
+      }
+
+      if (updates.available_quantity !== undefined) {
+        // Get current stock_quantity (from updates or database)
+        let currentStock = normalizedUpdates.stock_quantity;
+        if (currentStock === undefined) {
+          const currentItem = await database.queryOne(
+            "SELECT stock_quantity FROM items WHERE id = ?",
+            [id],
+          );
+          currentStock = currentItem?.stock_quantity ?? 0;
+        }
+        
+        // Sanitize available_quantity to not exceed stock_quantity
+        normalizedUpdates.available_quantity = sanitizeAvailable(
+          currentStock,
+          updates.available_quantity
+        );
+      } else if (normalizedUpdates.stock_quantity !== undefined) {
+        // If stock_quantity is updated but available_quantity is not,
+        // clamp existing available_quantity to new stock value
+        const currentItem = await database.queryOne(
+          "SELECT available_quantity FROM items WHERE id = ?",
+          [id],
+        );
+        const currentAvailable = currentItem?.available_quantity ?? 0;
+        normalizedUpdates.available_quantity = sanitizeAvailable(
+          normalizedUpdates.stock_quantity,
+          currentAvailable
+        );
+      }
+
       // Copy other valid fields
       for (const [key, value] of Object.entries(updates)) {
-        // Skip fields that don't exist in database
+        // Skip fields that don't exist in database or already handled
         if (
           key === "dailyRate" ||
           key === "weeklyRate" ||
           key === "deposit" ||
-          key === "discount_group_id"
+          key === "discount_group_id" ||
+          key === "stock_quantity" ||
+          key === "available_quantity"
         ) {
           continue;
         }

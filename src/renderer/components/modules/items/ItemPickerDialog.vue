@@ -37,10 +37,14 @@
           <div class="picker-meta">
             <Icon name="box" :size="20" class="picker-icon" />
             <div>
-              <div class="picker-name">{{ item.name }}</div>
+              <div class="picker-name">
+                {{ item.name }}
+                <span v-if="item.code" class="picker-code">{{ item.code }}</span>
+              </div>
               <div class="picker-detail">
                 {{ item.type || "General" }} ·
-                {{ formatCurrency(item.sale_price ?? item.price ?? 0) }}
+                {{ formatCurrency(item.sale_price ?? item.price ?? 0) }} ·
+                Stok: {{ item.available_quantity || 0 }}
                 <span
                   v-if="item.sale_price && item.sale_price !== item.price"
                   class="price-note"
@@ -57,7 +61,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="item.status !== 'AVAILABLE'"
+              :disabled="item.status !== 'AVAILABLE' || (item.available_quantity || 0) <= 0"
               @click="selectItem(item)"
             >
               Pilih
@@ -76,6 +80,7 @@ import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
+import { useItemType } from "@/composables/useItemType";
 
 export default {
   name: "ItemPickerDialog",
@@ -91,10 +96,15 @@ export default {
       type: Array,
       default: () => [],
     },
+    transactionType: {
+      type: String,
+      default: null, // null = tampilkan semua, 'SALE' = hanya SALE dan BOTH, 'RENTAL' = hanya RENTAL dan BOTH
+    },
   },
   emits: ["update:modelValue", "select"],
   setup(props, { emit }) {
     const itemStore = useItemStore();
+    const { filterItemsByTransactionType } = useItemType();
     const search = ref("");
     const typeFilter = ref("");
     const visible = computed({
@@ -103,9 +113,17 @@ export default {
     });
 
     const itemTypes = computed(() => {
+      // Filter item types berdasarkan transactionType
+      let items = itemStore.items;
+      
+      // Jika ada transactionType, filter items terlebih dahulu
+      if (props.transactionType) {
+        items = filterItemsByTransactionType(items, props.transactionType);
+      }
+      
       return [
         ...new Set(
-          itemStore.items
+          items
             .map((item) => item.type)
             .filter((value) => !!value)
             .map((value) => value.toString()),
@@ -117,11 +135,20 @@ export default {
 
     const filteredItems = computed(() => {
       const term = search.value.toLowerCase();
-      return itemStore.items
+      // Filter berdasarkan tipe transaksi
+      let items = filterItemsByTransactionType(
+        itemStore.items,
+        props.transactionType
+      );
+      
+      return items
         .filter((item) => !excludedSet.value.has(item.id))
         .filter((item) => {
           if (!term) return true;
-          return item.name.toLowerCase().includes(term);
+          // Cari di nama item atau kode item
+          const nameMatch = item.name?.toLowerCase().includes(term) || false;
+          const codeMatch = item.code?.toLowerCase().includes(term) || false;
+          return nameMatch || codeMatch;
         })
         .filter((item) => {
           if (!typeFilter.value) return true;
@@ -256,6 +283,20 @@ export default {
 .picker-name {
   font-weight: 600;
   color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.picker-code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .picker-detail {

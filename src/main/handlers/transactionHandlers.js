@@ -218,6 +218,31 @@ function setupTransactionHandlers() {
             ],
           );
 
+          // Validasi stok sebelum memproses transaksi rental
+          for (const item of transactionData.items) {
+            const quantity = Math.max(1, Number(item.quantity) || 0);
+            
+            // Get current stock
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity, name, code FROM items WHERE id = ?",
+              [item.itemId],
+            );
+            
+            if (!itemBefore) {
+              throw new Error(`Item dengan ID ${item.itemId} tidak ditemukan`);
+            }
+            
+            const availableStock = itemBefore.available_quantity || 0;
+            
+            // Validasi stok tersedia
+            if (availableStock < quantity) {
+              const itemName = itemBefore.name || itemBefore.code || `Item ID ${item.itemId}`;
+              throw new Error(
+                `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${quantity}`
+              );
+            }
+          }
+
           // Insert rental transaction items
           for (const item of transactionData.items) {
             // Get current stock before update
@@ -299,6 +324,31 @@ function setupTransactionHandlers() {
             ? await expandBundleSelections(transactionData.bundles)
             : [];
           const saleLines = [...saleItems, ...bundleLines];
+
+          // Validasi stok sebelum memproses transaksi
+          for (const line of saleLines) {
+            const quantity = Math.max(1, Number(line.quantity) || 0);
+            
+            // Get current stock
+            const itemBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity, name, code FROM items WHERE id = ?",
+              [line.itemId],
+            );
+            
+            if (!itemBefore) {
+              throw new Error(`Item dengan ID ${line.itemId} tidak ditemukan`);
+            }
+            
+            const availableStock = itemBefore.available_quantity || 0;
+            
+            // Validasi stok tersedia
+            if (availableStock < quantity) {
+              const itemName = itemBefore.name || itemBefore.code || `Item ID ${line.itemId}`;
+              throw new Error(
+                `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${quantity}`
+              );
+            }
+          }
 
           for (const line of saleLines) {
             const quantity = Math.max(1, Number(line.quantity) || 0);
