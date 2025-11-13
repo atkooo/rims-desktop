@@ -35,7 +35,7 @@
         <!-- Harga & Status -->
         <div class="form-pair">
           <div class="form-group">
-            <label for="price" class="form-label">Harga</label>
+            <label for="price" class="form-label">Harga Dasar</label>
             <input
               id="price"
               :value="formatNumberInput(form.price)"
@@ -57,6 +57,39 @@
               <option value="RENTED">Rented</option>
               <option value="MAINTENANCE">Maintenance</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Harga Jual & Harga Sewa -->
+        <div class="form-pair">
+          <div class="form-group">
+            <label for="salePrice" class="form-label">Harga Jual</label>
+            <input
+              id="salePrice"
+              :value="formatNumberInput(form.sale_price)"
+              @input="handleSalePriceInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.sale_price }"
+            />
+            <div v-if="errors.sale_price" class="error-message">
+              {{ errors.sale_price }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
+            <input
+              id="rentalPrice"
+              :value="formatNumberInput(form.rental_price_per_day)"
+              @input="handleRentalPriceInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.rental_price_per_day }"
+            />
+            <div v-if="errors.rental_price_per_day" class="error-message">
+              {{ errors.rental_price_per_day }}
+            </div>
           </div>
         </div>
 
@@ -180,6 +213,8 @@ import { useNumberFormat } from "@/composables/useNumberFormat";
 const defaultForm = () => ({
   name: "",
   price: 0,
+  sale_price: 0,
+  rental_price_per_day: 0,
   type: "RENTAL",
   description: "",
   status: "AVAILABLE",
@@ -230,6 +265,12 @@ export default {
     const handlePriceInput = createInputHandler(
       (value) => (form.value.price = value)
     );
+    const handleSalePriceInput = createInputHandler(
+      (value) => (form.value.sale_price = value)
+    );
+    const handleRentalPriceInput = createInputHandler(
+      (value) => (form.value.rental_price_per_day = value)
+    );
     const handleDepositInput = createInputHandler(
       (value) => (form.value.deposit = value)
     );
@@ -250,6 +291,9 @@ export default {
             ...defaultForm(),
             ...props.editData,
             // Map database column to form field
+            sale_price: props.editData.sale_price ?? 0,
+            rental_price_per_day:
+              props.editData.rental_price_per_day ?? 0,
             dailyRate:
               props.editData.rental_price_per_day ??
               props.editData.dailyRate ??
@@ -371,6 +415,8 @@ export default {
       formatCurrency,
       formatNumberInput,
       handlePriceInput,
+      handleSalePriceInput,
+      handleRentalPriceInput,
       handleDepositInput,
     };
   },

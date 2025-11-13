@@ -51,6 +51,9 @@ function setupItemHandlers() {
       // Map dailyRate to rental_price_per_day
       const rentalPricePerDay =
         itemData.dailyRate ?? itemData.rental_price_per_day ?? 0;
+      
+      // Get sale_price from itemData
+      const salePrice = itemData.sale_price ?? 0;
 
       // Validate discount_group_id if provided
       let discountGroupId = null;
@@ -79,18 +82,20 @@ function setupItemHandlers() {
             name,
             description,
             price,
+            sale_price,
             type,
             status,
             size_id,
             category_id,
             rental_price_per_day,
             discount_group_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
           itemData.description ?? null,
           itemData.price,
+          salePrice,
           itemData.type ?? "RENTAL",
           itemData.status ?? "AVAILABLE",
           itemData.size_id ?? null,
@@ -205,8 +210,11 @@ function setupItemHandlers() {
 
       const normalizedUpdates = {};
 
-      // Map dailyRate to rental_price_per_day
-      if (updates.dailyRate !== undefined) {
+      // Map dailyRate or rental_price_per_day to rental_price_per_day
+      // Priority: rental_price_per_day > dailyRate
+      if (updates.rental_price_per_day !== undefined) {
+        normalizedUpdates.rental_price_per_day = updates.rental_price_per_day;
+      } else if (updates.dailyRate !== undefined) {
         normalizedUpdates.rental_price_per_day = updates.dailyRate;
       }
 
