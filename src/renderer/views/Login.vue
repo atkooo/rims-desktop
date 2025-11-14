@@ -103,13 +103,6 @@
           </div>
         </div>
 
-        <div class="form-options">
-          <label class="checkbox">
-            <input type="checkbox" v-model="showPassword" />
-            <span>Tampilkan password</span>
-          </label>
-        </div>
-
         <button
           type="submit"
           class="submit-button"
@@ -386,35 +379,6 @@ export default {
 .password-toggle svg {
   width: 20px;
   height: 20px;
-}
-
-.form-options {
-  display: flex;
-  align-items: center;
-  margin-top: -4px;
-}
-
-.checkbox {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: var(--primary);
-}
-
-.checkbox span {
-  font-size: 14px;
-  color: #6b7280;
-  font-weight: 400;
 }
 
 .submit-button {
