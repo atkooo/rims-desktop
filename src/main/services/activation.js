@@ -147,19 +147,20 @@ async function getSupabaseConfig() {
   }
 
   // Check environment variables first, then settings
+  // Priority: SUPABASE_URL (main process) > VITE_SUPABASE_URL (backward compat) > settings
   const supabaseUrl =
+    process.env.SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||
-    settings.activation.supabase_url ||
-    process.env.SUPABASE_URL;
+    settings.activation.supabase_url;
 
   const supabaseAnonKey =
+    process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
-    settings.activation.supabase_anon_key ||
-    process.env.SUPABASE_ANON_KEY;
+    settings.activation.supabase_anon_key;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      "Supabase URL atau API key belum dikonfigurasi. Silakan atur VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY",
+      "Supabase URL atau API key belum dikonfigurasi. Silakan atur SUPABASE_URL dan SUPABASE_ANON_KEY (atau VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY) di file .env",
     );
   }
 

@@ -1,21 +1,51 @@
 // Load environment variables from .env file first
 const path = require("path");
 const fs = require("fs");
+
 // Try multiple paths: development (from src/main) and production (from app root)
+// Note: In packaged app, .env should be in the same directory as the executable
+// or in userData directory for production use
 const envPaths = [
-  path.join(__dirname, "../../.env"), // Development: src/main -> root
-  path.join(__dirname, "../.env"), // Production: might be in app folder
-  path.join(process.cwd(), ".env"), // Current working directory
+  // Development: from project root (src/main -> ../../)
+  path.join(__dirname, "../../.env"),
+  // Production unpacked: from app root
+  path.join(__dirname, "../.env"),
+  // Current working directory
+  path.join(process.cwd(), ".env"),
 ];
+
+let envLoaded = false;
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
     require("dotenv").config({ path: envPath });
     console.log(`Loaded .env from: ${envPath}`);
+    envLoaded = true;
     break;
   }
 }
 
+if (!envLoaded) {
+  console.log("No .env file found. Using environment variables from system or defaults.");
+}
+
 const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
+
+// After app is available, try additional paths for packaged apps
+if (!envLoaded && app && typeof app.getPath === "function") {
+  const additionalPaths = [
+    path.join(app.getPath("userData"), ".env"),
+    app.getAppPath ? path.join(path.dirname(app.getAppPath()), ".env") : null,
+  ].filter(Boolean);
+  
+  for (const envPath of additionalPaths) {
+    if (fs.existsSync(envPath)) {
+      require("dotenv").config({ path: envPath });
+      console.log(`Loaded .env from: ${envPath}`);
+      envLoaded = true;
+      break;
+    }
+  }
+}
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 
@@ -132,6 +162,8 @@ function createWindow() {
   const isDevelopment = process.env.NODE_ENV === "development" && !app.isPackaged;
   
   if (isDevelopment) {
+    // Development mode: load from Vite dev server
+    logger.info("Development mode - Loading from http://localhost:5173");
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.once("dom-ready", () => {
       if (!mainWindow.isDestroyed()) {
@@ -139,13 +171,15 @@ function createWindow() {
       }
     });
   } else {
-    // In production, load from dist/renderer
+    // Production mode: load from dist/renderer
     // app.getAppPath() returns the correct path in both dev and packaged app
     // In packaged app with asar, it points to app.asar directory
     const appPath = app.getAppPath();
     
     // Log for debugging
-    logger.info(`Production mode - Loading index.html`);
+    logger.info("Production mode - Loading index.html");
+    logger.info(`NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
+    logger.info(`Is packaged: ${app.isPackaged}`);
     logger.info(`App path: ${appPath}`);
     logger.info(`__dirname: ${__dirname}`);
     logger.info(`process.resourcesPath: ${process.resourcesPath}`);
@@ -163,11 +197,41 @@ function createWindow() {
     
     logger.info(`Trying paths: ${pathStrategies.join(", ")}`);
     
+    // Check if any of the paths exist before attempting to load
+    const existingPath = pathStrategies.find((tryPath) => fs.existsSync(tryPath));
+    
+    if (!existingPath && !app.isPackaged) {
+      // If not packaged and dist/renderer doesn't exist, show helpful error
+      logger.error("================================================");
+      logger.error("ERROR: dist/renderer/index.html not found!");
+      logger.error("Please run 'npm run build' first before using 'npm start'");
+      logger.error("Or use 'npm run dev' for development mode");
+      logger.error("================================================");
+    }
+    
     // Try to load using async function to handle multiple attempts
     async function tryLoadIndex() {
       for (let i = 0; i < pathStrategies.length; i++) {
         const tryPath = pathStrategies[i];
         logger.info(`Attempt ${i + 1}/${pathStrategies.length}: Loading from ${tryPath}`);
+        
+        // Check if file exists before attempting to load
+        if (!fs.existsSync(tryPath)) {
+          logger.warn(`Path does not exist: ${tryPath}`);
+          if (i === pathStrategies.length - 1) {
+            // Last attempt - all paths don't exist
+            logger.error("All path attempts failed - dist/renderer/index.html not found");
+            if (!app.isPackaged) {
+              logger.error("For development, use: npm run dev");
+              logger.error("For production, first run: npm run build");
+            }
+            // Show window even if loading failed so user can see something
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.show();
+            }
+          }
+          continue;
+        }
         
         try {
           await mainWindow.loadFile(tryPath);
