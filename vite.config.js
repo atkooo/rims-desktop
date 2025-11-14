@@ -4,6 +4,7 @@ import path from "path";
 
 export default defineConfig({
   root: path.resolve(__dirname, "src", "renderer"),
+  base: "./", // Use relative paths for Electron file:// protocol
   plugins: [vue()],
   resolve: {
     alias: {

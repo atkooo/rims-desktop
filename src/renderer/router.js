@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import Dashboard from "./views/Dashboard.vue";
 import Login from "./views/Login.vue";
+import Activation from "./views/Activation.vue";
 import Categories from "./views/master/Categories.vue";
 import AccessoriesView from "./views/master/AccessoriesView.vue";
 import AccessoryDetailView from "./views/master/AccessoryDetailView.vue";
@@ -40,6 +41,7 @@ import {
   hasAnyPermissionSync,
   initPermissions,
 } from "./composables/usePermissions.js";
+import { checkActivationStatus } from "./services/activation.js";
 
 // Route permission mapping
 const routePermissions = {
@@ -74,6 +76,7 @@ const routePermissions = {
 const routes = [
   { path: "/", name: "dashboard", component: Dashboard },
   { path: "/login", name: "login", component: Login },
+  { path: "/activation", name: "activation", component: Activation },
   // Master Data
   { path: "/master/categories", name: "categories", component: Categories },
   {
@@ -227,7 +230,32 @@ export const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-  if (to.path === "/login") return next();
+  // Allow access to activation and login pages without activation check
+  if (to.path === "/activation" || to.path === "/login") {
+    return next();
+  }
+
+  // Check activation status first (except for activation and login pages)
+  try {
+    const activationStatus = await checkActivationStatus();
+    
+    // If not active, redirect to activation page
+    // Allow offline mode only if explicitly marked as active before going offline
+    if (!activationStatus.isActive) {
+      // Only redirect if not already on activation page
+      if (to.path !== "/activation") {
+        console.warn("Application not activated, redirecting to activation page", activationStatus);
+        return next({ path: "/activation", query: { redirect: to.fullPath } });
+      }
+    }
+  } catch (error) {
+    console.error("Error checking activation status:", error);
+    // On error checking activation, redirect to activation page to be safe
+    if (to.path !== "/activation") {
+      console.warn("Error checking activation, redirecting to activation page");
+      return next({ path: "/activation", query: { redirect: to.fullPath } });
+    }
+  }
 
   try {
     const user = await getCurrentUser();

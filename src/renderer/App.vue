@@ -1,5 +1,5 @@
 <template>
-  <div v-if="$route.path === '/login'" class="auth">
+  <div v-if="$route.path === '/login' || $route.path === '/activation'" class="auth">
     <router-view :key="$route.fullPath" />
   </div>
   <div v-else :class="['app', { 'app--sidebar-collapsed': sidebarCollapsed }]">

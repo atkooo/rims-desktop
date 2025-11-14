@@ -2,5 +2,12 @@
   "printer": "Microsoft Print to PDF",
   "paperWidth": 80,
   "autoPrint": true,
-  "taxPercentage": 12
+  "taxPercentage": 12,
+  "activation": {
+    "machine_id": "2c44beee6d9cbc5f69edb9afa4d358a3",
+    "supabase_url": null,
+    "supabase_anon_key": null,
+    "last_check": "2025-11-14T03:35:40.050Z",
+    "check_interval": 3600000
+  }
 }

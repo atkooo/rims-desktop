@@ -38,6 +38,8 @@
     "wait-on": "^9.0.1"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^17.2.3",
     "jspdf": "^3.0.3",
     "pdf-to-printer": "^5.6.1",
     "pinia": "^3.0.4",

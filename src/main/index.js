@@ -1,5 +1,21 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
+// Load environment variables from .env file first
 const path = require("path");
+const fs = require("fs");
+// Try multiple paths: development (from src/main) and production (from app root)
+const envPaths = [
+  path.join(__dirname, "../../.env"), // Development: src/main -> root
+  path.join(__dirname, "../.env"), // Production: might be in app folder
+  path.join(process.cwd(), ".env"), // Current working directory
+];
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    require("dotenv").config({ path: envPath });
+    console.log(`Loaded .env from: ${envPath}`);
+    break;
+  }
+}
+
+const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 const setupItemHandlers = require("./handlers/itemHandlers");
@@ -23,8 +39,10 @@ const setupReceiptHandlers = require("./handlers/receiptHandlers");
 const setupRoleHandlers = require("./handlers/roleHandlers");
 const setupUserHandlers = require("./handlers/userHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
+const setupActivationHandlers = require("./handlers/activationHandlers");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
+const activationService = require("./services/activation");
 
 let mainWindow = null;
 
@@ -63,9 +81,9 @@ function createWindow() {
       }
     });
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, "..", "renderer", "dist", "index.html"),
-    );
+    // In production, load from dist/renderer (relative to project root)
+    const indexPath = path.join(__dirname, "..", "..", "dist", "renderer", "index.html");
+    mainWindow.loadFile(indexPath);
   }
 
   return mainWindow;
@@ -99,6 +117,41 @@ app.whenReady().then(async () => {
     logger.error("Failed to connect to database", err);
     app.quit();
     return;
+  }
+
+  // Setup activation handlers first
+  setupActivationHandlers();
+
+  // Check activation status before proceeding
+  try {
+    const activationStatus = await activationService.checkActivationStatus();
+    
+    // If not active and not offline, don't create window
+    // The activation screen will handle this in the router guard
+    if (!activationStatus.isActive && !activationStatus.offline) {
+      logger.warn(
+        `Application not activated for machine: ${activationStatus.machineId}`,
+      );
+      // Still create window - router guard will redirect to activation screen
+    } else if (activationStatus.offline) {
+      logger.warn(
+        "Cannot connect to activation server. Running in offline mode.",
+      );
+    } else {
+      logger.info("Application activated successfully");
+    }
+
+    // Start periodic activation check
+    activationService.startPeriodicCheck((status) => {
+      // If status changed to inactive and not offline, can send event to renderer
+      if (!status.isActive && !status.offline && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("activation:statusChanged", status);
+      }
+    });
+  } catch (error) {
+    logger.error("Error during activation check:", error);
+    // Continue anyway - graceful degradation
+    // Router guard will handle the activation check
   }
 
   registerAuthIpc();
@@ -153,4 +206,10 @@ app.on("will-quit", () => {
   try {
     globalShortcut.unregisterAll();
   } catch (_) {}
+  // Stop periodic activation check
+  try {
+    activationService.stopPeriodicCheck();
+  } catch (error) {
+    logger.error("Error stopping periodic activation check:", error);
+  }
 });
