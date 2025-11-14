@@ -1,18 +1,10 @@
 const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
-const { logActivity } = require("../helpers/activity");
-
-// Helper function to get current user safely
-function getCurrentUserSafely() {
-  try {
-    const { getCurrentUser } = require("../auth");
-    return getCurrentUser();
-  } catch (error) {
-    logger.warn("Error getting current user for activity log:", error);
-    return null;
-  }
-}
+const {
+  logActivity,
+  getCurrentUserSafely,
+} = require("../helpers/activity");
 
 function setupRoleHandlers() {
   // Get all roles

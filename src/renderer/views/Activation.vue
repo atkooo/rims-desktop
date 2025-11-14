@@ -376,14 +376,20 @@ export default {
     };
 
     const copyMachineId = async () => {
-      if (!machineId.value) return;
+      if (!machineId.value) {
+        return;
+      }
+
+      const resetCopied = () => {
+        setTimeout(() => {
+          copied.value = false;
+        }, 2000);
+      };
 
       try {
         await navigator.clipboard.writeText(machineId.value);
         copied.value = true;
-        setTimeout(() => {
-          copied.value = false;
-        }, 2000);
+        resetCopied();
       } catch (error) {
         console.error("Error copying machine ID:", error);
         // Fallback: select text
@@ -394,9 +400,7 @@ export default {
         document.execCommand("copy");
         document.body.removeChild(textArea);
         copied.value = true;
-        setTimeout(() => {
-          copied.value = false;
-        }, 2000);
+        resetCopied();
       }
     };
 

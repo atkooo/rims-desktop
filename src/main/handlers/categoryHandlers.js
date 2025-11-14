@@ -8,18 +8,17 @@ function setupCategoryHandlers() {
   ipcMain.handle("categories:getAll", async () => {
     try {
       const sql = `
-                SELECT 
-                    id,
-                    name,
-                    description,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM categories 
-                ORDER BY name ASC
-            `;
-      const categories = await database.query(sql);
-      return categories;
+        SELECT 
+          id,
+          name,
+          description,
+          is_active,
+          created_at,
+          updated_at
+        FROM categories 
+        ORDER BY name ASC
+      `;
+      return await database.query(sql);
     } catch (error) {
       logger.error("Error fetching categories:", error);
       throw error;
@@ -30,18 +29,17 @@ function setupCategoryHandlers() {
   ipcMain.handle("categories:getById", async (event, id) => {
     try {
       const sql = `
-                SELECT 
-                    id,
-                    name,
-                    description,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM categories 
-                WHERE id = ?
-            `;
-      const category = await database.queryOne(sql, [id]);
-      return category;
+        SELECT 
+          id,
+          name,
+          description,
+          is_active,
+          created_at,
+          updated_at
+        FROM categories 
+        WHERE id = ?
+      `;
+      return await database.queryOne(sql, [id]);
     } catch (error) {
       logger.error(`Error fetching category ${id}:`, error);
       throw error;
@@ -53,21 +51,22 @@ function setupCategoryHandlers() {
     try {
       const { name, description, is_active } = categoryData;
       const now = new Date().toISOString();
+      const isActive = is_active ?? 1;
 
       const sql = `
-                INSERT INTO categories (
-                    name, 
-                    description, 
-                    is_active,
-                    created_at, 
-                    updated_at
-                ) VALUES (?, ?, ?, ?, ?)
-            `;
+        INSERT INTO categories (
+          name, 
+          description, 
+          is_active,
+          created_at, 
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+      `;
 
       const result = await database.execute(sql, [
         name,
         description,
-        is_active ?? 1,
+        isActive,
         now,
         now,
       ]);
@@ -76,7 +75,7 @@ function setupCategoryHandlers() {
         id: result.id,
         name,
         description,
-        is_active: is_active ?? 1,
+        is_active: isActive,
         created_at: now,
         updated_at: now,
       };
@@ -91,23 +90,25 @@ function setupCategoryHandlers() {
     try {
       const { id, name, description, is_active } = categoryData;
       const now = new Date().toISOString();
+      const isActive = is_active ?? 1;
 
       const sql = `
-                UPDATE categories 
-                SET 
-                    name = ?,
-                    description = ?,
-                    is_active = ?,
-                    updated_at = ?
-                WHERE id = ?
-            `;
+        UPDATE categories 
+        SET 
+          name = ?,
+          description = ?,
+          is_active = ?,
+          updated_at = ?
+        WHERE id = ?
+      `;
 
-      await database.execute(sql, [name, description, is_active ?? 1, now, id]);
+      await database.execute(sql, [name, description, isActive, now, id]);
 
       return {
         id,
         name,
         description,
+        is_active: isActive,
         updated_at: now,
       };
     } catch (error) {
@@ -120,20 +121,18 @@ function setupCategoryHandlers() {
   ipcMain.handle("categories:delete", async (event, id) => {
     try {
       // Check if category is used in items
-      const checkSql = `
-                SELECT COUNT(*) as count 
-                FROM items 
-                WHERE category_id = ?
-            `;
-      const countRow = await database.queryOne(checkSql, [id]);
-      const count = countRow ? countRow.count : 0;
+      const countRow = await database.queryOne(
+        `SELECT COUNT(*) as count 
+         FROM items 
+         WHERE category_id = ?`,
+        [id],
+      );
 
-      if (count > 0) {
+      if ((countRow?.count ?? 0) > 0) {
         throw new Error("Cannot delete category that is being used by items");
       }
 
-      const sql = `DELETE FROM categories WHERE id = ?`;
-      await database.execute(sql, [id]);
+      await database.execute("DELETE FROM categories WHERE id = ?", [id]);
       return true;
     } catch (error) {
       logger.error(`Error deleting category ${id}:`, error);

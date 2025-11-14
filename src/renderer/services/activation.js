@@ -25,7 +25,6 @@ export async function getMachineId() {
  */
 export async function checkActivationStatus(forceRefresh = false) {
   if (!isIpcAvailable()) {
-    // If IPC not available, assume not active to be safe
     return {
       success: false,
       isActive: false,
@@ -34,8 +33,7 @@ export async function checkActivationStatus(forceRefresh = false) {
   }
 
   try {
-    const result = await invoke("activation:checkStatus", forceRefresh);
-    return result;
+    return await invoke("activation:checkStatus", forceRefresh);
   } catch (error) {
     console.error("Error checking activation status:", error);
     return {
@@ -50,11 +48,18 @@ export async function checkActivationStatus(forceRefresh = false) {
  * Verify activation
  */
 export async function verifyActivation() {
-  if (!isIpcAvailable()) throw new Error("IPC tidak tersedia");
+  if (!isIpcAvailable()) {
+    throw new Error("IPC tidak tersedia");
+  }
+
   try {
     return await invoke("activation:verify");
   } catch (error) {
-    return { success: false, error: "verification_failed", message: error.message };
+    return {
+      success: false,
+      error: "verification_failed",
+      message: error.message,
+    };
   }
 }
 
@@ -70,7 +75,9 @@ export async function isActivationRequired() {
  * Format machine ID for display
  */
 export function formatMachineId(machineId) {
-  if (!machineId) return "";
+  if (!machineId) {
+    return "";
+  }
   // Format as XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
   return machineId.match(/.{1,4}/g)?.join("-") || machineId;
 }

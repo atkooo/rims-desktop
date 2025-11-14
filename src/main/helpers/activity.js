@@ -1,6 +1,20 @@
 const logger = require("./logger");
 const database = require("./database");
 
+/**
+ * Get current user safely for activity logging
+ * @returns {Object|null} Current user object or null
+ */
+function getCurrentUserSafely() {
+  try {
+    const { getCurrentUser } = require("../auth");
+    return getCurrentUser();
+  } catch (error) {
+    logger.warn("Error getting current user for activity log:", error);
+    return null;
+  }
+}
+
 async function logActivity({
   userId = null,
   action,
@@ -20,4 +34,4 @@ async function logActivity({
   }
 }
 
-module.exports = { logActivity };
+module.exports = { logActivity, getCurrentUserSafely };

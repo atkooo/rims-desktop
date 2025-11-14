@@ -22,6 +22,117 @@ async function fetchBundleItemDetails(bundleId) {
   return database.query(bundleItemSql, [bundleId]);
 }
 
+/**
+ * Validate stock availability for an item
+ */
+async function validateStock(itemId, requiredQuantity) {
+  const item = await database.queryOne(
+    "SELECT available_quantity, stock_quantity, name, code FROM items WHERE id = ?",
+    [itemId],
+  );
+
+  if (!item) {
+    throw new Error(`Item dengan ID ${itemId} tidak ditemukan`);
+  }
+
+  const availableStock = item.available_quantity || 0;
+  if (availableStock < requiredQuantity) {
+    const itemName = item.name || item.code || `Item ID ${itemId}`;
+    throw new Error(
+      `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${requiredQuantity}`,
+    );
+  }
+
+  return item;
+}
+
+/**
+ * Create stock movement record
+ */
+async function createStockMovement({
+  itemId,
+  movementType,
+  referenceType,
+  referenceId,
+  quantity,
+  stockBefore,
+  stockAfter,
+  userId,
+  notes,
+}) {
+  await database.execute(
+    `INSERT INTO stock_movements (
+      item_id, movement_type, reference_type, reference_id,
+      quantity, stock_before, stock_after, user_id, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      itemId,
+      movementType,
+      referenceType,
+      referenceId,
+      quantity,
+      stockBefore,
+      stockAfter,
+      userId,
+      notes,
+    ],
+  );
+}
+
+/**
+ * Check payment status for a transaction
+ */
+async function getTransactionPaymentStatus(transactionType, transactionId) {
+  const table =
+    transactionType === "rental" ? "rental_transactions" : "sales_transactions";
+  const type = transactionType === "rental" ? "rental" : "sale";
+
+  const transaction = await database.queryOne(
+    `SELECT t.*, 
+     COALESCE(SUM(p.amount), 0) as total_paid,
+     CASE 
+       WHEN COALESCE(SUM(p.amount), 0) >= t.total_amount THEN 'paid'
+       ELSE 'unpaid'
+     END as calculated_payment_status
+     FROM ${table} t
+     LEFT JOIN payments p ON p.transaction_type = ? AND p.transaction_id = t.id
+     WHERE t.id = ?
+     GROUP BY t.id`,
+    [type, transactionId],
+  );
+
+  return transaction;
+}
+
+/**
+ * Validate cashier session for cash payments
+ */
+async function validateCashierSession(userId) {
+  if (!userId) {
+    throw new Error("User ID harus diisi untuk membuat transaksi");
+  }
+
+  const cashierTableExists = await database.tableExists("cashier_sessions");
+  if (!cashierTableExists) {
+    return null;
+  }
+
+  const activeSession = await database.queryOne(
+    `SELECT id FROM cashier_sessions 
+     WHERE user_id = ? AND status = 'open' 
+     ORDER BY opening_date DESC LIMIT 1`,
+    [userId],
+  );
+
+  if (!activeSession) {
+    throw new Error(
+      "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash.",
+    );
+  }
+
+  return activeSession.id;
+}
+
 async function expandBundleSelections(selections = []) {
   const cache = new Map();
   const result = [];
@@ -153,35 +264,15 @@ function setupTransactionHandlers() {
         throw new Error("Transaksi harus memiliki minimal 1 item atau paket");
       }
 
-      // Validasi cashier session untuk transaksi dengan pembayaran cash
+      // Validate cashier session for cash payments
       let cashierSessionId = null;
       if (
         !transactionData.paymentMethod ||
         transactionData.paymentMethod === "cash"
       ) {
-        if (!transactionData.userId) {
-          throw new Error("User ID harus diisi untuk membuat transaksi");
-        }
-
-        // Check if cashier session exists
-        const cashierTableExists =
-          await database.tableExists("cashier_sessions");
-        if (cashierTableExists) {
-          const activeSession = await database.queryOne(
-            `SELECT id FROM cashier_sessions 
-             WHERE user_id = ? AND status = 'open' 
-             ORDER BY opening_date DESC LIMIT 1`,
-            [transactionData.userId],
-          );
-
-          if (!activeSession) {
-            throw new Error(
-              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash.",
-            );
-          }
-
-          cashierSessionId = activeSession.id;
-        }
+        cashierSessionId = await validateCashierSession(
+          transactionData.userId,
+        );
       }
 
       // Mulai transaction database
@@ -216,36 +307,17 @@ function setupTransactionHandlers() {
             ],
           );
 
-          // Validasi stok sebelum memproses transaksi rental
+          // Validate stock before processing rental transaction
           for (const item of transactionData.items) {
             const quantity = Math.max(1, Number(item.quantity) || 0);
-            
-            // Get current stock
-            const itemBefore = await database.queryOne(
-              "SELECT available_quantity, stock_quantity, name, code FROM items WHERE id = ?",
-              [item.itemId],
-            );
-            
-            if (!itemBefore) {
-              throw new Error(`Item dengan ID ${item.itemId} tidak ditemukan`);
-            }
-            
-            const availableStock = itemBefore.available_quantity || 0;
-            
-            // Validasi stok tersedia
-            if (availableStock < quantity) {
-              const itemName = itemBefore.name || itemBefore.code || `Item ID ${item.itemId}`;
-              throw new Error(
-                `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${quantity}`
-              );
-            }
+            await validateStock(item.itemId, quantity);
           }
 
           // Insert rental transaction items
           for (const item of transactionData.items) {
             // Get current stock before update
             const itemBefore = await database.queryOne(
-              "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+              "SELECT available_quantity FROM items WHERE id = ?",
               [item.itemId],
             );
             const stockBefore = itemBefore?.available_quantity || 0;
@@ -270,25 +342,20 @@ function setupTransactionHandlers() {
               [item.quantity, item.itemId],
             );
 
-            // Get stock after update
             const stockAfter = stockBefore - item.quantity;
 
             // Create stock movement record
-            await database.execute(
-              `INSERT INTO stock_movements (
-                item_id, movement_type, reference_type, reference_id,
-                quantity, stock_before, stock_after, user_id, notes
-              ) VALUES (?, 'OUT', 'rental_transaction', ?, ?, ?, ?, ?, ?)`,
-              [
-                item.itemId,
-                result.id,
-                item.quantity,
-                stockBefore,
-                stockAfter,
-                transactionData.userId,
-                `Rental transaction: ${transactionCode}`,
-              ],
-            );
+            await createStockMovement({
+              itemId: item.itemId,
+              movementType: "OUT",
+              referenceType: "rental_transaction",
+              referenceId: result.id,
+              quantity: item.quantity,
+              stockBefore,
+              stockAfter,
+              userId: transactionData.userId,
+              notes: `Rental transaction: ${transactionCode}`,
+            });
           }
         } else {
           // Insert sales transaction
@@ -324,29 +391,10 @@ function setupTransactionHandlers() {
             : [];
           const saleLines = [...saleItems, ...bundleLines];
 
-          // Validasi stok sebelum memproses transaksi
+          // Validate stock before processing transaction
           for (const line of saleLines) {
             const quantity = Math.max(1, Number(line.quantity) || 0);
-            
-            // Get current stock
-            const itemBefore = await database.queryOne(
-              "SELECT available_quantity, stock_quantity, name, code FROM items WHERE id = ?",
-              [line.itemId],
-            );
-            
-            if (!itemBefore) {
-              throw new Error(`Item dengan ID ${line.itemId} tidak ditemukan`);
-            }
-            
-            const availableStock = itemBefore.available_quantity || 0;
-            
-            // Validasi stok tersedia
-            if (availableStock < quantity) {
-              const itemName = itemBefore.name || itemBefore.code || `Item ID ${line.itemId}`;
-              throw new Error(
-                `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${quantity}`
-              );
-            }
+            await validateStock(line.itemId, quantity);
           }
 
           for (const line of saleLines) {
@@ -360,7 +408,6 @@ function setupTransactionHandlers() {
               [line.itemId],
             );
             const stockBefore = itemBefore?.available_quantity || 0;
-            const stockQtyBefore = itemBefore?.stock_quantity || 0;
 
             await database.execute(
               `INSERT INTO sales_transaction_details (
@@ -376,26 +423,20 @@ function setupTransactionHandlers() {
               [quantity, quantity, line.itemId],
             );
 
-            // Get stock after update
             const stockAfter = stockBefore - quantity;
-            const stockQtyAfter = stockQtyBefore - quantity;
 
             // Create stock movement record
-            await database.execute(
-              `INSERT INTO stock_movements (
-                item_id, movement_type, reference_type, reference_id,
-                quantity, stock_before, stock_after, user_id, notes
-              ) VALUES (?, 'OUT', 'sales_transaction', ?, ?, ?, ?, ?, ?)`,
-              [
-                line.itemId,
-                result.id,
-                quantity,
-                stockBefore,
-                stockAfter,
-                transactionData.userId,
-                `Sales transaction: ${transactionCode}`,
-              ],
-            );
+            await createStockMovement({
+              itemId: line.itemId,
+              movementType: "OUT",
+              referenceType: "sales_transaction",
+              referenceId: result.id,
+              quantity,
+              stockBefore,
+              stockAfter,
+              userId: transactionData.userId,
+              notes: `Sales transaction: ${transactionCode}`,
+            });
           }
         }
 
@@ -484,21 +525,17 @@ function setupTransactionHandlers() {
               const stockAfter = stockBefore + item.quantity;
 
               // Create stock movement record for return
-              await database.execute(
-                `INSERT INTO stock_movements (
-                  item_id, movement_type, reference_type, reference_id,
-                  quantity, stock_before, stock_after, user_id, notes
-                ) VALUES (?, 'IN', 'rental_return', ?, ?, ?, ?, ?, ?)`,
-                [
-                  item.item_id,
-                  transactionId,
-                  item.quantity,
-                  stockBefore,
-                  stockAfter,
-                  rentalTransaction?.user_id,
-                  `Return rental transaction: ${rentalTransaction?.transaction_code || transactionId}`,
-                ],
-              );
+              await createStockMovement({
+                itemId: item.item_id,
+                movementType: "IN",
+                referenceType: "rental_return",
+                referenceId: transactionId,
+                quantity: item.quantity,
+                stockBefore,
+                stockAfter,
+                userId: rentalTransaction?.user_id,
+                notes: `Return rental transaction: ${rentalTransaction?.transaction_code || transactionId}`,
+              });
             }
           }
         } else {
@@ -531,42 +568,18 @@ function setupTransactionHandlers() {
         );
         const isRental = !!rentalCheck;
 
-        // Cek payment status dan status transaksi sebelum update
-        let paymentStatus = null;
-        let transactionStatus = null;
-        if (isRental) {
-          const rental = await database.queryOne(
-            `SELECT rt.*, 
-             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
-             CASE 
-               WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
-               ELSE 'unpaid'
-             END as calculated_payment_status
-             FROM rental_transactions rt
-             LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-             WHERE rt.id = ?
-             GROUP BY rt.id`,
-            [id],
-          );
-          paymentStatus = rental?.calculated_payment_status || 'unpaid';
-          transactionStatus = rental?.status || null;
-        } else {
-          const sale = await database.queryOne(
-            `SELECT st.*,
-             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
-             CASE 
-               WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
-               ELSE 'unpaid'
-             END as calculated_payment_status
-             FROM sales_transactions st
-             LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-             WHERE st.id = ?
-             GROUP BY st.id`,
-            [id],
-          );
-          paymentStatus = sale?.calculated_payment_status || 'unpaid';
-          transactionStatus = sale?.status || null;
+        // Check payment status and transaction status before update
+        const transaction = await getTransactionPaymentStatus(
+          isRental ? "rental" : "sale",
+          id,
+        );
+
+        if (!transaction) {
+          throw new Error("Transaksi tidak ditemukan");
         }
+
+        const paymentStatus = transaction.calculated_payment_status || "unpaid";
+        const transactionStatus = transaction.status || null;
 
         // Cegah update jika status sudah cancelled
         if (transactionStatus === 'cancelled') {
@@ -726,31 +739,16 @@ function setupTransactionHandlers() {
         const isRental = transactionType === "rental" || transactionType === "RENTAL";
 
         if (isRental) {
-          // Get rental transaction with payment status
-          const rental = await database.queryOne(
-            `SELECT rt.*, 
-             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
-             CASE 
-               WHEN COALESCE(SUM(p.amount), 0) >= rt.total_amount THEN 'paid'
-               ELSE 'unpaid'
-             END as calculated_payment_status
-             FROM rental_transactions rt
-             LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-             WHERE rt.id = ?
-             GROUP BY rt.id`,
-            [id],
-          );
+          const rental = await getTransactionPaymentStatus("rental", id);
 
           if (!rental) {
             throw new Error("Transaksi sewa tidak ditemukan");
           }
 
-          // Cek payment status
           if (rental.calculated_payment_status === "paid") {
             throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
           }
 
-          // Cek status saat ini
           if (rental.status === "cancelled") {
             throw new Error("Transaksi sudah di-cancel sebelumnya.");
           }
@@ -779,20 +777,17 @@ function setupTransactionHandlers() {
               );
 
               // Create stock movement record
-              await database.execute(
-                `INSERT INTO stock_movements (
-                  item_id, movement_type, reference_type, reference_id,
-                  quantity, stock_before, stock_after, user_id, notes
-                ) VALUES (?, 'IN', 'rental_cancellation', ?, ?, ?, ?, NULL, ?)`,
-                [
-                  detail.item_id,
-                  id,
-                  detail.quantity,
-                  stockBefore,
-                  stockAfter,
-                  `Cancel rental transaction: ${rental.transaction_code}`,
-                ],
-              );
+              await createStockMovement({
+                itemId: detail.item_id,
+                movementType: "IN",
+                referenceType: "rental_cancellation",
+                referenceId: id,
+                quantity: detail.quantity,
+                stockBefore,
+                stockAfter,
+                userId: null,
+                notes: `Cancel rental transaction: ${rental.transaction_code}`,
+              });
             }
           }
 
@@ -803,30 +798,16 @@ function setupTransactionHandlers() {
           );
         } else {
           // Sales transaction
-          const sale = await database.queryOne(
-            `SELECT st.*,
-             COALESCE(SUM(p.amount), 0) as actual_paid_amount,
-             CASE 
-               WHEN COALESCE(SUM(p.amount), 0) >= st.total_amount THEN 'paid'
-               ELSE 'unpaid'
-             END as calculated_payment_status
-             FROM sales_transactions st
-             LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-             WHERE st.id = ?
-             GROUP BY st.id`,
-            [id],
-          );
+          const sale = await getTransactionPaymentStatus("sale", id);
 
           if (!sale) {
             throw new Error("Transaksi penjualan tidak ditemukan");
           }
 
-          // Cek payment status
           if (sale.calculated_payment_status === "paid") {
             throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
           }
 
-          // Cek status saat ini
           if (sale.status === "cancelled") {
             throw new Error("Transaksi sudah di-cancel sebelumnya.");
           }
@@ -855,20 +836,17 @@ function setupTransactionHandlers() {
               );
 
               // Create stock movement record
-              await database.execute(
-                `INSERT INTO stock_movements (
-                  item_id, movement_type, reference_type, reference_id,
-                  quantity, stock_before, stock_after, user_id, notes
-                ) VALUES (?, 'IN', 'sale_cancellation', ?, ?, ?, ?, NULL, ?)`,
-                [
-                  detail.item_id,
-                  id,
-                  detail.quantity,
-                  stockBefore,
-                  stockAfter,
-                  `Cancel sale transaction: ${sale.transaction_code}`,
-                ],
-              );
+              await createStockMovement({
+                itemId: detail.item_id,
+                movementType: "IN",
+                referenceType: "sale_cancellation",
+                referenceId: id,
+                quantity: detail.quantity,
+                stockBefore,
+                stockAfter,
+                userId: null,
+                notes: `Cancel sale transaction: ${sale.transaction_code}`,
+              });
             }
           }
 
@@ -905,79 +883,33 @@ function setupPaymentHandlers() {
         throw new Error("Transaksi referensi harus diisi");
       }
 
-      // Cek status transaksi sebelum membuat pembayaran
-      if (paymentData.transactionType === 'rental') {
-        const rental = await database.queryOne(
-          `SELECT rt.*, 
-           COALESCE(SUM(p.amount), 0) as total_paid
-           FROM rental_transactions rt
-           LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-           WHERE rt.id = ?
-           GROUP BY rt.id`,
-          [paymentData.transactionId],
-        );
-        
-        if (!rental) {
-          throw new Error("Transaksi sewa tidak ditemukan");
-        }
-        
-        // Cek jika transaksi sudah dibatalkan
-        if (rental.status === 'cancelled') {
-          throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
-        }
-        
-        // Cek jika transaksi sudah lunas
-        if (rental.total_paid >= rental.total_amount) {
-          throw new Error("Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.");
-        }
-      } else {
-        const sale = await database.queryOne(
-          `SELECT st.*,
-           COALESCE(SUM(p.amount), 0) as total_paid
-           FROM sales_transactions st
-           LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-           WHERE st.id = ?
-           GROUP BY st.id`,
-          [paymentData.transactionId],
-        );
-        
-        if (!sale) {
-          throw new Error("Transaksi penjualan tidak ditemukan");
-        }
-        
-        // Cek jika transaksi sudah dibatalkan
-        if (sale.status === 'cancelled') {
-          throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
-        }
-        
-        // Cek jika transaksi sudah lunas
-        if (sale.total_paid >= sale.total_amount) {
-          throw new Error("Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.");
-        }
+      // Check transaction status before creating payment
+      const transaction = await getTransactionPaymentStatus(
+        paymentData.transactionType,
+        paymentData.transactionId,
+      );
+
+      if (!transaction) {
+        const typeLabel =
+          paymentData.transactionType === "rental"
+            ? "sewa"
+            : "penjualan";
+        throw new Error(`Transaksi ${typeLabel} tidak ditemukan`);
       }
 
-      // Validasi cashier session untuk pembayaran cash
+      if (transaction.status === "cancelled") {
+        throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+      }
+
+      if (transaction.total_paid >= transaction.total_amount) {
+        throw new Error(
+          "Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.",
+        );
+      }
+
+      // Validate cashier session for cash payments
       if (!paymentData.paymentMethod || paymentData.paymentMethod === "cash") {
-        if (!paymentData.userId) {
-          throw new Error("User ID harus diisi untuk membuat pembayaran");
-        }
-
-        const cashierTableExists =
-          await database.tableExists("cashier_sessions");
-        if (cashierTableExists) {
-          const activeSession = await database.queryOne(
-            `SELECT id FROM cashier_sessions 
-             WHERE user_id = ? AND status = 'open' 
-             ORDER BY opening_date DESC LIMIT 1`,
-            [paymentData.userId],
-          );
-
-          if (!activeSession) {
-            throw new Error(
-              "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat pembayaran cash.",
-            );
-          }
-        }
+        await validateCashierSession(paymentData.userId);
       }
 
       const result = await database.execute(
@@ -998,20 +930,13 @@ function setupPaymentHandlers() {
       );
 
       // Update rental transaction status to 'active' after first payment
-      if (paymentData.transactionType === 'rental') {
-        // Re-fetch rental with updated payment total
-        const rental = await database.queryOne(
-          `SELECT rt.*, 
-           COALESCE(SUM(p.amount), 0) as total_paid
-           FROM rental_transactions rt
-           LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-           WHERE rt.id = ?
-           GROUP BY rt.id`,
-          [paymentData.transactionId],
+      if (paymentData.transactionType === "rental") {
+        const rental = await getTransactionPaymentStatus(
+          "rental",
+          paymentData.transactionId,
         );
-        
-        // Update status to 'active' if it was 'pending' (unpaid) and now has payment
-        if (rental && rental.status === 'pending' && rental.total_paid > 0) {
+
+        if (rental && rental.status === "pending" && rental.total_paid > 0) {
           await database.execute(
             `UPDATE rental_transactions SET status = 'active' WHERE id = ?`,
             [paymentData.transactionId],
@@ -1159,6 +1084,7 @@ function setupStockMovementHandlers() {
 
         await database.execute("COMMIT");
 
+        // Get the created movement with joins
         const newMovement = await database.queryOne(
           `SELECT sm.*, i.name AS item_name, u.full_name AS user_name
            FROM stock_movements sm

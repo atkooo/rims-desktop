@@ -2,8 +2,6 @@ const { ipcMain } = require("electron");
 const activationService = require("../services/activation");
 const logger = require("../helpers/logger");
 
-let activationStatusCallback = null;
-
 function setupActivationHandlers() {
   // Get machine ID
   ipcMain.handle("activation:getMachineId", async () => {
@@ -43,20 +41,12 @@ function setupActivationHandlers() {
       return await activationService.verifyActivation();
     } catch (error) {
       logger.error("Error verifying activation:", error);
-      return { success: false, error: "verification_failed", message: error.message };
+      return {
+        success: false,
+        error: "verification_failed",
+        message: error.message,
+      };
     }
-  });
-
-  // Register callback for activation status changes
-  ipcMain.handle("activation:registerStatusCallback", (event) => {
-    // Note: This is a placeholder. In practice, we'll use periodic checks
-    // and the renderer can poll or listen for status updates
-    activationStatusCallback = (status) => {
-      if (event.sender && !event.sender.isDestroyed()) {
-        event.sender.send("activation:statusChanged", status);
-      }
-    };
-    return { success: true };
   });
 
   logger.info("Activation handlers registered");

@@ -1,5 +1,6 @@
 import { ipcRenderer } from "@/services/ipc";
 
+// Accessories
 export function fetchAccessories() {
   return ipcRenderer.invoke("master:getAccessories");
 }

@@ -41,9 +41,9 @@ export const useTransactionStore = defineStore("transactions", {
             t.created_at ||
             ""
           ).toString();
-          const status = t.status;
           return (
-            dateStr.startsWith(today) && status === TRANSACTION_STATUS.COMPLETED
+            dateStr.startsWith(today) &&
+            t.status === TRANSACTION_STATUS.COMPLETED
           );
         })
         .reduce((sum, t) => sum + (Number(t.totalAmount ?? 0) || 0), 0);
@@ -56,65 +56,71 @@ export const useTransactionStore = defineStore("transactions", {
       this.loading = true;
       try {
         const transactions = await ipcRenderer.invoke("transactions:getAll");
-        // Normalize to UI shape (camelCase fields, unified status/date)
-        this.transactions = transactions.map((t) => {
-          const isRental =
-            t.transaction_type === "rental" ||
-            t.transaction_type === "RENTAL" ||
-            !!t.rental_date;
-          const transactionDate =
-            t.transactionDate ||
-            (isRental ? t.rental_date : t.sale_date) ||
-            t.created_at ||
-            null;
-          const totalAmount = Number(t.totalAmount ?? t.total_amount ?? 0) || 0;
-          const customerName =
-            t.customerName || t.customer_name || t.customer || null;
-
-          // Map backend status to UI constants
-          let status = t.status;
-          if (isRental) {
-            if (status === "pending") {
-              status = TRANSACTION_STATUS.PENDING;
-            } else if (status === "active" || status === "overdue") {
-              status = TRANSACTION_STATUS.PENDING; // Active/overdue masih pending return
-            } else if (status === "returned") {
-              status = TRANSACTION_STATUS.COMPLETED;
-            } else if (status === "cancelled") {
-              status = TRANSACTION_STATUS.CANCELLED;
-            }
-          } else {
-            // For sales transactions, check status first (cancelled takes priority)
-            if (status === "cancelled") {
-              status = TRANSACTION_STATUS.CANCELLED;
-            } else {
-              const pay = t.payment_status ?? status;
-              if (pay === "paid") status = TRANSACTION_STATUS.COMPLETED;
-              else if (pay === "unpaid")
-                status = TRANSACTION_STATUS.PENDING;
-            }
-          }
-
-          const transactionType = isRental ? "RENTAL" : "SALE";
-          const paidAmount =
-            Number(t.paid_amount ?? t.actual_paid_amount ?? 0) || 0;
-
-          return {
-            ...t,
-            transactionType,
-            transactionDate,
-            totalAmount,
-            customerName,
-            status,
-            paid_amount: paidAmount,
-          };
-        });
+        this.transactions = transactions.map((t) =>
+          this.normalizeTransaction(t),
+        );
         this.error = null;
       } catch (err) {
         this.error = err.message;
       } finally {
         this.loading = false;
       }
+    },
+
+    // Normalize transaction data to UI format
+    normalizeTransaction(t) {
+      const isRental =
+        t.transaction_type === "rental" ||
+        t.transaction_type === "RENTAL" ||
+        !!t.rental_date;
+
+      const transactionDate =
+        t.transactionDate ||
+        (isRental ? t.rental_date : t.sale_date) ||
+        t.created_at ||
+        null;
+
+      const totalAmount = Number(t.totalAmount ?? t.total_amount ?? 0) || 0;
+      const customerName =
+        t.customerName || t.customer_name || t.customer || null;
+      const paidAmount =
+        Number(t.paid_amount ?? t.actual_paid_amount ?? 0) || 0;
+
+      // Map backend status to UI constants
+      const status = this.mapTransactionStatus(t, isRental);
+
+      return {
+        ...t,
+        transactionType: isRental ? "RENTAL" : "SALE",
+        transactionDate,
+        totalAmount,
+        customerName,
+        status,
+        paid_amount: paidAmount,
+      };
+    },
+
+    // Map transaction status from backend to UI constants
+    mapTransactionStatus(t, isRental) {
+      const status = t.status;
+
+      if (isRental) {
+        if (status === "pending") return TRANSACTION_STATUS.PENDING;
+        if (status === "active" || status === "overdue")
+          return TRANSACTION_STATUS.PENDING;
+        if (status === "returned") return TRANSACTION_STATUS.COMPLETED;
+        if (status === "cancelled") return TRANSACTION_STATUS.CANCELLED;
+        return TRANSACTION_STATUS.PENDING;
+      }
+
+      // For sales transactions
+      if (status === "cancelled") return TRANSACTION_STATUS.CANCELLED;
+
+      const paymentStatus = t.payment_status ?? status;
+      if (paymentStatus === "paid") return TRANSACTION_STATUS.COMPLETED;
+      if (paymentStatus === "unpaid") return TRANSACTION_STATUS.PENDING;
+
+      return TRANSACTION_STATUS.PENDING;
     },
 
     // Buat transaksi baru

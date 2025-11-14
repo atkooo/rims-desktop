@@ -49,8 +49,21 @@ function toInteger(value) {
   return Number.isNaN(num) ? 0 : num;
 }
 
+/**
+ * Sanitize available quantity to ensure it doesn't exceed stock quantity
+ * @param {number} stock - Stock quantity
+ * @param {number} available - Available quantity
+ * @returns {number} Sanitized available quantity
+ */
+function sanitizeAvailable(stock, available) {
+  const stockQty = Math.max(0, toInteger(stock));
+  const availableQty = Math.max(0, toInteger(available));
+  return Math.min(stockQty, availableQty);
+}
+
 module.exports = {
   normalizeCode,
   generateTransactionCode,
   toInteger,
+  sanitizeAvailable,
 };

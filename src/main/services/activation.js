@@ -23,10 +23,12 @@ function resolveSettingsPath() {
       return settingsPath;
     }
   } catch (error) {
-    // Fall back to project data folder if app.getPath fails
-    logger.warn("Error resolving userData path for settings, using project path:", error);
+    logger.warn(
+      "Error resolving userData path for settings, using project path:",
+      error,
+    );
   }
-  
+
   // Development: use project data folder
   const projectDataPath = path.join(__dirname, "../../../data");
   fsSync.mkdirSync(projectDataPath, { recursive: true });
@@ -177,22 +179,12 @@ async function createSupabaseClient() {
  * Handles boolean, integer (1/0), and string ("true"/"false"/"1"/"0")
  */
 function parseIsActive(value) {
-  if (value === null || value === undefined) {
-    return false;
-  }
-  
-  if (typeof value === "boolean") {
-    return value === true;
-  }
-  
-  if (typeof value === "number") {
-    return value === 1;
-  }
-  
+  if (value === null || value === undefined) return false;
+  if (typeof value === "boolean") return value === true;
+  if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
     return value.toLowerCase() === "true" || value === "1";
   }
-  
   return false;
 }
 
@@ -200,21 +192,22 @@ function parseIsActive(value) {
  * Check activation status from Supabase
  */
 async function checkActivationStatus(forceRefresh = false) {
-  try {
-    // Check cache first
-    const now = Date.now();
-    if (
-      !forceRefresh &&
-      cachedStatus !== null &&
-      now - cacheTimestamp < CACHE_EXPIRY
-    ) {
-      return cachedStatus;
-    }
+  const now = Date.now();
 
+  // Check cache first
+  if (
+    !forceRefresh &&
+    cachedStatus !== null &&
+    now - cacheTimestamp < CACHE_EXPIRY
+  ) {
+    return cachedStatus;
+  }
+
+  try {
     const machineId = await getOrGenerateMachineId();
     const supabase = await createSupabaseClient();
-
     const trimmedMachineId = machineId.trim();
+
     const { data, error } = await supabase
       .from("activations")
       .select("is_active")
@@ -224,7 +217,11 @@ async function checkActivationStatus(forceRefresh = false) {
     if (error) {
       if (error.code === "PGRST116") {
         logger.warn(`Activation not found: ${trimmedMachineId}`);
-        cachedStatus = { isActive: false, machineId: trimmedMachineId, error: "activation_not_found" };
+        cachedStatus = {
+          isActive: false,
+          machineId: trimmedMachineId,
+          error: "activation_not_found",
+        };
         cacheTimestamp = now;
         return cachedStatus;
       }
@@ -234,28 +231,40 @@ async function checkActivationStatus(forceRefresh = false) {
     const isActive = parseIsActive(data.is_active);
     cachedStatus = { isActive, machineId: trimmedMachineId };
     cacheTimestamp = now;
-    logger.info(`Activation: ${isActive ? "ACTIVE" : "INACTIVE"} (${trimmedMachineId})`);
+    logger.info(
+      `Activation: ${isActive ? "ACTIVE" : "INACTIVE"} (${trimmedMachineId})`,
+    );
     return cachedStatus;
   } catch (error) {
     logger.error("Error checking activation status:", error);
 
-    // Get machine ID to return in error case
     const machineId = await getOrGenerateMachineId().catch(() => null);
-    const isConfigError = error.message?.includes("belum dikonfigurasi") || 
-                          error.message?.includes("Supabase URL") || 
-                          error.message?.includes("API key");
-    
+    const isConfigError =
+      error.message?.includes("belum dikonfigurasi") ||
+      error.message?.includes("Supabase URL") ||
+      error.message?.includes("API key");
+
     if (isConfigError) {
       logger.warn("Supabase configuration missing");
-      return { isActive: false, machineId, error: error.message, offline: true };
+      return {
+        isActive: false,
+        machineId,
+        error: error.message,
+        offline: true,
+      };
     }
-    
+
     if (cachedStatus?.isActive) {
       logger.warn("Using cached active status");
       return { ...cachedStatus, offline: true, error: error.message };
     }
-    
-    return { isActive: false, machineId, error: error.message, offline: true };
+
+    return {
+      isActive: false,
+      machineId,
+      error: error.message,
+      offline: true,
+    };
   }
 }
 
@@ -266,6 +275,7 @@ async function verifyActivation() {
   try {
     const machineId = (await getOrGenerateMachineId()).trim();
     const supabase = await createSupabaseClient();
+
     const { data, error } = await supabase
       .from("activations")
       .select("is_active")
@@ -274,21 +284,33 @@ async function verifyActivation() {
 
     if (error) {
       if (error.code === "PGRST116") {
-        return { success: false, error: "activation_not_found", message: "Aktivasi tidak ditemukan" };
+        return {
+          success: false,
+          error: "activation_not_found",
+          message: "Aktivasi tidak ditemukan",
+        };
       }
       throw error;
     }
 
     const isActive = parseIsActive(data.is_active);
     if (!isActive) {
-      return { success: false, error: "activation_inactive", message: "Aktivasi tidak aktif" };
+      return {
+        success: false,
+        error: "activation_inactive",
+        message: "Aktivasi tidak aktif",
+      };
     }
 
     clearCache();
     return { success: true, message: "Aktivasi berhasil diverifikasi" };
   } catch (error) {
     logger.error("Error verifying activation:", error);
-    return { success: false, error: "verification_failed", message: error.message };
+    return {
+      success: false,
+      error: "verification_failed",
+      message: error.message,
+    };
   }
 }
 

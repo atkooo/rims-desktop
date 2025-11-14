@@ -2,7 +2,11 @@ const { ipcMain } = require("electron");
 const crypto = require("crypto");
 const database = require("./helpers/database");
 const { logActivity } = require("./helpers/activity");
-const { getUserPermissions } = require("./helpers/permissions");
+const {
+  getUserPermissions,
+  hasPermission,
+  hasAnyPermission,
+} = require("./helpers/permissions");
 
 let currentUser = null;
 
@@ -11,9 +15,9 @@ function scryptHash(password, salt = crypto.randomBytes(16).toString("hex")) {
   return `scrypt:${salt}:${derived}`;
 }
 
-
 function verifyPassword(inputPassword, storedHash) {
   if (!storedHash) return false;
+
   if (storedHash.startsWith("scrypt:")) {
     const [, salt, hash] = storedHash.split(":");
     const derived = crypto.scryptSync(inputPassword, salt, 32).toString("hex");
@@ -22,6 +26,7 @@ function verifyPassword(inputPassword, storedHash) {
       Buffer.from(derived, "hex"),
     );
   }
+
   if (storedHash.startsWith("sha256:")) {
     const hash = crypto
       .createHash("sha256")
@@ -32,6 +37,7 @@ function verifyPassword(inputPassword, storedHash) {
       Buffer.from(hash, "hex"),
     );
   }
+
   return false;
 }
 
@@ -48,17 +54,19 @@ function registerAuthIpc() {
         [username],
       );
 
-      if (!user || !user.is_active)
+      if (!user || !user.is_active) {
         throw new Error("User tidak ditemukan atau non-aktif");
-      if (!verifyPassword(password, user.password_hash))
+      }
+
+      if (!verifyPassword(password, user.password_hash)) {
         throw new Error("Username atau password salah");
+      }
 
       await database.execute(
         "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
         [user.id],
       );
 
-      // Get user permissions
       const permissions = await getUserPermissions(user.id);
 
       currentUser = {
@@ -68,7 +76,7 @@ function registerAuthIpc() {
         full_name: user.full_name,
         email: user.email,
         role: user.role_name || null,
-        permissions: permissions,
+        permissions,
       };
 
       await logActivity({
@@ -84,7 +92,7 @@ function registerAuthIpc() {
         userId: null,
         action: "LOGIN_FAILED",
         module: "auth",
-        description: `User ${username} login failed`,
+        description: `User ${username} login failed: ${error.message}`,
       });
       throw error;
     }
@@ -109,13 +117,11 @@ function registerAuthIpc() {
 
   ipcMain.handle("auth:hasPermission", async (event, permissionSlug) => {
     if (!currentUser) return false;
-    const { hasPermission } = require("./helpers/permissions");
     return await hasPermission(currentUser.id, permissionSlug);
   });
 
   ipcMain.handle("auth:hasAnyPermission", async (event, permissionSlugs) => {
     if (!currentUser) return false;
-    const { hasAnyPermission } = require("./helpers/permissions");
     return await hasAnyPermission(currentUser.id, permissionSlugs);
   });
 
@@ -123,25 +129,27 @@ function registerAuthIpc() {
     if (!currentUser) return [];
     return currentUser.permissions || [];
   });
-  ipcMain.handle(
-    "auth:changePassword",
-    async (event, { userId, newPassword }) => {
-      if (!newPassword || newPassword.length < 6)
-        throw new Error("Password terlalu pendek");
-      const hash = scryptHash(newPassword);
-      await database.execute(
-        "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [hash, userId],
-      );
-      await logActivity({
-        userId,
-        action: "PASSWORD_CHANGE",
-        module: "auth",
-        description: `User ${userId} changed password`,
-      });
-      return true;
-    },
-  );
+
+  ipcMain.handle("auth:changePassword", async (event, { userId, newPassword }) => {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error("Password terlalu pendek");
+    }
+
+    const hash = scryptHash(newPassword);
+    await database.execute(
+      "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [hash, userId],
+    );
+
+    await logActivity({
+      userId,
+      action: "PASSWORD_CHANGE",
+      module: "auth",
+      description: `User ${userId} changed password`,
+    });
+
+    return true;
+  });
 }
 
 function getCurrentUser() {

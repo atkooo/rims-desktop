@@ -37,10 +37,15 @@ function setupItemSizeHandlers() {
     try {
       const { code, name, description, notes, sort_order, is_active } =
         payload || {};
-      if (!name) throw new Error("Nama ukuran wajib diisi");
+
+      if (!name || !name.trim()) {
+        throw new Error("Nama ukuran wajib diisi");
+      }
 
       const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
+      const sortOrder = Number(sort_order) || 0;
+      const isActive = is_active ? 1 : 0;
 
       const sql = `
         INSERT INTO item_sizes
@@ -53,8 +58,8 @@ function setupItemSizeHandlers() {
         name.trim(),
         description || null,
         notes || null,
-        Number(sort_order) || 0,
-        is_active ? 1 : 0,
+        sortOrder,
+        isActive,
         now,
         now,
       ]);
@@ -62,11 +67,11 @@ function setupItemSizeHandlers() {
       return {
         id: result.id,
         code: normalizedCode,
-        name,
-        description,
-        notes,
-        sort_order: Number(sort_order) || 0,
-        is_active: is_active ? 1 : 0,
+        name: name.trim(),
+        description: description || null,
+        notes: notes || null,
+        sort_order: sortOrder,
+        is_active: isActive,
         created_at: now,
         updated_at: now,
       };
@@ -80,11 +85,18 @@ function setupItemSizeHandlers() {
     try {
       const { id, code, name, description, notes, sort_order, is_active } =
         payload || {};
-      if (!id) throw new Error("ID ukuran tidak ditemukan");
-      if (!name) throw new Error("Nama ukuran wajib diisi");
+
+      if (!id) {
+        throw new Error("ID ukuran tidak ditemukan");
+      }
+      if (!name || !name.trim()) {
+        throw new Error("Nama ukuran wajib diisi");
+      }
 
       const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
+      const sortOrder = Number(sort_order) || 0;
+      const isActive = is_active ? 1 : 0;
 
       const sql = `
         UPDATE item_sizes
@@ -104,8 +116,8 @@ function setupItemSizeHandlers() {
         name.trim(),
         description || null,
         notes || null,
-        Number(sort_order) || 0,
-        is_active ? 1 : 0,
+        sortOrder,
+        isActive,
         now,
         id,
       ]);
@@ -113,11 +125,11 @@ function setupItemSizeHandlers() {
       return {
         id,
         code: normalizedCode,
-        name,
-        description,
-        notes,
-        sort_order: Number(sort_order) || 0,
-        is_active: is_active ? 1 : 0,
+        name: name.trim(),
+        description: description || null,
+        notes: notes || null,
+        sort_order: sortOrder,
+        is_active: isActive,
         updated_at: now,
       };
     } catch (error) {
@@ -128,14 +140,14 @@ function setupItemSizeHandlers() {
 
   ipcMain.handle("itemSizes:delete", async (event, id) => {
     try {
-      if (!id) throw new Error("ID ukuran tidak ditemukan");
+      if (!id) {
+        throw new Error("ID ukuran tidak ditemukan");
+      }
 
       const usage = await database.queryOne(
-        `
-          SELECT COUNT(1) AS total
-          FROM items
-          WHERE size_id = ?
-        `,
+        `SELECT COUNT(1) AS total
+         FROM items
+         WHERE size_id = ?`,
         [id],
       );
 

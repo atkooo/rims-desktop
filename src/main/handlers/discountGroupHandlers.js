@@ -3,12 +3,24 @@ const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 
+/**
+ * Parse is_active value from various data types
+ */
+function parseIsActive(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "boolean") return value === true;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return value.toLowerCase() === "true" || value === "1";
+  }
+  return false;
+}
+
 function mapDiscountGroupRow(row) {
   if (!row) return row;
   return {
     ...row,
-    is_active:
-      row.is_active === true || row.is_active === 1 || row.is_active === "1",
+    is_active: parseIsActive(row.is_active),
     discount_percentage: Number(row.discount_percentage) || 0,
     discount_amount: Number(row.discount_amount) || 0,
   };
@@ -83,6 +95,67 @@ async function generateDiscountGroupCode() {
   }
 }
 
+/**
+ * Normalize and validate discount group code
+ * @param {string} code - Code to normalize
+ * @param {number|null} excludeId - ID to exclude from uniqueness check
+ * @returns {Promise<string>} Normalized and validated code
+ */
+async function normalizeAndValidateCode(code, excludeId = null) {
+  const originalCode = code;
+  code = (code ?? "").toString().trim();
+
+  // Auto-generate code if not provided
+  if (!validator.isNotEmpty(code)) {
+    code = await generateDiscountGroupCode();
+  } else {
+    // Normalize code to uppercase and remove non-letter characters
+    code = code.toUpperCase().replace(/[^A-Z]/g, "");
+    if (!code) {
+      // If after cleaning there's no letters, generate one
+      code = await generateDiscountGroupCode();
+    }
+  }
+
+  // Check for uniqueness
+  const wasManuallyProvided = validator.isNotEmpty(originalCode);
+  const maxAttempts = 10;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const existing = await database.queryOne(
+      excludeId
+        ? "SELECT id FROM discount_groups WHERE code = ? AND id != ?"
+        : "SELECT id FROM discount_groups WHERE code = ?",
+      excludeId ? [code, excludeId] : [code],
+    );
+
+    if (!existing) {
+      // Code is unique
+      return code;
+    }
+
+    // Code exists
+    if (wasManuallyProvided && attempts === 0) {
+      // First attempt with manually provided code
+      throw new Error("Kode grup diskon sudah digunakan");
+    }
+
+    // Generate next code
+    const currentNumber = letterCodeToNumber(code);
+    if (currentNumber > 0) {
+      code = numberToLetterCode(currentNumber + 1);
+    } else {
+      // Fallback: regenerate completely
+      code = await generateDiscountGroupCode();
+    }
+    attempts++;
+  }
+
+  // Final fallback: use timestamp-based code
+  return `DG${Date.now().toString().slice(-4)}`;
+}
+
 function setupDiscountGroupHandlers() {
   // Get all discount groups
   ipcMain.handle("discountGroups:getAll", async () => {
@@ -144,18 +217,10 @@ function setupDiscountGroupHandlers() {
       const discountPercentage = Number(payload.discount_percentage) || 0;
       const discountAmount = Number(payload.discount_amount) || 0;
 
-      // Auto-generate code if not provided
-      if (!validator.isNotEmpty(code)) {
-        code = await generateDiscountGroupCode();
-      } else {
-        // Normalize code to uppercase and remove non-letter characters
-        code = code.toUpperCase().replace(/[^A-Z]/g, "");
-        if (!code) {
-          // If after cleaning there's no letters, generate one
-          code = await generateDiscountGroupCode();
-        }
-      }
+      // Normalize and validate code
+      code = await normalizeAndValidateCode(code, null);
 
+      // Validate input
       if (!validator.isNotEmpty(name)) {
         throw new Error("Nama grup diskon wajib diisi");
       }
@@ -171,59 +236,8 @@ function setupDiscountGroupHandlers() {
         );
       }
 
-      // Check if code already exists (only if code was manually provided)
-      // For auto-generated codes, generateDiscountGroupCode already handles uniqueness
-      if (payload.code && payload.code.trim() !== "") {
-        const existing = await database.queryOne(
-          "SELECT id FROM discount_groups WHERE code = ?",
-          [code],
-        );
-
-        if (existing) {
-          throw new Error("Kode grup diskon sudah digunakan");
-        }
-      } else {
-        // For auto-generated codes, ensure uniqueness by checking if it exists
-        // and generating a new one if needed
-        let attempts = 0;
-        let maxAttempts = 10;
-        while (attempts < maxAttempts) {
-          const existing = await database.queryOne(
-            "SELECT id FROM discount_groups WHERE code = ?",
-            [code],
-          );
-
-          if (!existing) {
-            // Code is unique, we can use it
-            break;
-          }
-
-          // Code exists, generate a new one
-          const currentNumber = letterCodeToNumber(code);
-          if (currentNumber > 0) {
-            code = numberToLetterCode(currentNumber + 1);
-          } else {
-            // Fallback: regenerate completely
-            code = await generateDiscountGroupCode();
-          }
-          attempts++;
-        }
-
-        if (attempts >= maxAttempts) {
-          // Final fallback: use timestamp-based code
-          code = `DG${Date.now().toString().slice(-4)}`;
-        }
-      }
-
       // Handle is_active: false, 0, '0', null as false; everything else as true
-      const isActiveValue = payload.is_active;
-      const isActive =
-        isActiveValue === false ||
-        isActiveValue === 0 ||
-        isActiveValue === "0" ||
-        isActiveValue === null
-          ? 0
-          : 1;
+      const isActive = parseIsActive(payload.is_active) ? 1 : 0;
 
       const insertSql = `
         INSERT INTO discount_groups (
@@ -282,55 +296,8 @@ function setupDiscountGroupHandlers() {
       const values = [];
 
       if (payload.code !== undefined) {
-        let code = (payload.code ?? "").toString().trim();
-
-        // If code is empty, auto-generate it
-        if (!validator.isNotEmpty(code)) {
-          code = await generateDiscountGroupCode();
-          // Ensure uniqueness for auto-generated code
-          let attempts = 0;
-          let maxAttempts = 10;
-          while (attempts < maxAttempts) {
-            const existingCode = await database.queryOne(
-              "SELECT id FROM discount_groups WHERE code = ? AND id != ?",
-              [code, id],
-            );
-            if (!existingCode) {
-              break;
-            }
-            const currentNumber = letterCodeToNumber(code);
-            if (currentNumber > 0) {
-              code = numberToLetterCode(currentNumber + 1);
-            } else {
-              code = await generateDiscountGroupCode();
-            }
-            attempts++;
-          }
-          if (attempts >= maxAttempts) {
-            code = `DG${Date.now().toString().slice(-4)}`;
-          }
-        } else {
-          // Normalize code to uppercase and remove non-letter characters
-          code = code.toUpperCase().replace(/[^A-Z]/g, "");
-          if (!code) {
-            // If after cleaning there's no letters, generate one
-            code = await generateDiscountGroupCode();
-          } else {
-            // Check for duplicate
-            const duplicate = await database.queryOne(
-              "SELECT id FROM discount_groups WHERE code = ? AND id != ?",
-              [code, id],
-            );
-
-            if (duplicate) {
-              throw new Error(
-                "Kode grup diskon sudah digunakan oleh grup diskon lain",
-              );
-            }
-          }
-        }
-
-        updates.code = code;
+        const code = (payload.code ?? "").toString().trim();
+        updates.code = await normalizeAndValidateCode(code, id);
       }
 
       if (payload.name !== undefined) {
@@ -381,18 +348,7 @@ function setupDiscountGroupHandlers() {
       });
 
       if (payload.is_active !== undefined) {
-        // Handle false, 0, '0', null as false; everything else as true
-        const isActiveValue = payload.is_active;
-        if (
-          isActiveValue === false ||
-          isActiveValue === 0 ||
-          isActiveValue === "0" ||
-          isActiveValue === null
-        ) {
-          updates.is_active = 0;
-        } else {
-          updates.is_active = 1;
-        }
+        updates.is_active = parseIsActive(payload.is_active) ? 1 : 0;
       }
 
       updates.updated_at = new Date().toISOString();

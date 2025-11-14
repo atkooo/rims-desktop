@@ -196,14 +196,23 @@ export default {
     };
 
     const handleSubmit = async () => {
-      if (!validateForm()) return;
+      if (!validateForm()) {
+        return;
+      }
 
       loading.value = true;
+      errors.value.submit = "";
+
       try {
         const user = getStoredUser();
         const movementData = {
-          ...form.value,
-          userId: user?.id || 1,
+          itemId: form.value.itemId,
+          movementType: form.value.movementType,
+          quantity: form.value.quantity,
+          referenceType: form.value.referenceType || null,
+          referenceId: form.value.referenceId || null,
+          userId: user?.id || null,
+          notes: form.value.notes || null,
         };
 
         await createStockMovement(movementData);

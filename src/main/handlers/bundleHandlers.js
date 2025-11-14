@@ -2,7 +2,10 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
-const { toInteger } = require("../helpers/codeUtils");
+const {
+  toInteger,
+  sanitizeAvailable,
+} = require("../helpers/codeUtils");
 
 const toNumber = (value) => {
   const num = Number(value);
@@ -14,11 +17,34 @@ const sanitizeBundleType = (value) => {
   return normalized === "sale" ? "sale" : "rental";
 };
 
-const sanitizeAvailable = (stock, available) => {
-  const stockQty = Math.max(0, toInteger(stock));
-  const availableQty = Math.max(0, toInteger(available));
-  return Math.min(stockQty, availableQty);
-};
+/**
+ * Validate and normalize discount group ID
+ */
+async function validateDiscountGroupId(discountGroupId) {
+  if (
+    discountGroupId === undefined ||
+    discountGroupId === null ||
+    discountGroupId === ""
+  ) {
+    return null;
+  }
+
+  const id = Number(discountGroupId);
+  if (!id) {
+    return null;
+  }
+
+  const discountGroup = await database.queryOne(
+    "SELECT id FROM discount_groups WHERE id = ?",
+    [id],
+  );
+
+  if (!discountGroup) {
+    throw new Error("Grup diskon tidak ditemukan");
+  }
+
+  return id;
+}
 
 async function buildPayload(raw) {
   const stockQty = Math.max(0, toInteger(raw.stock_quantity));
@@ -28,25 +54,9 @@ async function buildPayload(raw) {
       : Math.max(0, toInteger(raw.available_quantity));
 
   // Validate discount_group_id if provided
-  let discountGroupId = null;
-  if (
-    raw.discount_group_id !== undefined &&
-    raw.discount_group_id !== null &&
-    raw.discount_group_id !== ""
-  ) {
-    discountGroupId = Number(raw.discount_group_id);
-    if (discountGroupId) {
-      const discountGroup = await database.queryOne(
-        "SELECT id FROM discount_groups WHERE id = ?",
-        [discountGroupId],
-      );
-      if (!discountGroup) {
-        throw new Error("Grup diskon tidak ditemukan");
-      }
-    } else {
-      discountGroupId = null;
-    }
-  }
+  const discountGroupId = await validateDiscountGroupId(
+    raw.discount_group_id,
+  );
 
   // Auto-generate code if empty
   const { normalizeCode } = require("../helpers/codeUtils");
@@ -232,29 +242,11 @@ function setupBundleHandlers() {
 
       // Process discount_group_id separately
       if (rawPayload.discount_group_id !== undefined) {
-        if (
-          rawPayload.discount_group_id === null ||
-          rawPayload.discount_group_id === ""
-        ) {
-          fields.push("discount_group_id = ?");
-          values.push(null);
-        } else {
-          const discountGroupId = Number(rawPayload.discount_group_id);
-          if (discountGroupId) {
-            const discountGroup = await database.queryOne(
-              "SELECT id FROM discount_groups WHERE id = ?",
-              [discountGroupId],
-            );
-            if (!discountGroup) {
-              throw new Error("Grup diskon tidak ditemukan");
-            }
-            fields.push("discount_group_id = ?");
-            values.push(discountGroupId);
-          } else {
-            fields.push("discount_group_id = ?");
-            values.push(null);
-          }
-        }
+        const discountGroupId = await validateDiscountGroupId(
+          rawPayload.discount_group_id,
+        );
+        fields.push("discount_group_id = ?");
+        values.push(discountGroupId);
       }
 
       // Process other fields

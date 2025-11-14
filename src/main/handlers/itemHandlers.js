@@ -2,17 +2,38 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
-const { normalizeCode } = require("../helpers/codeUtils");
+const {
+  normalizeCode,
+  sanitizeAvailable,
+} = require("../helpers/codeUtils");
 
-// Helper function untuk memastikan available_quantity tidak melebihi stock_quantity
-function sanitizeAvailable(stock, available) {
-  const toInteger = (val) => {
-    const num = Number(val);
-    return Number.isNaN(num) ? 0 : Math.max(0, Math.floor(num));
-  };
-  const stockQty = Math.max(0, toInteger(stock));
-  const availableQty = Math.max(0, toInteger(available));
-  return Math.min(stockQty, availableQty);
+/**
+ * Validate and normalize discount group ID
+ */
+async function validateDiscountGroupId(discountGroupId) {
+  if (
+    discountGroupId === undefined ||
+    discountGroupId === null ||
+    discountGroupId === ""
+  ) {
+    return null;
+  }
+
+  const id = Number(discountGroupId);
+  if (!id) {
+    return null;
+  }
+
+  const discountGroup = await database.queryOne(
+    "SELECT id FROM discount_groups WHERE id = ?",
+    [id],
+  );
+
+  if (!discountGroup) {
+    throw new Error("Grup diskon tidak ditemukan");
+  }
+
+  return id;
 }
 
 // Setup item handlers
@@ -84,25 +105,9 @@ function setupItemHandlers() {
       const isAvailableForSale = availability.is_available_for_sale;
 
       // Validate discount_group_id if provided
-      let discountGroupId = null;
-      if (
-        itemData.discount_group_id !== undefined &&
-        itemData.discount_group_id !== null &&
-        itemData.discount_group_id !== ""
-      ) {
-        discountGroupId = Number(itemData.discount_group_id);
-        if (discountGroupId) {
-          const discountGroup = await database.queryOne(
-            "SELECT id FROM discount_groups WHERE id = ?",
-            [discountGroupId],
-          );
-          if (!discountGroup) {
-            throw new Error("Grup diskon tidak ditemukan");
-          }
-        } else {
-          discountGroupId = null;
-        }
-      }
+      const discountGroupId = await validateDiscountGroupId(
+        itemData.discount_group_id,
+      );
 
       // Handle stock_quantity and available_quantity with validation
       const stockQuantity = Math.max(0, Number(itemData.stock_quantity) || 0);
@@ -285,26 +290,9 @@ function setupItemHandlers() {
 
       // Validate discount_group_id if provided
       if (updates.discount_group_id !== undefined) {
-        if (
-          updates.discount_group_id === null ||
-          updates.discount_group_id === ""
-        ) {
-          normalizedUpdates.discount_group_id = null;
-        } else {
-          const discountGroupId = Number(updates.discount_group_id);
-          if (discountGroupId) {
-            const discountGroup = await database.queryOne(
-              "SELECT id FROM discount_groups WHERE id = ?",
-              [discountGroupId],
-            );
-            if (!discountGroup) {
-              throw new Error("Grup diskon tidak ditemukan");
-            }
-            normalizedUpdates.discount_group_id = discountGroupId;
-          } else {
-            normalizedUpdates.discount_group_id = null;
-          }
-        }
+        normalizedUpdates.discount_group_id = await validateDiscountGroupId(
+          updates.discount_group_id,
+        );
       }
 
       // Handle stock_quantity and available_quantity with validation
@@ -409,7 +397,7 @@ function setupItemHandlers() {
         "SELECT COUNT(*) as count FROM rental_transaction_details WHERE item_id = ?",
         [id],
       );
-      if (rentalCheck && rentalCheck.count > 0) {
+      if ((rentalCheck?.count ?? 0) > 0) {
         throw new Error(
           "Tidak dapat menghapus item yang digunakan dalam transaksi sewa",
         );
@@ -420,19 +408,18 @@ function setupItemHandlers() {
         "SELECT COUNT(*) as count FROM sales_transaction_details WHERE item_id = ?",
         [id],
       );
-      if (salesCheck && salesCheck.count > 0) {
+      if ((salesCheck?.count ?? 0) > 0) {
         throw new Error(
           "Tidak dapat menghapus item yang digunakan dalam transaksi penjualan",
         );
       }
-
 
       // Check if item is used in stock movements
       const stockMovementCheck = await database.queryOne(
         "SELECT COUNT(*) as count FROM stock_movements WHERE item_id = ?",
         [id],
       );
-      if (stockMovementCheck && stockMovementCheck.count > 0) {
+      if ((stockMovementCheck?.count ?? 0) > 0) {
         throw new Error(
           "Tidak dapat menghapus item yang memiliki riwayat pergerakan stok",
         );

@@ -23,8 +23,10 @@ function writeStoredUser(user) {
 }
 
 async function loadUserPermissions(user) {
-  if (!user || !isIpcAvailable()) return;
-  
+  if (!user || !isIpcAvailable()) {
+    return;
+  }
+
   try {
     user.permissions = (await invoke("auth:getUserPermissions")) || [];
   } catch (error) {
@@ -65,8 +67,14 @@ export async function logout() {
 
 export async function getCurrentUser(forceRefresh = false) {
   const stored = readStoredUser();
-  if (!forceRefresh && stored && !isIpcAvailable()) return stored;
-  if (!isIpcAvailable()) return stored;
+
+  if (!isIpcAvailable()) {
+    return stored;
+  }
+
+  if (!forceRefresh && stored) {
+    return stored;
+  }
 
   try {
     const user = await invoke("auth:getCurrentUser");

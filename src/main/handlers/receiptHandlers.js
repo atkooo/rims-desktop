@@ -1,8 +1,11 @@
-const { ipcMain, dialog } = require("electron");
+const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const fs = require("fs").promises;
 const path = require("path");
+const { printPDF, openPDF } = require("../helpers/printUtils");
+const { loadSettings } = require("../helpers/settingsUtils");
+const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
 
 // Function to generate receipt (struk) - compact format for thermal printer
 async function generateReceipt(transactionId, transactionType, options = {}) {
@@ -18,57 +21,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     }
 
     // Get receipt display settings
-    // Use same path resolution as settingsHandlers
-    const { app } = require("electron");
-    const fsSync = require("fs");
-    let settingsFile;
-    try {
-      if (app && typeof app.getPath === "function" && app.isPackaged) {
-        const userDataPath = app.getPath("userData");
-        settingsFile = path.join(userDataPath, "settings.json");
-      } else {
-        settingsFile = path.join(__dirname, "../../../data/settings.json");
-      }
-    } catch (error) {
-      settingsFile = path.join(__dirname, "../../../data/settings.json");
-    }
-    let settings = {
-      companyName: "RIMS",
-      address: "-",
-      phone: "-",
-      paperWidth: 80,
-      receiptSettings: {
-        showCompanyName: true,
-        showAddress: true,
-        showPhone: true,
-        showCustomerInfo: true,
-        showTransactionCode: true,
-        showDate: true,
-        showCashier: true,
-        showItems: true,
-        showSubtotal: true,
-        showDiscount: true,
-        showTax: true,
-        showTotal: true,
-        showPaymentInfo: true,
-        showNotes: true,
-        showFooter: true,
-      },
-    };
-
-    try {
-      const settingsData = await fs.readFile(settingsFile, "utf8");
-      const savedSettings = JSON.parse(settingsData);
-      settings = { ...settings, ...savedSettings };
-      if (savedSettings.receiptSettings) {
-        settings.receiptSettings = {
-          ...settings.receiptSettings,
-          ...savedSettings.receiptSettings,
-        };
-      }
-    } catch (error) {
-      logger.warn("Could not load settings, using defaults");
-    }
+    const settings = await loadSettings();
 
     // Override with options if provided
     if (options.receiptSettings) {
@@ -178,27 +131,8 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
 
-    // Helper function to format currency
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-      }).format(value || 0);
-    };
-
-    // Helper function to format date
-    const formatDate = (dateString) => {
-      if (!dateString) return "-";
-      const date = new Date(dateString);
-      return date.toLocaleDateString("id-ID", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    };
+    // Helper function to format date (for receipt, use formatDateTime)
+    const formatDate = formatDateTime;
 
     // Helper to add centered text
     const addCenteredText = (text, fontSize = 10, isBold = false) => {
@@ -531,25 +465,8 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
 
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-      }).format(value || 0);
-    };
-
-    const formatDate = (dateString) => {
-      if (!dateString) return "-";
-      const date = new Date(dateString);
-      return date.toLocaleDateString("id-ID", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    };
+    // Use format helpers from imports at top
+    const formatDate = formatDateTime;
 
     const addCenteredText = (text, fontSize = 10, isBold = false) => {
       doc.setFontSize(fontSize);
@@ -838,118 +755,10 @@ function setupReceiptHandlers() {
 
         // If printer name is provided, print directly to that printer
         if (printerName) {
-          try {
-            // Try using pdf-to-printer library first (better for direct printing)
-            const ptp = require("pdf-to-printer");
-
-            await ptp.print(result.filePath, {
-              printer: printerName,
-              silent: silent,
-            });
-
-            logger.info(`Receipt printed to printer: ${printerName}`);
-            return {
-              success: true,
-              filePath: result.filePath,
-              printer: printerName,
-            };
-          } catch (ptpError) {
-            // Fallback: Use Electron's webContents.print() method
-            logger.warn(
-              "pdf-to-printer failed, trying Electron print method:",
-              ptpError,
-            );
-
-            try {
-              const { BrowserWindow } = require("electron");
-
-              // Create a hidden window to load and print the PDF
-              const printWindow = new BrowserWindow({
-                show: false,
-                webPreferences: {
-                  nodeIntegration: false,
-                  contextIsolation: true,
-                  plugins: true, // Enable plugins for PDF support
-                },
-              });
-
-              try {
-                // Load PDF file using file:// protocol
-                const filePath = result.filePath.replace(/\\/g, "/");
-                await printWindow.loadURL(`file://${filePath}`);
-
-                // Wait for PDF to load
-                await new Promise((resolve, reject) => {
-                  const timeout = setTimeout(() => {
-                    resolve(); // Resolve even on timeout to continue
-                  }, 3000);
-
-                  printWindow.webContents.once("did-finish-load", () => {
-                    clearTimeout(timeout);
-                    setTimeout(resolve, 1000); // Give PDF viewer time to render
-                  });
-                });
-
-                // Print to specific printer using Electron's print API
-                return new Promise((resolve, reject) => {
-                  printWindow.webContents.print(
-                    {
-                      silent: silent,
-                      printBackground: true,
-                      deviceName: printerName,
-                    },
-                    (success, errorType) => {
-                      // Close print window after printing
-                      setTimeout(() => {
-                        if (!printWindow.isDestroyed()) {
-                          printWindow.close();
-                        }
-                      }, 1000);
-
-                      if (success) {
-                        logger.info(
-                          `Receipt printed to printer: ${printerName}`,
-                        );
-                        resolve({
-                          success: true,
-                          filePath: result.filePath,
-                          printer: printerName,
-                        });
-                      } else {
-                        logger.error(`Print failed: ${errorType}`);
-                        reject(
-                          new Error(
-                            `Gagal mencetak: ${errorType || "Unknown error"}`,
-                          ),
-                        );
-                      }
-                    },
-                  );
-                });
-              } catch (printError) {
-                if (!printWindow.isDestroyed()) {
-                  printWindow.close();
-                }
-                throw printError;
-              }
-            } catch (electronPrintError) {
-              logger.error(
-                "Electron print method also failed:",
-                electronPrintError,
-              );
-              // Final fallback: open PDF viewer
-              const { shell } = require("electron");
-              await shell.openPath(result.filePath);
-              throw new Error(
-                `Gagal mencetak ke printer ${printerName}. PDF dibuka di viewer untuk print manual.`,
-              );
-            }
-          }
+          return await printPDF(result.filePath, printerName, silent);
         } else {
           // No printer specified, open PDF in default viewer
-          const { shell } = require("electron");
-          await shell.openPath(result.filePath);
-          return { success: true, filePath: result.filePath };
+          return await openPDF(result.filePath);
         }
       } catch (error) {
         logger.error("Error printing receipt:", error);

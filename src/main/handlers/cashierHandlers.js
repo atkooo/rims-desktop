@@ -15,6 +15,63 @@ function generateSessionCode() {
   return `CSH${year}${month}${day}${random}`;
 }
 
+/**
+ * Calculate expected balance for cashier session
+ */
+async function calculateExpectedBalance(session) {
+  // Try using cashier_session_id (more accurate)
+  const salesResult = await database.queryOne(
+    `SELECT 
+      COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+    FROM sales_transactions st
+    LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+    WHERE st.cashier_session_id = ?`,
+    [session.id],
+  );
+
+  const rentalResult = await database.queryOne(
+    `SELECT 
+      COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+    FROM rental_transactions rt
+    LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+    WHERE rt.cashier_session_id = ?`,
+    [session.id],
+  );
+
+  let cashSales = Number(salesResult?.cash_sales || 0);
+  let cashRentals = Number(rentalResult?.cash_rentals || 0);
+
+  // Fallback to date-based if no transactions linked
+  if (cashSales === 0 && cashRentals === 0) {
+    const salesResultFallback = await database.queryOne(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+      FROM sales_transactions st
+      LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+      WHERE st.user_id = ? 
+        AND st.sale_date >= date(?) 
+        AND st.sale_date <= date('now', '+1 day')`,
+      [session.user_id, session.opening_date],
+    );
+
+    const rentalResultFallback = await database.queryOne(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+      FROM rental_transactions rt
+      LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+      WHERE rt.user_id = ? 
+        AND rt.rental_date >= date(?) 
+        AND rt.rental_date <= date('now', '+1 day')`,
+      [session.user_id, session.opening_date],
+    );
+
+    cashSales = Number(salesResultFallback?.cash_sales || 0);
+    cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
+  }
+
+  return Number(session.opening_balance) + cashSales + cashRentals;
+}
+
 function setupCashierHandlers() {
   // Get current open session
   ipcMain.handle("cashier:getCurrentSession", async (event, userId) => {
@@ -46,72 +103,7 @@ function setupCashierHandlers() {
       );
 
       if (session) {
-        // Calculate expected balance from payments linked to transactions in this cashier session
-        // First try using cashier_session_id (more accurate)
-        const salesResult = await database.queryOne(
-          `SELECT 
-            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
-          FROM sales_transactions st
-          LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-          WHERE st.cashier_session_id = ?
-          `,
-          [session.id],
-        );
-
-        const rentalResult = await database.queryOne(
-          `SELECT 
-            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
-          FROM rental_transactions rt
-          LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-          WHERE rt.cashier_session_id = ?
-          `,
-          [session.id],
-        );
-
-        // If no transactions found with cashier_session_id, fallback to date-based calculation
-        const totalCashSales = Number(salesResult?.cash_sales || 0);
-        const totalCashRentals = Number(rentalResult?.cash_rentals || 0);
-
-        // Fallback: if no transactions linked, use date-based calculation
-        if (totalCashSales === 0 && totalCashRentals === 0) {
-          const salesResultFallback = await database.queryOne(
-            `SELECT 
-              COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
-            FROM sales_transactions st
-            LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-            WHERE st.user_id = ? 
-              AND st.sale_date >= date(?)
-              AND st.sale_date <= date('now', '+1 day')
-            `,
-            [userId, session.opening_date],
-          );
-
-          const rentalResultFallback = await database.queryOne(
-            `SELECT 
-              COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
-            FROM rental_transactions rt
-            LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-            WHERE rt.user_id = ? 
-              AND rt.rental_date >= date(?)
-              AND rt.rental_date <= date('now', '+1 day')
-            `,
-            [userId, session.opening_date],
-          );
-
-          const cashSales = Number(salesResultFallback?.cash_sales || 0);
-          const cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
-          const expectedBalance =
-            Number(session.opening_balance) + cashSales + cashRentals;
-
-          return {
-            ...session,
-            expected_balance: expectedBalance,
-          };
-        }
-
-        const expectedBalance =
-          Number(session.opening_balance) + totalCashSales + totalCashRentals;
-
+        const expectedBalance = await calculateExpectedBalance(session);
         return {
           ...session,
           expected_balance: expectedBalance,
@@ -297,58 +289,7 @@ function setupCashierHandlers() {
         throw new Error("Sesi kasir tidak ditemukan atau sudah ditutup");
       }
 
-      // Calculate expected balance using cashier_session_id (more accurate)
-      const salesResult = await database.queryOne(
-        `SELECT 
-          COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
-        FROM sales_transactions st
-        LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-        WHERE st.cashier_session_id = ?`,
-        [session.id],
-      );
-
-      const rentalResult = await database.queryOne(
-        `SELECT 
-          COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
-        FROM rental_transactions rt
-        LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-        WHERE rt.cashier_session_id = ?`,
-        [session.id],
-      );
-
-      // Fallback to date-based if no transactions linked
-      let cashSales = Number(salesResult?.cash_sales || 0);
-      let cashRentals = Number(rentalResult?.cash_rentals || 0);
-
-      if (cashSales === 0 && cashRentals === 0) {
-        const salesResultFallback = await database.queryOne(
-          `SELECT 
-            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
-          FROM sales_transactions st
-          LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
-          WHERE st.user_id = ? 
-            AND st.sale_date >= date(?) 
-            AND st.sale_date <= date('now', '+1 day')`,
-          [session.user_id, session.opening_date],
-        );
-
-        const rentalResultFallback = await database.queryOne(
-          `SELECT 
-            COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
-          FROM rental_transactions rt
-          LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
-          WHERE rt.user_id = ? 
-            AND rt.rental_date >= date(?) 
-            AND rt.rental_date <= date('now', '+1 day')`,
-          [session.user_id, session.opening_date],
-        );
-
-        cashSales = Number(salesResultFallback?.cash_sales || 0);
-        cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
-      }
-
-      const expectedBalance =
-        Number(session.opening_balance) + cashSales + cashRentals;
+      const expectedBalance = await calculateExpectedBalance(session);
       const difference = Number(actualBalance) - expectedBalance;
 
       await database.transaction(async () => {

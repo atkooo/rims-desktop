@@ -1,19 +1,11 @@
 const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
-const { logActivity } = require("../helpers/activity");
+const {
+  logActivity,
+  getCurrentUserSafely,
+} = require("../helpers/activity");
 const { scryptHash } = require("../auth");
-
-// Helper function to get current user safely
-function getCurrentUserSafely() {
-  try {
-    const { getCurrentUser } = require("../auth");
-    return getCurrentUser();
-  } catch (error) {
-    logger.warn("Error getting current user for activity log:", error);
-    return null;
-  }
-}
 
 function setupUserHandlers() {
   // Get user by ID
