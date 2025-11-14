@@ -70,9 +70,11 @@ function setupReportHandlers() {
              code,
              name,
              stock_quantity,
-             min_stock_alert
+             min_stock_alert,
+             type,
+             category_name
       FROM v_stock_alerts
-      ORDER BY stock_quantity ASC
+      ORDER BY stock_quantity ASC, name ASC
     `,
     "stock alerts",
   );

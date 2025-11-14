@@ -41,7 +41,7 @@
           :columns="columns"
           :rows="alerts"
           :loading="loading"
-          :searchable-keys="['code', 'name']"
+          :searchable-keys="['code', 'name', 'category_name']"
           row-key="id"
           default-page-size="10"
         />
@@ -65,8 +65,24 @@ export default {
     const error = ref("");
 
     const columns = [
-      { key: "code", label: "Kode Item", sortable: true },
-      { key: "name", label: "Nama Item", sortable: true },
+      { key: "code", label: "Kode", sortable: true },
+      { key: "name", label: "Nama", sortable: true },
+      {
+        key: "type",
+        label: "Tipe",
+        sortable: true,
+        format: (value) => {
+          if (value === "item") return "Item";
+          if (value === "accessory") return "Aksesoris";
+          return value;
+        },
+      },
+      {
+        key: "category_name",
+        label: "Kategori",
+        sortable: true,
+        format: (value) => value || "-",
+      },
       {
         key: "stock_quantity",
         label: "Stok Saat Ini",

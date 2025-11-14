@@ -46,17 +46,34 @@ SELECT
 FROM sales_transactions st
 GROUP BY date(st.sale_date);
 
--- Low stock alerts
+-- Low stock alerts (items and accessories)
 CREATE VIEW IF NOT EXISTS v_stock_alerts AS
 SELECT
   i.id,
   i.code,
   i.name,
   i.stock_quantity,
-  i.min_stock_alert
+  i.min_stock_alert,
+  'item' AS type,
+  c.name AS category_name
 FROM items i
+LEFT JOIN categories c ON c.id = i.category_id
 WHERE i.is_active = 1
-  AND i.stock_quantity <= i.min_stock_alert;
+  AND i.stock_quantity <= i.min_stock_alert
+  AND i.min_stock_alert > 0
+UNION ALL
+SELECT
+  a.id,
+  a.code,
+  a.name,
+  a.stock_quantity,
+  a.min_stock_alert,
+  'accessory' AS type,
+  'Aksesoris' AS category_name
+FROM accessories a
+WHERE a.is_active = 1
+  AND a.stock_quantity <= a.min_stock_alert
+  AND a.min_stock_alert > 0;
 
 -- Top customers by total transactions (rentals + sales)
 CREATE VIEW IF NOT EXISTS v_top_customers AS
