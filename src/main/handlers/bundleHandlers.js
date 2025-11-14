@@ -46,13 +46,7 @@ async function validateDiscountGroupId(discountGroupId) {
   return id;
 }
 
-async function buildPayload(raw) {
-  const stockQty = Math.max(0, toInteger(raw.stock_quantity));
-  const requestedAvailable =
-    raw.available_quantity === undefined || raw.available_quantity === ""
-      ? stockQty
-      : Math.max(0, toInteger(raw.available_quantity));
-
+async function buildPayload(raw, isEdit = false) {
   // Validate discount_group_id if provided
   const discountGroupId = await validateDiscountGroupId(
     raw.discount_group_id,
@@ -62,18 +56,26 @@ async function buildPayload(raw) {
   const { normalizeCode } = require("../helpers/codeUtils");
   const code = normalizeCode(raw.code, raw.name, "BND");
 
-  return {
+  const payload = {
     code: code,
     name: (raw.name ?? "").toString().trim(),
     description: (raw.description ?? "").toString().trim(),
     bundle_type: sanitizeBundleType(raw.bundle_type),
     price: toNumber(raw.price),
     rental_price_per_day: toNumber(raw.rental_price_per_day),
-    stock_quantity: stockQty,
-    available_quantity: sanitizeAvailable(stockQty, requestedAvailable),
     discount_group_id: discountGroupId,
     is_active: raw.is_active ? 1 : 0,
   };
+
+  // Stok selalu 0 saat create, tidak bisa diubah dari form
+  // Stok hanya bisa diubah melalui manajemen stok
+  if (!isEdit) {
+    payload.stock_quantity = 0;
+    payload.available_quantity = 0;
+  }
+  // Jika edit, jangan set stock_quantity dan available_quantity
+
+  return payload;
 }
 
 function validatePayload(payload) {
@@ -176,7 +178,7 @@ const fetchDetailRow = (id) => database.queryOne(detailSelectSql, [id]);
 function setupBundleHandlers() {
   ipcMain.handle("bundles:create", async (_event, rawPayload = {}) => {
     try {
-      const payload = await buildPayload(rawPayload);
+      const payload = await buildPayload(rawPayload, false); // Create: force stok = 0
       validatePayload(payload);
 
       const now = new Date().toISOString();
@@ -232,13 +234,22 @@ function setupBundleHandlers() {
       if (!existing) throw new Error("Paket tidak ditemukan");
 
       // Merge with existing data and build payload
-      const payload = await buildPayload({ ...existing, ...rawPayload });
+      const payload = await buildPayload({ ...existing, ...rawPayload }, true); // Edit: jangan ubah stok
 
       // Only validate when fields provided
       validatePayload(payload);
 
       const fields = [];
       const values = [];
+
+      // Stok tidak bisa diubah dari form edit
+      // Hapus stock_quantity dan available_quantity jika ada di rawPayload
+      if (rawPayload.stock_quantity !== undefined) {
+        logger.warn(`Ignoring stock_quantity update for bundle ${id} - stok hanya bisa diubah melalui manajemen stok`);
+      }
+      if (rawPayload.available_quantity !== undefined) {
+        logger.warn(`Ignoring available_quantity update for bundle ${id} - stok hanya bisa diubah melalui manajemen stok`);
+      }
 
       // Process discount_group_id separately
       if (rawPayload.discount_group_id !== undefined) {
@@ -249,10 +260,12 @@ function setupBundleHandlers() {
         values.push(discountGroupId);
       }
 
-      // Process other fields
+      // Process other fields (exclude stock fields)
       Object.entries(rawPayload).forEach(([key, value]) => {
         if (
           key !== "discount_group_id" &&
+          key !== "stock_quantity" &&
+          key !== "available_quantity" &&
           value !== undefined &&
           value !== null
         ) {

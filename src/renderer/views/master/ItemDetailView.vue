@@ -129,8 +129,20 @@
           </div>
           <div class="detail-item">
             <label>Stok Terpakai</label>
-            <div class="detail-value">
-              {{ (item.stock_quantity || 0) - (item.available_quantity || 0) }}
+            <div 
+              class="detail-value"
+              :class="{
+                'text-danger': (item.stock_quantity || 0) < (item.available_quantity || 0)
+              }"
+            >
+              {{ Math.max(0, (item.stock_quantity || 0) - (item.available_quantity || 0)) }}
+              <span 
+                v-if="(item.stock_quantity || 0) < (item.available_quantity || 0)"
+                class="text-danger"
+                style="font-size: 0.85rem; display: block; margin-top: 0.25rem;"
+              >
+                ⚠️ Data tidak konsisten
+              </span>
             </div>
           </div>
         </div>

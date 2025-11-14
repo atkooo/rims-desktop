@@ -54,20 +54,16 @@
             {{ errors.rental_price_per_day }}
           </div>
         </div>
-        <FormInput
-          id="stockQty"
-          label="Total Stok"
-          type="number"
-          v-model="form.stock_quantity"
-          :error="errors.stock_quantity"
-        />
-        <FormInput
-          id="availableQty"
-          label="Stok Tersedia"
-          type="number"
-          v-model="form.available_quantity"
-          :error="errors.available_quantity"
-        />
+        <!-- Informasi Stok: Stok diatur melalui Manajemen Stok -->
+        <div class="form-group grid-span-2">
+          <div class="info-box">
+            <small>
+              <strong>Catatan:</strong> Stok paket diatur melalui menu 
+              <strong>Transaksi → Pergerakan Stok</strong>. 
+              Stok awal akan otomatis diset ke 0.
+            </small>
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-label">Grup Diskon (Opsional)</label>
           <select v-model.number="form.discount_group_id" class="form-select">
@@ -203,16 +199,7 @@ export default {
         validationErrors.bundle_type = "Tipe tidak valid";
       }
 
-      const stockQty = Math.max(0, toInteger(form.value.stock_quantity));
-      const availableQty = Math.max(
-        0,
-        toInteger(form.value.available_quantity),
-      );
-
-      if (availableQty > stockQty) {
-        validationErrors.available_quantity =
-          "Stok tersedia tidak boleh melebihi total stok";
-      }
+      // Stok selalu 0 saat create/edit, akan diatur melalui manajemen stok
 
       ["price", "rental_price_per_day"].forEach((field) => {
         if (toNumber(form.value[field]) < 0) {
@@ -225,27 +212,26 @@ export default {
     };
 
     const buildPayload = () => {
-      const stockQty = Math.max(0, toInteger(form.value.stock_quantity));
-      const requestedAvailable =
-        form.value.available_quantity === "" ||
-        form.value.available_quantity === null ||
-        form.value.available_quantity === undefined
-          ? stockQty
-          : Math.max(0, toInteger(form.value.available_quantity));
-      const availableQty = Math.min(stockQty, requestedAvailable);
-
-      return {
+      const payload = {
         code: form.value.code.trim(),
         name: form.value.name.trim(),
         bundle_type: form.value.bundle_type,
         description: form.value.description?.trim() ?? "",
         price: toNumber(form.value.price),
         rental_price_per_day: toNumber(form.value.rental_price_per_day),
-        stock_quantity: stockQty,
-        available_quantity: availableQty,
         discount_group_id: form.value.discount_group_id || null,
         is_active: !!form.value.is_active,
       };
+      
+      // Stok selalu 0 saat create, tidak bisa diubah dari form
+      // Stok hanya bisa diubah melalui manajemen stok
+      if (!isEdit.value) {
+        payload.stock_quantity = 0;
+        payload.available_quantity = 0;
+      }
+      // Jika edit, jangan kirim stock_quantity dan available_quantity
+      
+      return payload;
     };
 
     const handleSubmit = async () => {
@@ -282,15 +268,7 @@ export default {
       },
     );
 
-    watch(
-      () => form.value.stock_quantity,
-      (qty) => {
-        const stockQty = Math.max(0, toInteger(qty));
-        if (toInteger(form.value.available_quantity) > stockQty) {
-          form.value.available_quantity = stockQty.toString();
-        }
-      },
-    );
+    // Watch untuk stock_quantity dihapus karena stok tidak bisa diubah dari form
 
     const loadDiscountGroups = async () => {
       try {
@@ -382,5 +360,21 @@ export default {
 .submit-error {
   color: #b91c1c;
   font-size: 0.9rem;
+}
+
+/* Info box untuk catatan stok */
+.info-box {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  grid-column: span 2;
+}
+
+.info-box small {
+  color: #0369a1;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 </style>

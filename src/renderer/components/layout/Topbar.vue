@@ -37,8 +37,8 @@
           ref="notificationButtonRef"
         >
           <Icon name="bell" :size="20" />
-          <span v-if="pendingTransactions" class="icon-badge">
-            {{ pendingTransactions }}
+          <span v-if="totalNotifications > 0" class="icon-badge">
+            {{ totalNotifications }}
           </span>
         </button>
         <Teleport to="body">
@@ -57,8 +57,8 @@
                 <button
                   type="button"
                   class="notification-refresh-btn"
-                  @click="refreshTransactions"
-                  :disabled="transactionStore.loading"
+                  @click="refreshAllNotifications"
+                  :disabled="transactionStore.loading || stockAlertsLoading"
                   aria-label="Refresh"
                 >
                   <Icon name="refresh-cw" :size="16" />
@@ -66,13 +66,13 @@
               </div>
               <div class="notification-menu-content">
                 <div
-                  v-if="transactionStore.loading"
+                  v-if="transactionStore.loading || stockAlertsLoading"
                   class="notification-loading"
                 >
                   Memuat...
                 </div>
                 <div
-                  v-else-if="pendingTransactionsList.length === 0"
+                  v-else-if="allNotificationsList.length === 0"
                   class="notification-empty"
                 >
                   <Icon name="check-circle" :size="24" />
@@ -80,163 +80,47 @@
                 </div>
                 <div v-else class="notification-list">
                   <button
-                    v-for="transaction in pendingTransactionsList"
-                    :key="transaction.id"
+                    v-for="notification in allNotificationsList"
+                    :key="`${notification.type}-${notification.id}`"
                     type="button"
                     class="notification-item"
-                    @click="handleNotificationClick(transaction)"
+                    :class="`notification-item--${notification.type}`"
+                    @click="handleNotificationItemClick(notification)"
                   >
                     <div class="notification-item-icon">
                       <Icon
-                        :name="
-                          transaction.transactionType === 'RENTAL'
-                            ? 'package'
-                            : 'shopping-cart'
-                        "
+                        :name="getNotificationIcon(notification)"
                         :size="16"
                       />
                     </div>
                     <div class="notification-item-content">
-                      <div class="notification-item-title">
-                        {{
-                          transaction.transactionType === "RENTAL"
-                            ? "Transaksi Rental"
-                            : "Transaksi Penjualan"
-                        }}
+                      <div class="notification-item-header">
+                        <span class="notification-type-badge" :class="`notification-type--${notification.type}`">
+                          {{ getNotificationTypeLabel(notification.type) }}
+                        </span>
+                        <div class="notification-item-title">
+                          {{ getNotificationTitle(notification) }}
+                        </div>
                       </div>
                       <div class="notification-item-message">
-                        {{ transaction.customerName || "Tanpa nama" }} -
-                        {{ transaction.transaction_code }}
+                        {{ getNotificationMessage(notification) }}
                       </div>
                       <div class="notification-item-meta">
-                        {{ formatDate(transaction.transactionDate) }} •
-                        {{ formatCurrency(transaction.totalAmount) }}
+                        {{ getNotificationMeta(notification) }}
                       </div>
                     </div>
                   </button>
                 </div>
               </div>
-            </div>
-          </transition>
-        </Teleport>
-      </div>
-      <div class="payment-notification-shell" ref="paymentMenuRef">
-        <button
-          class="icon-btn"
-          type="button"
-          aria-label="Tagihan menunggu"
-          :aria-expanded="paymentMenuOpen"
-          @click="togglePaymentMenu"
-          ref="paymentButtonRef"
-        >
-          <Icon name="message" :size="20" />
-          <span v-if="awaitingPayments" class="icon-badge">
-            {{ awaitingPayments }}
-          </span>
-        </button>
-        <Teleport to="body">
-          <transition name="fade-scale">
-            <div
-              v-if="paymentMenuOpen"
-              class="payment-notification-menu"
-              ref="paymentMenuDropdownRef"
-              :style="{
-                top: paymentMenuPosition.top + 'px',
-                left: paymentMenuPosition.left + 'px',
-              }"
-            >
-              <div class="payment-notification-menu-header">
-                <h3>Tagihan Menunggu</h3>
+              <div v-if="allNotificationsList.length > 0" class="notification-menu-footer">
                 <button
+                  v-if="stockAlertsList.length > 0"
                   type="button"
-                  class="payment-refresh-btn"
-                  @click="refreshTransactions"
-                  :disabled="transactionStore.loading"
-                  aria-label="Refresh"
+                  class="notification-view-all"
+                  @click="handleViewAllStockAlerts"
                 >
-                  <Icon name="refresh-cw" :size="16" />
+                  Lihat Semua Peringatan Stok
                 </button>
-              </div>
-              <div class="payment-notification-menu-content">
-                <div v-if="transactionStore.loading" class="payment-loading">
-                  Memuat...
-                </div>
-                <div
-                  v-else-if="awaitingPaymentsList.length === 0"
-                  class="payment-empty"
-                >
-                  <Icon name="check-circle" :size="24" />
-                  <p>Tidak ada tagihan menunggu</p>
-                </div>
-                <div v-else class="payment-list">
-                  <button
-                    v-for="transaction in awaitingPaymentsList"
-                    :key="transaction.id"
-                    type="button"
-                    class="payment-item"
-                    @click="handlePaymentClick(transaction)"
-                  >
-                    <div class="payment-item-icon">
-                      <Icon name="credit-card" :size="16" />
-                    </div>
-                    <div class="payment-item-content">
-                      <div class="payment-item-title">
-                        {{
-                          transaction.transactionType === "RENTAL"
-                            ? "Transaksi Rental"
-                            : "Transaksi Penjualan"
-                        }}
-                      </div>
-                      <div class="payment-item-message">
-                        {{ transaction.customerName || "Tanpa nama" }} -
-                        {{ transaction.transaction_code }}
-                      </div>
-                      <div class="payment-item-meta">
-                        <span class="payment-amount">
-                          Total: {{ formatCurrency(transaction.totalAmount) }}
-                        </span>
-                        <span
-                          v-if="transaction.paid_amount"
-                          class="payment-paid"
-                        >
-                          Dibayar: {{ formatCurrency(transaction.paid_amount) }}
-                        </span>
-                        <span
-                          v-if="
-                            transaction.totalAmount &&
-                            transaction.paid_amount &&
-                            transaction.totalAmount > transaction.paid_amount
-                          "
-                          class="payment-remaining"
-                        >
-                          Sisa:
-                          {{
-                            formatCurrency(
-                              transaction.totalAmount - transaction.paid_amount,
-                            )
-                          }}
-                        </span>
-                      </div>
-                      <div class="payment-item-status">
-                        <span
-                          :class="[
-                            'payment-status-badge',
-                            `payment-status--${getPaymentStatusClass(
-                              transaction.payment_status,
-                            )}`,
-                          ]"
-                        >
-                          {{
-                            getPaymentStatusLabel(transaction.payment_status)
-                          }}
-                        </span>
-                        <span class="payment-date">
-                          {{ formatDate(transaction.transactionDate) }}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                </div>
               </div>
             </div>
           </transition>
@@ -303,6 +187,8 @@ import {
 import { useTransactionStore } from "@/store/transactions";
 import { eventBus } from "@/utils/eventBus";
 import { TRANSACTION_STATUS } from "@shared/constants";
+import { fetchStockAlerts } from "@/services/reports";
+import { fetchItemsWithStock } from "@/services/reports";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -318,6 +204,7 @@ const searchBusy = ref(false);
 const transactionStore = useTransactionStore();
 let storageListener = null;
 let searchTimeout = null;
+let stockAlertInterval = null;
 const profileMenuOpen = ref(false);
 const profileMenuRef = ref(null);
 const profileMenuDropdownRef = ref(null);
@@ -332,12 +219,8 @@ const notificationButtonRef = ref(null);
 const notificationMenuPosition = ref({ top: 0, left: 0 });
 let notificationListenersAttached = false;
 
-const paymentMenuOpen = ref(false);
-const paymentMenuRef = ref(null);
-const paymentMenuDropdownRef = ref(null);
-const paymentButtonRef = ref(null);
-const paymentMenuPosition = ref({ top: 0, left: 0 });
-let paymentListenersAttached = false;
+const stockAlertsList = ref([]);
+const stockAlertsLoading = ref(false);
 
 const pendingTransactions = computed(() => {
   return (transactionStore.transactions || []).filter(
@@ -381,6 +264,53 @@ const awaitingPaymentsList = computed(() => {
     });
 });
 
+const stockAlertsCount = computed(() => {
+  return stockAlertsList.value.length;
+});
+
+const totalNotifications = computed(() => {
+  return pendingTransactions.value + awaitingPayments.value + stockAlertsCount.value;
+});
+
+const allNotificationsList = computed(() => {
+  const list = [];
+  
+  // Add pending transactions
+  pendingTransactionsList.value.forEach(transaction => {
+    list.push({
+      ...transaction,
+      notificationType: 'transaction',
+      type: 'transaction'
+    });
+  });
+  
+  // Add awaiting payments
+  awaitingPaymentsList.value.forEach(transaction => {
+    list.push({
+      ...transaction,
+      notificationType: 'payment',
+      type: 'payment'
+    });
+  });
+  
+  // Add stock alerts
+  stockAlertsList.value.forEach(alert => {
+    list.push({
+      ...alert,
+      notificationType: 'stock',
+      type: 'stock'
+    });
+  });
+  
+  // Sort by priority: stock alerts first, then payments, then transactions
+  list.sort((a, b) => {
+    const priority = { stock: 0, payment: 1, transaction: 2 };
+    return priority[a.type] - priority[b.type];
+  });
+  
+  return list.slice(0, 15); // Limit to 15 items
+});
+
 const roleLabel = computed(() => currentUser.value?.role || "User");
 
 const initials = computed(() => {
@@ -406,6 +336,50 @@ const handleSearch = () => {
 const refreshTransactions = () => {
   if (!transactionStore.loading) {
     transactionStore.fetchTransactions().catch(() => {});
+  }
+};
+
+const refreshAllNotifications = () => {
+  refreshTransactions();
+  refreshStockAlerts();
+};
+
+const refreshStockAlerts = async () => {
+  stockAlertsLoading.value = true;
+  try {
+    // Fetch all items with stock
+    const items = await fetchItemsWithStock();
+    
+    // Filter items that need attention
+    const alerts = items.filter((item) => {
+      // Item dengan stok habis (available_quantity = 0)
+      if (item.available_quantity === 0) return true;
+      
+      // Item dengan stok rendah (available_quantity <= min_stock_alert dan min_stock_alert > 0)
+      if ((item.min_stock_alert || 0) > 0) {
+        if (item.available_quantity <= item.min_stock_alert) return true;
+      }
+      
+      return false;
+    });
+    
+    // Sort: habis dulu, lalu rendah
+    alerts.sort((a, b) => {
+      if (a.available_quantity === 0 && b.available_quantity > 0) return -1;
+      if (a.available_quantity > 0 && b.available_quantity === 0) return 1;
+      return (a.available_quantity || 0) - (b.available_quantity || 0);
+    });
+    
+    // Add type field and limit to 10 items
+    stockAlertsList.value = alerts.slice(0, 10).map(item => ({
+      ...item,
+      type: 'item' // All items from fetchItemsWithStock are items
+    }));
+  } catch (err) {
+    console.error("Error fetching stock alerts:", err);
+    stockAlertsList.value = [];
+  } finally {
+    stockAlertsLoading.value = false;
   }
 };
 
@@ -439,37 +413,91 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
-const handleNotificationClick = (transaction) => {
+const handleNotificationItemClick = (notification) => {
   closeNotificationMenu();
-  if (transaction.transactionType === "RENTAL") {
-    router.push("/transactions/rentals");
-  } else {
-    router.push("/transactions/sales");
+  
+  if (notification.type === 'stock') {
+    router.push(`/master/items/${notification.id}`);
+  } else if (notification.type === 'payment' || notification.type === 'transaction') {
+    if (notification.transactionType === "RENTAL") {
+      router.push("/transactions/rentals");
+    } else {
+      router.push("/transactions/sales");
+    }
   }
 };
 
-const handlePaymentClick = (transaction) => {
-  closePaymentMenu();
-  if (transaction.transactionType === "RENTAL") {
-    router.push("/transactions/rentals");
+const getNotificationIcon = (notification) => {
+  if (notification.type === 'stock') {
+    return notification.available_quantity === 0 ? 'x-circle' : 'alert-circle';
+  } else if (notification.type === 'payment') {
+    return 'credit-card';
   } else {
-    router.push("/transactions/sales");
+    return notification.transactionType === 'RENTAL' ? 'package' : 'shopping-cart';
   }
 };
 
-const getPaymentStatusLabel = (status) => {
-  const statusLower = (status || "").toString().toLowerCase();
-  if (statusLower === "unpaid") return "Belum Dibayar";
-  if (statusLower === "pending") return "Menunggu";
-  return "Belum Dibayar";
+const getNotificationTypeLabel = (type) => {
+  const labels = {
+    stock: 'Peringatan Stok',
+    payment: 'Tagihan',
+    transaction: 'Transaksi'
+  };
+  return labels[type] || 'Notifikasi';
 };
 
-const getPaymentStatusClass = (status) => {
-  const statusLower = (status || "").toString().toLowerCase();
-  if (statusLower === "unpaid") return "unpaid";
-  if (statusLower === "pending") return "pending";
-  return "unpaid";
+const getNotificationTitle = (notification) => {
+  if (notification.type === 'stock') {
+    return notification.name;
+  } else {
+    return notification.transactionType === "RENTAL"
+      ? "Transaksi Rental"
+      : "Transaksi Penjualan";
+  }
 };
+
+const getNotificationMessage = (notification) => {
+  if (notification.type === 'stock') {
+    return `${notification.code} • ${notification.category_name || 'Tidak ada kategori'}`;
+  } else {
+    return `${notification.customerName || "Tanpa nama"} - ${notification.transaction_code}`;
+  }
+};
+
+const getNotificationMeta = (notification) => {
+  if (notification.type === 'stock') {
+    const parts = [];
+    parts.push(`Stok: ${notification.stock_quantity || 0}`);
+    if (notification.min_stock_alert > 0) {
+      parts.push(`Batas: ${notification.min_stock_alert}`);
+    }
+    if (notification.available_quantity === 0) {
+      parts.push('HABIS');
+    } else if (notification.min_stock_alert > 0 && notification.available_quantity <= notification.min_stock_alert) {
+      parts.push('RENDAH');
+    }
+    return parts.join(' • ');
+  } else if (notification.type === 'payment') {
+    const parts = [];
+    parts.push(`Total: ${formatCurrency(notification.totalAmount)}`);
+    if (notification.paid_amount) {
+      parts.push(`Dibayar: ${formatCurrency(notification.paid_amount)}`);
+    }
+    if (notification.totalAmount && notification.paid_amount && notification.totalAmount > notification.paid_amount) {
+      parts.push(`Sisa: ${formatCurrency(notification.totalAmount - notification.paid_amount)}`);
+    }
+    parts.push(formatDate(notification.transactionDate));
+    return parts.join(' • ');
+  } else {
+    return `${formatDate(notification.transactionDate)} • ${formatCurrency(notification.totalAmount)}`;
+  }
+};
+
+const handleViewAllStockAlerts = () => {
+  closeNotificationMenu();
+  router.push("/reports/items-with-stock");
+};
+
 
 const updateProfileMenuPosition = () => {
   const anchor = profileButtonRef.value;
@@ -498,18 +526,6 @@ const updateNotificationMenuPosition = () => {
   notificationMenuPosition.value = { top, left };
 };
 
-const updatePaymentMenuPosition = () => {
-  const anchor = paymentButtonRef.value;
-  if (!anchor) return;
-  const rect = anchor.getBoundingClientRect();
-  const dropdownWidth = paymentMenuDropdownRef.value?.offsetWidth || 400;
-  const padding = 16;
-  const desiredLeft = rect.right - dropdownWidth;
-  const maxLeft = window.innerWidth - dropdownWidth - padding;
-  const left = Math.max(padding, Math.min(desiredLeft, maxLeft));
-  const top = rect.bottom + 8;
-  paymentMenuPosition.value = { top, left };
-};
 
 const attachDropdownListeners = () => {
   if (dropdownListenersAttached) return;
@@ -539,19 +555,6 @@ const detachNotificationListeners = () => {
   window.removeEventListener("scroll", updateNotificationMenuPosition, true);
 };
 
-const attachPaymentListeners = () => {
-  if (paymentListenersAttached) return;
-  paymentListenersAttached = true;
-  window.addEventListener("resize", updatePaymentMenuPosition);
-  window.addEventListener("scroll", updatePaymentMenuPosition, true);
-};
-
-const detachPaymentListeners = () => {
-  if (!paymentListenersAttached) return;
-  paymentListenersAttached = false;
-  window.removeEventListener("resize", updatePaymentMenuPosition);
-  window.removeEventListener("scroll", updatePaymentMenuPosition, true);
-};
 
 const toggleProfileMenu = () => {
   profileMenuOpen.value = !profileMenuOpen.value;
@@ -568,26 +571,12 @@ const toggleNotificationMenu = () => {
   notificationMenuOpen.value = !notificationMenuOpen.value;
   if (notificationMenuOpen.value) {
     profileMenuOpen.value = false;
-    paymentMenuOpen.value = false;
-    refreshTransactions();
+    refreshAllNotifications();
   }
 };
 
 const closeNotificationMenu = () => {
   notificationMenuOpen.value = false;
-};
-
-const togglePaymentMenu = () => {
-  paymentMenuOpen.value = !paymentMenuOpen.value;
-  if (paymentMenuOpen.value) {
-    profileMenuOpen.value = false;
-    notificationMenuOpen.value = false;
-    refreshTransactions();
-  }
-};
-
-const closePaymentMenu = () => {
-  paymentMenuOpen.value = false;
 };
 
 const goToProfile = () => {
@@ -654,16 +643,6 @@ const handleClickOutside = (event) => {
     return;
   }
   notificationMenuOpen.value = false;
-
-  const clickedPaymentTrigger =
-    paymentMenuRef.value && paymentMenuRef.value.contains(event.target);
-  const clickedPaymentDropdown =
-    paymentMenuDropdownRef.value &&
-    paymentMenuDropdownRef.value.contains(event.target);
-  if (clickedPaymentTrigger || clickedPaymentDropdown) {
-    return;
-  }
-  paymentMenuOpen.value = false;
 };
 
 onMounted(() => {
@@ -673,6 +652,13 @@ onMounted(() => {
   if (!transactionStore.transactions.length) {
     transactionStore.fetchTransactions().catch(() => {});
   }
+  // Load stock alerts on mount
+  refreshStockAlerts();
+  // Refresh stock alerts every 5 minutes
+  stockAlertInterval = setInterval(() => {
+    refreshStockAlerts();
+  }, 5 * 60 * 1000);
+  
   document.addEventListener("click", handleClickOutside);
 });
 
@@ -683,10 +669,12 @@ onBeforeUnmount(() => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
+  if (stockAlertInterval) {
+    clearInterval(stockAlertInterval);
+  }
   document.removeEventListener("click", handleClickOutside);
   detachDropdownListeners();
   detachNotificationListeners();
-  detachPaymentListeners();
 });
 
 watch(profileMenuOpen, async (isOpen) => {
@@ -709,15 +697,6 @@ watch(notificationMenuOpen, async (isOpen) => {
   }
 });
 
-watch(paymentMenuOpen, async (isOpen) => {
-  if (isOpen) {
-    await nextTick();
-    updatePaymentMenuPosition();
-    attachPaymentListeners();
-  } else {
-    detachPaymentListeners();
-  }
-});
 </script>
 
 <style>
@@ -1138,200 +1117,75 @@ watch(paymentMenuOpen, async (isOpen) => {
   color: #94a3b8;
 }
 
-.payment-notification-shell {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.payment-notification-menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 400px;
-  max-height: 500px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  box-shadow:
-    0 20px 45px rgba(15, 23, 42, 0.15),
-    0 2px 12px rgba(15, 23, 42, 0.05);
-  display: flex;
-  flex-direction: column;
-  z-index: 1200;
-  overflow: hidden;
-}
-
-.payment-notification-menu-header {
+.notification-item-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.payment-notification-menu-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.payment-refresh-btn {
-  border: none;
-  background: transparent;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.payment-refresh-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.payment-refresh-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.payment-notification-menu-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.payment-loading,
-.payment-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
-  color: #64748b;
-}
-
-.payment-empty p {
-  margin: 12px 0 0;
-  font-size: 14px;
-}
-
-.payment-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.payment-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  text-align: left;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.payment-item:last-child {
-  border-bottom: none;
-}
-
-.payment-item:hover {
-  background: #f8fafc;
-}
-
-.payment-item-icon {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #fef3c7;
-  color: #d97706;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.payment-item-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.payment-item-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
-}
-
-.payment-item-message {
-  font-size: 13px;
-  color: #475569;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.payment-item-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.payment-amount {
-  color: #0f172a;
-  font-weight: 500;
-}
-
-.payment-paid {
-  color: #059669;
-}
-
-.payment-remaining {
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.payment-item-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  margin-top: 4px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
-.payment-status-badge {
-  padding: 2px 8px;
+.notification-type-badge {
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
-.payment-status--unpaid {
+.notification-type--stock {
   background: #fee2e2;
   color: #dc2626;
 }
 
-.payment-status--pending {
+.notification-type--payment {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.notification-type--transaction {
   background: #dbeafe;
   color: #2563eb;
 }
 
-.payment-date {
-  font-size: 11px;
-  color: #94a3b8;
+.notification-item--stock .notification-item-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.notification-item--payment .notification-item-icon {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.notification-item--transaction .notification-item-icon {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.notification-menu-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.notification-view-all {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-view-all:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 /* Keep layout identical across window sizes; rely on horizontal scroll if space is tight. */

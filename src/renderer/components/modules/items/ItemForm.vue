@@ -60,7 +60,7 @@
           </div>
         </div>
 
-        <!-- Harga Jual & Harga Sewa (ditampilkan berdasarkan tipe item) -->
+        <!-- Harga Jual (ditampilkan berdasarkan tipe item) -->
         <div class="form-pair">
           <!-- Harga Jual: tampilkan jika SALE atau BOTH -->
           <div 
@@ -78,25 +78,6 @@
             />
             <div v-if="errors.sale_price" class="error-message">
               {{ errors.sale_price }}
-            </div>
-          </div>
-
-          <!-- Harga Sewa: tampilkan jika RENTAL atau BOTH -->
-          <div 
-            v-if="form.type === 'RENTAL' || form.type === 'BOTH'" 
-            class="form-group"
-          >
-            <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
-            <input
-              id="rentalPrice"
-              :value="formatNumberInput(form.rental_price_per_day)"
-              @input="handleRentalPriceInput"
-              type="text"
-              class="form-input"
-              :class="{ error: errors.rental_price_per_day }"
-            />
-            <div v-if="errors.rental_price_per_day" class="error-message">
-              {{ errors.rental_price_per_day }}
             </div>
           </div>
         </div>
@@ -169,37 +150,14 @@
           </div>
         </div>
 
-        <!-- Informasi Stok -->
-        <div class="form-pair">
-          <div class="form-group">
-            <label for="stockQuantity" class="form-label">Total Stok</label>
-            <input
-              id="stockQuantity"
-              type="number"
-              v-model.number="form.stock_quantity"
-              min="0"
-              class="form-input"
-              :class="{ error: errors.stock_quantity }"
-            />
-            <div v-if="errors.stock_quantity" class="error-message">
-              {{ errors.stock_quantity }}
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="availableQuantity" class="form-label">Stok Tersedia</label>
-            <input
-              id="availableQuantity"
-              type="number"
-              v-model.number="form.available_quantity"
-              min="0"
-              :max="form.stock_quantity || 0"
-              class="form-input"
-              :class="{ error: errors.available_quantity }"
-            />
-            <div v-if="errors.available_quantity" class="error-message">
-              {{ errors.available_quantity }}
-            </div>
+        <!-- Informasi Stok: Stok diatur melalui Manajemen Stok -->
+        <div class="form-group grid-span-2">
+          <div class="info-box">
+            <small>
+              <strong>Catatan:</strong> Stok item diatur melalui menu 
+              <strong>Stok & Gudang → Manajemen Stok</strong>. 
+              Stok awal akan otomatis diset ke 0.
+            </small>
           </div>
         </div>
       </div>
@@ -208,20 +166,34 @@
       <div v-if="form.type === 'RENTAL' || form.type === 'BOTH'" class="form-section">
         <h3>Informasi Rental</h3>
         <div class="form-grid-rental">
-          <FormInput
-            id="dailyRate"
-            label="Harga per Hari"
-            type="number"
-            v-model.number="form.dailyRate"
-            :error="errors.dailyRate"
-          />
-          <FormInput
-            id="weeklyRate"
-            label="Harga per Minggu"
-            type="number"
-            v-model.number="form.weeklyRate"
-            :error="errors.weeklyRate"
-          />
+          <div class="form-group">
+            <label for="dailyRate" class="form-label">Harga per Hari</label>
+            <input
+              id="dailyRate"
+              :value="formatNumberInput(form.dailyRate)"
+              @input="handleDailyRateInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.dailyRate }"
+            />
+            <div v-if="errors.dailyRate" class="error-message">
+              {{ errors.dailyRate }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="weeklyRate" class="form-label">Harga per Minggu</label>
+            <input
+              id="weeklyRate"
+              :value="formatNumberInput(form.weeklyRate)"
+              @input="handleWeeklyRateInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.weeklyRate }"
+            />
+            <div v-if="errors.weeklyRate" class="error-message">
+              {{ errors.weeklyRate }}
+            </div>
+          </div>
           <div class="form-group">
             <label for="deposit" class="form-label">Deposit</label>
             <input
@@ -317,8 +289,15 @@ export default {
     const handleSalePriceInput = createInputHandler(
       (value) => (form.value.sale_price = value)
     );
-    const handleRentalPriceInput = createInputHandler(
-      (value) => (form.value.rental_price_per_day = value)
+    const handleDailyRateInput = createInputHandler(
+      (value) => {
+        form.value.dailyRate = value;
+        // Sync dailyRate to rental_price_per_day for backend compatibility
+        form.value.rental_price_per_day = value;
+      }
+    );
+    const handleWeeklyRateInput = createInputHandler(
+      (value) => (form.value.weeklyRate = value)
     );
     const handleDepositInput = createInputHandler(
       (value) => (form.value.deposit = value)
@@ -344,9 +323,12 @@ export default {
             rental_price_per_day:
               props.editData.rental_price_per_day ?? 0,
             dailyRate:
-              props.editData.rental_price_per_day ??
               props.editData.dailyRate ??
+              props.editData.rental_price_per_day ??
               0,
+            weeklyRate: props.editData.weeklyRate ?? 0,
+            // Stok tidak bisa diubah dari form, tetap tampilkan nilai saat ini untuk info saja
+            // Tapi saat submit, akan di-ignore dan tidak di-update
             stock_quantity: props.editData.stock_quantity ?? 0,
             available_quantity: props.editData.available_quantity ?? 0,
             size_id:
@@ -378,19 +360,7 @@ export default {
       if (!form.value.category_id) e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       
-      // Validasi stok
-      const stockQty = Number(form.value.stock_quantity) || 0;
-      const availableQty = Number(form.value.available_quantity) || 0;
-      
-      if (stockQty < 0) {
-        e.stock_quantity = "Stok tidak boleh negatif";
-      }
-      if (availableQty < 0) {
-        e.available_quantity = "Stok tersedia tidak boleh negatif";
-      }
-      if (availableQty > stockQty) {
-        e.available_quantity = "Stok tersedia tidak boleh melebihi total stok";
-      }
+      // Stok selalu 0 saat create/edit, akan diatur melalui manajemen stok
       
       // Validasi berdasarkan tipe item
       if (form.value.type === "SALE" || form.value.type === "BOTH") {
@@ -399,8 +369,6 @@ export default {
       }
       
       if (form.value.type === "RENTAL" || form.value.type === "BOTH") {
-        if (!form.value.rental_price_per_day || form.value.rental_price_per_day <= 0)
-          e.rental_price_per_day = "Harga sewa per hari harus > 0";
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
           e.dailyRate = "Harga per hari harus > 0";
         if (!form.value.deposit || form.value.deposit <= 0)
@@ -415,9 +383,22 @@ export default {
       if (!validateForm()) return;
       loading.value = true;
       try {
+        // Hapus stock_quantity dan available_quantity dari payload
+        // Stok hanya bisa diubah melalui manajemen stok
+        const payload = { ...form.value };
+        if (!isEdit.value) {
+          // Saat create, force stok = 0
+          payload.stock_quantity = 0;
+          payload.available_quantity = 0;
+        } else {
+          // Saat edit, jangan kirim stok, biarkan tidak berubah
+          delete payload.stock_quantity;
+          delete payload.available_quantity;
+        }
+        
         if (isEdit.value)
-          await itemStore.updateItem(props.editData.id, form.value);
-        else await itemStore.addItem(form.value);
+          await itemStore.updateItem(props.editData.id, payload);
+        else await itemStore.addItem(payload);
         emit("saved");
         showDialog.value = false;
       } catch (err) {
@@ -502,7 +483,8 @@ export default {
       formatNumberInput,
       handlePriceInput,
       handleSalePriceInput,
-      handleRentalPriceInput,
+      handleDailyRateInput,
+      handleWeeklyRateInput,
       handleDepositInput,
     };
   },
@@ -596,6 +578,20 @@ export default {
   margin-top: -0.2rem;
 }
 
+.form-hint {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  line-height: 1.6;
+}
+
+.label-optional {
+  font-weight: normal;
+  color: #9ca3af;
+  font-size: 0.85em;
+}
+
 /* Section tambahan (Informasi Rental) */
 .form-section {
   border-top: 1px solid #e5e7eb;
@@ -618,5 +614,20 @@ export default {
   font-weight: 600;
   color: #111827;
   margin-bottom: 0.5rem;
+}
+
+/* Info box untuk catatan stok */
+.info-box {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.info-box small {
+  color: #0369a1;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 </style>

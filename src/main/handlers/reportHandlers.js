@@ -26,6 +26,7 @@ function setupReportHandlers() {
              rented_quantity,
              rental_price_per_day,
              sale_price,
+             min_stock_alert,
              is_active
       FROM v_items_with_stock
       ORDER BY name ASC

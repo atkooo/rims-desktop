@@ -61,11 +61,10 @@ function setupAccessoryHandlers() {
         throw new Error("Nama aksesoris wajib diisi");
       }
 
-      const stockQuantity = Math.max(0, toInteger(payload.stock_quantity));
-      const availableQuantity = sanitizeAvailable(
-        stockQuantity,
-        payload.available_quantity ?? stockQuantity,
-      );
+      // Stok selalu 0 saat create, diatur melalui manajemen stok
+      // Force stock_quantity dan available_quantity = 0
+      const stockQuantity = 0;
+      const availableQuantity = 0;
 
       const now = new Date().toISOString();
 
@@ -165,40 +164,14 @@ function setupAccessoryHandlers() {
         }
       });
 
+      // Stok tidak bisa diubah dari form edit
+      // Hapus stock_quantity dan available_quantity jika ada di payload
+      // Stok hanya bisa diubah melalui manajemen stok
       if (payload.stock_quantity !== undefined) {
-        updates.stock_quantity = Math.max(0, toInteger(payload.stock_quantity));
+        logger.warn(`Ignoring stock_quantity update for accessory ${id} - stok hanya bisa diubah melalui manajemen stok`);
       }
-
       if (payload.available_quantity !== undefined) {
-        const stock =
-          updates.stock_quantity !== undefined
-            ? updates.stock_quantity
-            : undefined;
-        let currentStock = stock;
-
-        if (currentStock === undefined) {
-          const row = await database.queryOne(
-            "SELECT stock_quantity FROM accessories WHERE id = ?",
-            [id],
-          );
-          currentStock = row?.stock_quantity ?? 0;
-        }
-
-        updates.available_quantity = sanitizeAvailable(
-          currentStock,
-          payload.available_quantity,
-        );
-      } else if (updates.stock_quantity !== undefined) {
-        // Clamp existing available quantity to new stock value
-        const row = await database.queryOne(
-          "SELECT available_quantity FROM accessories WHERE id = ?",
-          [id],
-        );
-        const currentAvailable = row?.available_quantity ?? 0;
-        updates.available_quantity = sanitizeAvailable(
-          updates.stock_quantity,
-          currentAvailable,
-        );
+        logger.warn(`Ignoring available_quantity update for accessory ${id} - stok hanya bisa diubah melalui manajemen stok`);
       }
 
       if (payload.min_stock_alert !== undefined) {

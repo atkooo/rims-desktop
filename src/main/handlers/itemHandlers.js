@@ -5,6 +5,7 @@ const validator = require("../helpers/validator");
 const {
   normalizeCode,
   sanitizeAvailable,
+  toInteger,
 } = require("../helpers/codeUtils");
 
 /**
@@ -109,14 +110,13 @@ function setupItemHandlers() {
         itemData.discount_group_id,
       );
 
-      // Handle stock_quantity and available_quantity with validation
-      const stockQuantity = Math.max(0, Number(itemData.stock_quantity) || 0);
-      const requestedAvailable = itemData.available_quantity !== undefined 
-        ? Number(itemData.available_quantity) || 0
-        : stockQuantity; // Default to stock_quantity if not provided
+      // Stok selalu 0 saat create, diatur melalui manajemen stok
+      // Force stock_quantity dan available_quantity = 0
+      const stockQuantity = 0;
+      const availableQuantity = 0;
       
-      // Sanitize available_quantity to not exceed stock_quantity
-      const availableQuantity = sanitizeAvailable(stockQuantity, requestedAvailable);
+      // Get min_stock_alert from itemData, default to 0
+      const minStockAlert = Math.max(0, toInteger(itemData.min_stock_alert ?? 0));
 
       const result = await database.execute(
         `INSERT INTO items (
@@ -133,10 +133,11 @@ function setupItemHandlers() {
             discount_group_id,
             stock_quantity,
             available_quantity,
+            min_stock_alert,
             is_available_for_rent,
             is_available_for_sale,
             is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
@@ -151,6 +152,7 @@ function setupItemHandlers() {
           discountGroupId,
           stockQuantity,
           availableQuantity,
+          minStockAlert,
           isAvailableForRent ? 1 : 0,
           isAvailableForSale ? 1 : 0,
           (itemData.is_active ?? true) ? 1 : 0,
@@ -295,39 +297,22 @@ function setupItemHandlers() {
         );
       }
 
-      // Handle stock_quantity and available_quantity with validation
-      if (updates.stock_quantity !== undefined) {
-        normalizedUpdates.stock_quantity = Math.max(0, Number(updates.stock_quantity) || 0);
+      // Handle min_stock_alert if provided
+      if (updates.min_stock_alert !== undefined) {
+        normalizedUpdates.min_stock_alert = Math.max(
+          0,
+          toInteger(updates.min_stock_alert),
+        );
       }
 
+      // Stok tidak bisa diubah dari form edit
+      // Hapus stock_quantity dan available_quantity jika ada di updates
+      // Stok hanya bisa diubah melalui manajemen stok
+      if (updates.stock_quantity !== undefined) {
+        logger.warn(`Ignoring stock_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`);
+      }
       if (updates.available_quantity !== undefined) {
-        // Get current stock_quantity (from updates or database)
-        let currentStock = normalizedUpdates.stock_quantity;
-        if (currentStock === undefined) {
-          const currentItem = await database.queryOne(
-            "SELECT stock_quantity FROM items WHERE id = ?",
-            [id],
-          );
-          currentStock = currentItem?.stock_quantity ?? 0;
-        }
-        
-        // Sanitize available_quantity to not exceed stock_quantity
-        normalizedUpdates.available_quantity = sanitizeAvailable(
-          currentStock,
-          updates.available_quantity
-        );
-      } else if (normalizedUpdates.stock_quantity !== undefined) {
-        // If stock_quantity is updated but available_quantity is not,
-        // clamp existing available_quantity to new stock value
-        const currentItem = await database.queryOne(
-          "SELECT available_quantity FROM items WHERE id = ?",
-          [id],
-        );
-        const currentAvailable = currentItem?.available_quantity ?? 0;
-        normalizedUpdates.available_quantity = sanitizeAvailable(
-          normalizedUpdates.stock_quantity,
-          currentAvailable
-        );
+        logger.warn(`Ignoring available_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`);
       }
 
       // Copy other valid fields
@@ -338,6 +323,7 @@ function setupItemHandlers() {
           key === "weeklyRate" ||
           key === "deposit" ||
           key === "discount_group_id" ||
+          key === "min_stock_alert" ||
           key === "stock_quantity" ||
           key === "available_quantity"
         ) {

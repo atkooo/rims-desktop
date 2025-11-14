@@ -1036,7 +1036,7 @@ function setupStockMovementHandlers() {
 
       // Get current stock
       const item = await database.queryOne(
-        "SELECT available_quantity FROM items WHERE id = ?",
+        "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
         [movementData.itemId],
       );
 
@@ -1045,6 +1045,7 @@ function setupStockMovementHandlers() {
       }
 
       const stockBefore = item.available_quantity || 0;
+      const totalStockBefore = item.stock_quantity || 0;
       const stockAfter =
         movementData.movementType === "IN"
           ? stockBefore + movementData.quantity
@@ -1077,10 +1078,19 @@ function setupStockMovementHandlers() {
         );
 
         // Update item stock
-        await database.execute(
-          "UPDATE items SET available_quantity = ? WHERE id = ?",
-          [stockAfter, movementData.itemId],
-        );
+        // For IN: increase both stock_quantity and available_quantity
+        // For OUT: only decrease available_quantity (stock_quantity stays the same as it represents total stock ever had)
+        if (movementData.movementType === "IN") {
+          await database.execute(
+            "UPDATE items SET available_quantity = ?, stock_quantity = stock_quantity + ? WHERE id = ?",
+            [stockAfter, movementData.quantity, movementData.itemId],
+          );
+        } else {
+          await database.execute(
+            "UPDATE items SET available_quantity = ? WHERE id = ?",
+            [stockAfter, movementData.itemId],
+          );
+        }
 
         await database.execute("COMMIT");
 
@@ -1123,7 +1133,7 @@ function setupStockMovementHandlers() {
 
         // Reverse stock change
         const item = await database.queryOne(
-          "SELECT available_quantity FROM items WHERE id = ?",
+          "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
           [movement.item_id],
         );
 
@@ -1134,10 +1144,19 @@ function setupStockMovementHandlers() {
             : currentStock + movement.quantity;
 
         // Update item stock
-        await database.execute(
-          "UPDATE items SET available_quantity = ? WHERE id = ?",
-          [reversedStock, movement.item_id],
-        );
+        // For IN reversal: decrease both stock_quantity and available_quantity
+        // For OUT reversal: only increase available_quantity
+        if (movement.movement_type === "IN") {
+          await database.execute(
+            "UPDATE items SET available_quantity = ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+            [reversedStock, movement.quantity, movement.item_id],
+          );
+        } else {
+          await database.execute(
+            "UPDATE items SET available_quantity = ? WHERE id = ?",
+            [reversedStock, movement.item_id],
+          );
+        }
 
         // Delete movement
         await database.execute("DELETE FROM stock_movements WHERE id = ?", [

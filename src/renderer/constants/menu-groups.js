@@ -27,21 +27,15 @@ export const menuGroups = [
     items: [
       {
         to: "/transactions/stock-movements",
-        label: "Pergerakan Stok",
+        label: "Manajemen Stok",
         icon: "layers",
         permission: "transactions.stock-movements.view",
       },
       {
         to: "/reports/items-with-stock",
-        label: "Item & Stok",
+        label: "Peringatan Stok",
         icon: "box",
         permission: "reports.items-stock.view",
-      },
-      {
-        to: "/reports/stock-alerts",
-        label: "Peringatan Stok",
-        icon: "bell",
-        permission: "reports.stock-alerts.view",
       },
     ],
   },
@@ -56,7 +50,7 @@ export const menuGroups = [
       },
       {
         to: "/master/items",
-        label: "Katalog Barang",
+        label: "Manajemen Item",
         icon: "box",
         permission: "master.items.view",
       },

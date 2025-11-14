@@ -2,10 +2,9 @@
   <div class="data-page stock-page">
     <div class="page-header">
       <div>
-        <h1>Item dengan Stok</h1>
+        <h1>Laporan & Peringatan Stok</h1>
         <p class="subtitle">
-          Rekap jumlah stok, ketersediaan, dan status item langsung dari
-          database.
+          Rekap lengkap semua item dengan informasi stok, ketersediaan, dan peringatan stok rendah.
         </p>
       </div>
       <AppButton variant="secondary" :loading="loading" @click="loadData">
@@ -26,6 +25,14 @@
         <div class="summary-card">
           <span>Stok Tersedia</span>
           <strong>{{ stats.availableStock }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Item Perlu Perhatian</span>
+          <strong class="text-warning">{{ stats.alertItems }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Stok Habis</span>
+          <strong class="text-danger">{{ stats.outOfStock }}</strong>
         </div>
         <div class="summary-card">
           <span>Item Aktif</span>
@@ -52,8 +59,9 @@
         <select v-model="filters.stockStatus" class="filter-select">
           <option value="">Semua Status Stok</option>
           <option value="in_stock">Ada Stok</option>
-          <option value="low_stock">Stok Rendah</option>
-          <option value="out_of_stock">Habis</option>
+          <option value="low_stock">Stok Rendah / Peringatan</option>
+          <option value="out_of_stock">Habis (Stok = 0)</option>
+          <option value="needs_attention">Perlu Perhatian</option>
         </select>
 
         <select v-model="filters.isActive" class="filter-select">
@@ -77,11 +85,31 @@
               class="stock-badge"
               :class="{
                 'stock-low':
+                  (row.min_stock_alert || 0) > 0 &&
                   row.available_quantity <= (row.min_stock_alert || 0),
                 'stock-empty': row.available_quantity === 0,
               }"
             >
               {{ row.available_quantity }}
+            </span>
+          </template>
+          <template #cell-rented_quantity="{ row }">
+            <span>{{ row.rented_quantity || 0 }}</span>
+          </template>
+          <template #cell-min_stock_alert="{ row }">
+            <span :class="{ 'text-muted': (row.min_stock_alert || 0) === 0 }">
+              {{ row.min_stock_alert || 0 }}
+              <span v-if="(row.min_stock_alert || 0) === 0" class="text-muted" style="font-size: 0.7rem; margin-left: 0.25rem;">
+                (tidak diatur)
+              </span>
+            </span>
+          </template>
+          <template #cell-alert_status="{ row }">
+            <span
+              class="alert-badge"
+              :class="getAlertStatusClass(row)"
+            >
+              {{ getAlertStatusText(row) }}
             </span>
           </template>
           <template #actions="{ row }">
@@ -111,6 +139,14 @@
                       <Icon name="eye" :size="16" />
                       <span>Detail</span>
                     </button>
+                    <button
+                      type="button"
+                      class="action-menu-item"
+                      @click="handleEditMinStock(row)"
+                    >
+                      <Icon name="edit" :size="16" />
+                      <span>Edit Batas Minimum</span>
+                    </button>
                   </div>
                 </transition>
               </Teleport>
@@ -119,6 +155,48 @@
         </AppTable>
       </div>
     </section>
+
+    <!-- Modal Edit Batas Minimum Stok -->
+    <AppDialog
+      v-model="showMinStockModal"
+      :title="`Edit Batas Minimum Stok - ${selectedItemForEdit?.name || ''}`"
+      confirm-text="Simpan"
+      :loading="savingMinStock"
+      @confirm="saveMinStock"
+    >
+      <div class="min-stock-modal-content">
+        <div class="form-group">
+          <label for="minStockValue" class="form-label">
+            Batas Minimum Stok (Peringatan)
+          </label>
+          <input
+            id="minStockValue"
+            type="number"
+            v-model.number="editingMinStockValue"
+            class="form-input"
+            min="0"
+            placeholder="0"
+          />
+          <small class="form-hint">
+            <strong>Cara kerja:</strong> Jika stok tersedia ≤ nilai ini, sistem akan menampilkan peringatan "Stok Rendah".
+            <br>
+            <strong>Contoh:</strong> Jika diisi <strong>5</strong>, peringatan muncul saat stok tersedia ≤ 5.
+            <br>
+            <strong>Kosongkan atau isi 0</strong> jika tidak ingin ada peringatan stok rendah.
+          </small>
+        </div>
+        <div v-if="selectedItemForEdit" class="current-stock-info">
+          <div class="info-item">
+            <span class="info-label">Stok Tersedia Saat Ini:</span>
+            <span class="info-value">{{ selectedItemForEdit.available_quantity || 0 }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Total Stok:</span>
+            <span class="info-value">{{ selectedItemForEdit.stock_quantity || 0 }}</span>
+          </div>
+        </div>
+      </div>
+    </AppDialog>
   </div>
 </template>
 
@@ -127,20 +205,27 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchItemsWithStock } from "@/services/reports";
+import { useItemStore } from "@/store/items";
 
 export default {
   name: "ItemsWithStockView",
-  components: { AppButton, AppTable, Icon },
+  components: { AppButton, AppTable, AppDialog, Icon },
   setup() {
     const router = useRouter();
+    const itemStore = useItemStore();
     const items = ref([]);
     const loading = ref(false);
     const error = ref("");
     const categories = ref([]);
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const showMinStockModal = ref(false);
+    const editingMinStockValue = ref(0);
+    const selectedItemForEdit = ref(null);
+    const savingMinStock = ref(false);
 
     // Filter state
     const filters = ref({
@@ -172,6 +257,24 @@ export default {
         sortable: true,
         align: "center",
       },
+      {
+        key: "rented_quantity",
+        label: "Terpakai",
+        sortable: true,
+        align: "center",
+      },
+      {
+        key: "min_stock_alert",
+        label: "Batas Minimum",
+        sortable: true,
+        align: "center",
+      },
+      {
+        key: "alert_status",
+        label: "Status",
+        sortable: false,
+        align: "center",
+      },
     ];
 
     const filteredItems = computed(() => {
@@ -194,11 +297,19 @@ export default {
         } else if (filters.value.stockStatus === "low_stock") {
           result = result.filter(
             (item) =>
+              (item.min_stock_alert || 0) > 0 &&
               item.available_quantity > 0 &&
               item.available_quantity <= (item.min_stock_alert || 0),
           );
         } else if (filters.value.stockStatus === "out_of_stock") {
           result = result.filter((item) => item.available_quantity === 0);
+        } else if (filters.value.stockStatus === "needs_attention") {
+          result = result.filter(
+            (item) =>
+              item.available_quantity === 0 ||
+              ((item.min_stock_alert || 0) > 0 &&
+                item.available_quantity <= (item.min_stock_alert || 0)),
+          );
         }
       }
 
@@ -223,9 +334,90 @@ export default {
       const activeItems = filteredItems.value.filter(
         (item) => item.is_active,
       ).length;
+      const outOfStock = filteredItems.value.filter(
+        (item) => item.available_quantity === 0,
+      ).length;
+      const alertItems = filteredItems.value.filter(
+        (item) =>
+          item.available_quantity === 0 ||
+          ((item.min_stock_alert || 0) > 0 &&
+            item.available_quantity <= (item.min_stock_alert || 0)),
+      ).length;
 
-      return { totalItems, totalStock, availableStock, activeItems };
+      return {
+        totalItems,
+        totalStock,
+        availableStock,
+        activeItems,
+        outOfStock,
+        alertItems,
+      };
     });
+
+    const getAlertStatusClass = (row) => {
+      if (row.available_quantity === 0) {
+        return "alert-critical";
+      }
+      if ((row.min_stock_alert || 0) > 0) {
+        if (row.available_quantity <= row.min_stock_alert) {
+          return "alert-warning";
+        }
+        return "alert-ok";
+      }
+      // Jika min_stock_alert = 0, tidak ada status peringatan
+      return "alert-neutral";
+    };
+
+    const getAlertStatusText = (row) => {
+      if (row.available_quantity === 0) {
+        return "Habis";
+      }
+      if ((row.min_stock_alert || 0) > 0) {
+        if (row.available_quantity <= row.min_stock_alert) {
+          return "Rendah";
+        }
+        return "Aman";
+      }
+      // Jika min_stock_alert = 0, tidak ada peringatan
+      return "-";
+    };
+
+    const handleEditMinStock = (row) => {
+      openMenuId.value = null;
+      selectedItemForEdit.value = row;
+      editingMinStockValue.value = row.min_stock_alert || 0;
+      showMinStockModal.value = true;
+    };
+
+    const saveMinStock = async () => {
+      if (!selectedItemForEdit.value) return;
+      
+      const newValue = Math.max(0, Number(editingMinStockValue.value) || 0);
+      savingMinStock.value = true;
+      
+      try {
+        await itemStore.updateItem(selectedItemForEdit.value.id, {
+          min_stock_alert: newValue,
+        });
+        
+        // Update local data
+        const itemIndex = items.value.findIndex(
+          (item) => item.id === selectedItemForEdit.value.id
+        );
+        if (itemIndex !== -1) {
+          items.value[itemIndex].min_stock_alert = newValue;
+        }
+        
+        showMinStockModal.value = false;
+        selectedItemForEdit.value = null;
+        editingMinStockValue.value = 0;
+      } catch (err) {
+        console.error("Error updating min_stock_alert:", err);
+        alert(err.message || "Gagal mengupdate batas minimum stok");
+      } finally {
+        savingMinStock.value = false;
+      }
+    };
 
     const loadCategories = async () => {
       try {
@@ -311,6 +503,14 @@ export default {
       handleViewDetail,
       toggleActionMenu,
       getMenuPosition,
+      getAlertStatusClass,
+      getAlertStatusText,
+      showMinStockModal,
+      editingMinStockValue,
+      selectedItemForEdit,
+      savingMinStock,
+      handleEditMinStock,
+      saveMinStock,
     };
   },
 };
@@ -391,6 +591,117 @@ export default {
 .stock-badge.stock-empty {
   background-color: #fee2e2;
   color: #991b1b;
+}
+
+.alert-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.alert-badge.alert-ok {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.alert-badge.alert-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.alert-badge.alert-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-badge.alert-neutral {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.text-warning {
+  color: #d97706;
+}
+
+.text-danger {
+  color: #dc2626;
+}
+
+.text-muted {
+  color: #9ca3af;
+}
+
+.min-stock-modal-content {
+  padding: 0.5rem 0;
+}
+
+.min-stock-modal-content .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.min-stock-modal-content .form-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.min-stock-modal-content .form-input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.min-stock-modal-content .form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.min-stock-modal-content .form-hint {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+.current-stock-info {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.info-item:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.info-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.95rem;
 }
 
 .status-badge {
