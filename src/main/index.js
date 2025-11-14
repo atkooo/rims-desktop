@@ -32,13 +32,13 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 800,
-    // Start fullscreen only; window is not resizable. Default/min stays.
+    // Window is not resizable. Default/min stays.
     minWidth: 1440,
     minHeight: 800,
     resizable: false,
     maximizable: false,
     fullscreenable: true,
-    fullscreen: true,
+    fullscreen: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,

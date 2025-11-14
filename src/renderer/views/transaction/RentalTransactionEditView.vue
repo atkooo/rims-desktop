@@ -303,26 +303,6 @@ export default {
       ),
     );
 
-    const normalizedItems = computed(() =>
-      form.value.items.map((item) => {
-        const quantity = item.quantity || 1;
-        const basePrice = item.rental_price_per_day ?? item.price ?? 0;
-        return {
-          itemId: item.id,
-          quantity,
-          rentalPrice: basePrice,
-          salePrice: 0,
-          subtotal: basePrice * quantity * totalDays.value,
-        };
-      }),
-    );
-
-    const normalizedBundles = computed(() =>
-      form.value.bundles.map((bundle) => ({
-        bundleId: bundle.id,
-        quantity: Math.max(1, Number(bundle.quantity) || 1),
-      })),
-    );
 
     const loadCustomers = async () => {
       try {

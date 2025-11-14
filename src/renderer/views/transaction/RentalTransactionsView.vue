@@ -76,6 +76,7 @@
           :searchable-keys="['transaction_code', 'customer_name', 'status']"
           row-key="id"
           default-page-size="10"
+          show-index
         >
           <template #actions="{ row }">
             <div class="action-menu-wrapper">
@@ -159,7 +160,6 @@ import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchRentalTransactions, cancelTransaction } from "@/services/transactions";
-import { useTransactionStore } from "@/store/transactions";
 import { useNotification } from "@/composables/useNotification";
 
 export default {
@@ -169,7 +169,6 @@ export default {
     const rentals = ref([]);
     const loading = ref(false);
     const error = ref("");
-    const transactionStore = useTransactionStore();
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -189,6 +188,13 @@ export default {
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
+
+    const formatPaymentStatus = (value, row) => {
+      const paymentStatus = (row.payment_status || row.paymentStatus || "").toString().toLowerCase();
+      if (paymentStatus === "paid") return "Lunas";
+      if (paymentStatus === "unpaid") return "Belum Lunas";
+      return "Belum Lunas";
+    };
 
     const columns = [
       { key: "transaction_code", label: "Kode", sortable: true },
@@ -213,9 +219,15 @@ export default {
       },
       { 
         key: "status", 
-        label: "Status Sewa", 
+        label: "Status Transaksi", 
         sortable: true,
         format: (value) => getRentalStatusLabel(value)
+      },
+      { 
+        key: "payment_status", 
+        label: "Status Pembayaran", 
+        format: formatPaymentStatus,
+        sortable: true 
       },
     ];
 
@@ -324,7 +336,12 @@ export default {
         });
       }
 
-      return items;
+      // Sort by date descending (newest first)
+      return [...items].sort((a, b) => {
+        const dateA = new Date(a.rental_date || a.created_at || 0);
+        const dateB = new Date(b.rental_date || b.created_at || 0);
+        return dateB - dateA; // Descending order (newest first)
+      });
     });
 
     const handleRefresh = () => {
@@ -480,6 +497,7 @@ export default {
       loadData,
       formatCurrency,
       formatDate,
+      formatPaymentStatus,
       filteredItems,
       openMenuId,
       openCreateRental,

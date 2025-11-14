@@ -335,39 +335,6 @@ export default {
       ),
     );
 
-    const normalizedItems = computed(() =>
-      form.value.items.map((item) => {
-        const quantity = item.quantity || 1;
-        const price = calculateItemPrice(item);
-        return {
-          itemId: item.id,
-          quantity,
-          rentalPrice: 0,
-          salePrice: price,
-          subtotal: price * quantity,
-        };
-      }),
-    );
-
-    const normalizedBundles = computed(() =>
-      form.value.bundles.map((bundle) => ({
-        bundleId: bundle.id,
-        quantity: Math.max(1, Number(bundle.quantity) || 1),
-      })),
-    );
-
-    const normalizedAccessories = computed(() => {
-      return form.value.accessories.map((accessory) => {
-        const price = calculateAccessoryPrice(accessory);
-        return {
-          accessoryId: accessory.id,
-          quantity: accessory.quantity || 1,
-          salePrice: price,
-          subtotal: price * (accessory.quantity || 1),
-        };
-      });
-    });
-
     const isDiscountReadonly = computed(() => {
       if (form.value.customerId) {
         const customer = customers.value.find(

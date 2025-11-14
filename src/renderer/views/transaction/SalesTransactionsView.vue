@@ -67,6 +67,7 @@
           ]"
           row-key="id"
           default-page-size="10"
+          show-index
         >
           <template #actions="{ row }">
             <div class="action-menu-wrapper">
@@ -149,7 +150,6 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchSalesTransactions, cancelTransaction } from "@/services/transactions";
-import { useTransactionStore } from "@/store/transactions";
 import { useNotification } from "@/composables/useNotification";
 
 export default {
@@ -159,7 +159,6 @@ export default {
     const sales = ref([]);
     const loading = ref(false);
     const error = ref("");
-    const transactionStore = useTransactionStore();
     const router = useRouter();
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -179,10 +178,15 @@ export default {
     const formatDate = (value) =>
       value ? new Date(value).toLocaleDateString("id-ID") : "-";
     const formatStatus = (value, row) => {
-      if (isCancelled(row)) return "Dibatalkan";
+      // Payment status only - cancelled is handled by transaction status column
       const paymentStatus = (row.payment_status || row.paymentStatus || "").toString().toLowerCase();
       return paymentStatus === "paid" ? "Lunas" : "Belum Lunas";
     };
+    const formatTransactionStatus = (value, row) => {
+      if (isCancelled(row)) return "Dibatalkan";
+      return "Selesai";
+    };
+
     const columns = [
       { key: "transaction_code", label: "Kode", sortable: true },
       { key: "customer_name", label: "Customer", sortable: true },
@@ -197,6 +201,12 @@ export default {
         label: "Total",
         format: formatCurrency,
         sortable: true,
+      },
+      { 
+        key: "status", 
+        label: "Status Transaksi", 
+        format: formatTransactionStatus,
+        sortable: true 
       },
       { 
         key: "payment_status", 
@@ -217,7 +227,12 @@ export default {
           return paymentStatus === filters.value.paymentStatus.toLowerCase();
         });
       }
-      return items;
+      // Sort by date descending (newest first)
+      return [...items].sort((a, b) => {
+        const dateA = new Date(a.sale_date || a.created_at || 0);
+        const dateB = new Date(b.sale_date || b.created_at || 0);
+        return dateB - dateA; // Descending order (newest first)
+      });
     });
 
     const totalRecords = computed(() => sales.value.length);
@@ -432,6 +447,8 @@ export default {
       formatCurrency,
       totalRecords,
       formatDate,
+      formatStatus,
+      formatTransactionStatus,
       openMenuId,
       goToSaleDetail,
       isPaid,

@@ -167,32 +167,26 @@
           </span>
         </button>
       </form>
-
-      <div v-if="errorMessage" class="error-message">
-        <svg
-          class="error-icon"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-            clip-rule="evenodd"
-          />
-        </svg>
-        {{ errorMessage }}
-      </div>
     </div>
 
-    <!-- Notification Component -->
+    <!-- Notification Component Success -->
     <AppNotification
       v-model="showNotification"
       type="success"
       title="Login Berhasil"
       message="Selamat datang! Anda akan diarahkan ke halaman utama."
       :duration="2000"
-      @close="handleNotificationClose"
+      @close="showNotification = false"
+    />
+
+    <!-- Notification Component Error -->
+    <AppNotification
+      v-model="showErrorNotification"
+      type="error"
+      title="Login Gagal"
+      :message="errorNotificationMessage"
+      :duration="4000"
+      @close="showErrorNotification = false"
     />
   </div>
 </template>
@@ -216,39 +210,31 @@ export default {
     const password = ref("");
     const showPassword = ref(false);
     const loading = ref(false);
-    const errorMessage = ref("");
     const showNotification = ref(false);
+    const showErrorNotification = ref(false);
+    const errorNotificationMessage = ref("");
 
     const handleSubmit = async () => {
       if (loading.value) return;
       loading.value = true;
-      errorMessage.value = "";
+      showErrorNotification.value = false;
 
       try {
-        // Delay 2 detik dengan animasi loading
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
         await login(username.value, password.value);
 
-        // Tampilkan notifikasi berhasil
         showNotification.value = true;
         loading.value = false;
 
-        // Redirect setelah notifikasi ditampilkan
         setTimeout(() => {
           const redirect = route.query.redirect || "/";
           router.push(redirect);
         }, 2000);
       } catch (error) {
         console.error("Login gagal", error);
-        errorMessage.value =
-          error?.message || "Login gagal. Periksa username / password.";
+        errorNotificationMessage.value = "Username atau password salah";
+        showErrorNotification.value = true;
         loading.value = false;
       }
-    };
-
-    const handleNotificationClose = () => {
-      showNotification.value = false;
     };
 
     return {
@@ -256,10 +242,10 @@ export default {
       password,
       showPassword,
       loading,
-      errorMessage,
       showNotification,
+      showErrorNotification,
+      errorNotificationMessage,
       handleSubmit,
-      handleNotificationClose,
     };
   },
 };
@@ -505,39 +491,6 @@ export default {
 
   to {
     transform: rotate(360deg);
-  }
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #991b1b;
-  font-size: 14px;
-  margin-top: 8px;
-  animation: slideIn 0.3s ease;
-}
-
-.error-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  color: #dc2626;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 

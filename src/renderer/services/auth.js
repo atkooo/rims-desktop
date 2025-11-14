@@ -22,42 +22,36 @@ function writeStoredUser(user) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 }
 
+async function loadUserPermissions(user) {
+  if (!user || !isIpcAvailable()) return;
+  
+  try {
+    user.permissions = (await invoke("auth:getUserPermissions")) || [];
+  } catch (error) {
+    console.error("Error loading permissions:", error);
+    user.permissions = [];
+  }
+}
+
+async function initPermissionsComposable() {
+  try {
+    const { initPermissions } = await import("@/composables/usePermissions");
+    await initPermissions();
+  } catch (error) {
+    console.error("Error initializing permissions in composable:", error);
+  }
+}
+
 export async function login(username, password) {
   if (!username || !password)
     throw new Error("Username dan password wajib diisi");
   if (!isIpcAvailable()) throw new Error("IPC Electron tidak tersedia");
 
   const user = await invoke("auth:login", { username, password });
-
-  // Ensure permissions are loaded
-  if (user && isIpcAvailable()) {
-    try {
-      // Load permissions from IPC
-      const permissions = (await invoke("auth:getUserPermissions")) || [];
-      user.permissions = permissions;
-    } catch (error) {
-      console.error("Error loading permissions:", error);
-      // If admin, allow empty permissions (will be handled in router)
-      if (user.role !== "admin") {
-        user.permissions = [];
-      } else {
-        // Admin should have all permissions, but if loading fails, allow access anyway
-        user.permissions = [];
-      }
-    }
-  }
-
-  // Store user with permissions
+  
+  await loadUserPermissions(user);
   writeStoredUser(user);
-
-  // Initialize permissions in composable
-  try {
-    const { initPermissions } = await import("@/composables/usePermissions");
-    await initPermissions();
-  } catch (error) {
-    console.error("Error initializing permissions in composable:", error);
-    // Continue anyway
-  }
+  await initPermissionsComposable();
 
   return user;
 }
@@ -72,31 +66,16 @@ export async function logout() {
 export async function getCurrentUser(forceRefresh = false) {
   const stored = readStoredUser();
   if (!forceRefresh && stored && !isIpcAvailable()) return stored;
-
   if (!isIpcAvailable()) return stored;
 
   try {
     const user = await invoke("auth:getCurrentUser");
     if (user) {
-      // Ensure permissions are loaded
-      if (!user.permissions && isIpcAvailable()) {
-        try {
-          user.permissions = (await invoke("auth:getUserPermissions")) || [];
-        } catch (error) {
-          console.error("Error loading permissions:", error);
-          user.permissions = [];
-        }
+      if (!user.permissions) {
+        await loadUserPermissions(user);
       }
       writeStoredUser(user);
-      // Initialize permissions in composable if available
-      try {
-        const { initPermissions } = await import(
-          "@/composables/usePermissions"
-        );
-        await initPermissions();
-      } catch (error) {
-        // Composable may not be available yet
-      }
+      await initPermissionsComposable();
     } else {
       writeStoredUser(null);
     }
