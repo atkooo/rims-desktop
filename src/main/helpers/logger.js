@@ -17,6 +17,13 @@ function resolveLogDir() {
 const logDir = resolveLogDir();
 fs.mkdirSync(logDir, { recursive: true });
 
+// Log directory location to console for debugging
+console.log("=== LOG DIRECTORY ===");
+console.log(`Log files location: ${logDir}`);
+console.log(`Error log: ${path.join(logDir, "error.log")}`);
+console.log(`Combined log: ${path.join(logDir, "combined.log")}`);
+console.log("====================");
+
 // Konfigurasi logger
 const logger = winston.createLogger({
   level: "info",

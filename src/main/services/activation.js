@@ -1,11 +1,46 @@
 const os = require("os");
 const crypto = require("crypto");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
+const { app } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const logger = require("../helpers/logger");
 
-const SETTINGS_FILE = path.join(__dirname, "../../../data/settings.json");
+/**
+ * Resolve settings file path
+ * In production (packaged app), use userData directory
+ * In development, use project data folder
+ */
+function resolveSettingsPath() {
+  try {
+    // If app is packaged, use userData directory (same as database and logs)
+    if (app && typeof app.getPath === "function" && app.isPackaged) {
+      const userDataPath = app.getPath("userData");
+      const settingsPath = path.join(userDataPath, "settings.json");
+      // Ensure directory exists
+      fsSync.mkdirSync(userDataPath, { recursive: true });
+      return settingsPath;
+    }
+  } catch (error) {
+    // Fall back to project data folder if app.getPath fails
+    logger.warn("Error resolving userData path for settings, using project path:", error);
+  }
+  
+  // Development: use project data folder
+  const projectDataPath = path.join(__dirname, "../../../data");
+  fsSync.mkdirSync(projectDataPath, { recursive: true });
+  return path.join(projectDataPath, "settings.json");
+}
+
+let cachedSettingsPath = null;
+
+function getSettingsFile() {
+  if (!cachedSettingsPath) {
+    cachedSettingsPath = resolveSettingsPath();
+  }
+  return cachedSettingsPath;
+}
 const DEFAULT_CHECK_INTERVAL = 3600000; // 1 hour in milliseconds
 const CACHE_EXPIRY = 300000; // 5 minutes cache
 
@@ -56,7 +91,8 @@ function generateMachineId() {
  */
 async function loadSettings() {
   try {
-    const data = await fs.readFile(SETTINGS_FILE, "utf8");
+    const settingsFile = getSettingsFile();
+    const data = await fs.readFile(settingsFile, "utf8");
     return JSON.parse(data);
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -75,7 +111,8 @@ async function loadSettings() {
  * Save settings to file
  */
 async function saveSettings(settings) {
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  const settingsFile = getSettingsFile();
+  await fs.writeFile(settingsFile, JSON.stringify(settings, null, 2));
 }
 
 /**

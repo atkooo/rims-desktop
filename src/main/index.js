@@ -18,6 +18,20 @@ for (const envPath of envPaths) {
 const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
+
+// Log startup info immediately
+logger.info("=== RIMS Desktop Starting ===");
+logger.info(`App version: ${app.getVersion()}`);
+logger.info(`Electron version: ${process.versions.electron}`);
+logger.info(`Node version: ${process.versions.node}`);
+logger.info(`Platform: ${process.platform}`);
+logger.info(`Architecture: ${process.arch}`);
+logger.info(`Is packaged: ${app.isPackaged}`);
+if (app.isPackaged) {
+  logger.info(`App path: ${app.getAppPath()}`);
+  logger.info(`User data path: ${app.getPath("userData")}`);
+  logger.info(`Log directory: ${require("path").join(app.getPath("userData"), "logs")}`);
+}
 const setupItemHandlers = require("./handlers/itemHandlers");
 const setupAccessoryHandlers = require("./handlers/accessoryHandlers");
 const setupBundleHandlers = require("./handlers/bundleHandlers");
@@ -47,6 +61,20 @@ const activationService = require("./services/activation");
 let mainWindow = null;
 
 function createWindow() {
+  // Resolve preload path - use app.getAppPath() in production for correct path
+  let preloadPath = path.join(__dirname, "preload.js");
+  if (app.isPackaged) {
+    const appPath = app.getAppPath();
+    const altPreloadPath = path.join(appPath, "src", "main", "preload.js");
+    if (fs.existsSync(altPreloadPath)) {
+      preloadPath = altPreloadPath;
+      logger.info(`Using preload from: ${preloadPath}`);
+    } else if (!fs.existsSync(preloadPath)) {
+      logger.warn(`Preload not found at: ${preloadPath}, trying: ${altPreloadPath}`);
+      preloadPath = altPreloadPath;
+    }
+  }
+
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 800,
@@ -57,12 +85,39 @@ function createWindow() {
     maximizable: false,
     fullscreenable: true,
     fullscreen: false,
+    show: false, // Don't show until ready
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
       plugins: true, // Enable plugins for PDF support
     },
+  });
+
+  // Show window when ready to prevent visual flash
+  mainWindow.once("ready-to-show", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      logger.info("Window shown");
+    }
+  });
+
+  // Error handling for window
+  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription, validatedURL) => {
+    logger.error(`Failed to load: ${errorCode} - ${errorDescription}`);
+    logger.error(`URL: ${validatedURL}`);
+    // Show error message to user
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show(); // Show window even if load failed
+    }
+  });
+
+  mainWindow.webContents.on("crashed", (event, killed) => {
+    logger.error(`Renderer process crashed. Killed: ${killed}`);
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 
   mainWindow.webContents.on("console-message", (event) => {
@@ -73,7 +128,10 @@ function createWindow() {
     }
   });
 
-  if (process.env.NODE_ENV === "development") {
+  // Use app.isPackaged to detect production (more reliable than NODE_ENV)
+  const isDevelopment = process.env.NODE_ENV === "development" && !app.isPackaged;
+  
+  if (isDevelopment) {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.once("dom-ready", () => {
       if (!mainWindow.isDestroyed()) {
@@ -81,9 +139,62 @@ function createWindow() {
       }
     });
   } else {
-    // In production, load from dist/renderer (relative to project root)
-    const indexPath = path.join(__dirname, "..", "..", "dist", "renderer", "index.html");
-    mainWindow.loadFile(indexPath);
+    // In production, load from dist/renderer
+    // app.getAppPath() returns the correct path in both dev and packaged app
+    // In packaged app with asar, it points to app.asar directory
+    const appPath = app.getAppPath();
+    
+    // Log for debugging
+    logger.info(`Production mode - Loading index.html`);
+    logger.info(`App path: ${appPath}`);
+    logger.info(`__dirname: ${__dirname}`);
+    logger.info(`process.resourcesPath: ${process.resourcesPath}`);
+    
+    // Try multiple path strategies for different packaging scenarios
+    const pathStrategies = [
+      // Strategy 1: Relative to app path (standard for asar)
+      // app.getAppPath() in packaged app returns path to app.asar
+      path.join(appPath, "dist", "renderer", "index.html"),
+      // Strategy 2: Relative to __dirname (if main is in src/main within asar)
+      path.join(__dirname, "..", "..", "dist", "renderer", "index.html"),
+      // Strategy 3: Using resourcesPath (for some packaging scenarios)
+      process.resourcesPath ? path.join(process.resourcesPath, "app.asar", "dist", "renderer", "index.html") : null,
+    ].filter(Boolean); // Remove null values
+    
+    logger.info(`Trying paths: ${pathStrategies.join(", ")}`);
+    
+    // Try to load using async function to handle multiple attempts
+    async function tryLoadIndex() {
+      for (let i = 0; i < pathStrategies.length; i++) {
+        const tryPath = pathStrategies[i];
+        logger.info(`Attempt ${i + 1}/${pathStrategies.length}: Loading from ${tryPath}`);
+        
+        try {
+          await mainWindow.loadFile(tryPath);
+          logger.info(`Successfully loaded index.html from: ${tryPath}`);
+          return; // Success, exit function
+        } catch (err) {
+          logger.error(`Failed to load from: ${tryPath}`, err.message);
+          if (i === pathStrategies.length - 1) {
+            // Last attempt failed
+            logger.error("All path attempts failed. Window will be shown anyway.");
+            // Show window even if loading failed so user can see something
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.show();
+            }
+          }
+        }
+      }
+    }
+    
+    // Start loading
+    tryLoadIndex().catch((err) => {
+      logger.error("Unexpected error during load attempts:", err);
+      // Ensure window is shown
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+      }
+    });
   }
 
   return mainWindow;
@@ -96,6 +207,31 @@ ipcMain.handle("window:focus", () => {
     return true;
   }
   return false;
+});
+
+// Handler to get log directory path
+ipcMain.handle("app:getLogPath", () => {
+  try {
+    const logDir = require("path").join(app.getPath("userData"), "logs");
+    return { success: true, path: logDir };
+  } catch (error) {
+    logger.error("Error getting log path:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler to open log directory in file explorer
+ipcMain.handle("app:openLogDirectory", () => {
+  try {
+    const { shell } = require("electron");
+    const logDir = require("path").join(app.getPath("userData"), "logs");
+    shell.openPath(logDir);
+    logger.info(`Opened log directory: ${logDir}`);
+    return { success: true, path: logDir };
+  } catch (error) {
+    logger.error("Error opening log directory:", error);
+    return { success: false, error: error.message };
+  }
 });
 
 app.whenReady().then(async () => {

@@ -25,15 +25,30 @@ class Database {
     // If already connecting, wait for that connection
     if (this.connectingPromise) return this.connectingPromise;
 
+    // Log database path before connecting
+    logger.info(`Attempting to connect to database at: ${dbConfig.path}`);
+    
+    // Ensure directory exists
+    const dbDir = path.dirname(dbConfig.path);
+    try {
+      fs.mkdirSync(dbDir, { recursive: true });
+      logger.info(`Database directory ensured: ${dbDir}`);
+    } catch (dirErr) {
+      logger.error(`Failed to create database directory: ${dbDir}`, dirErr);
+    }
+
     this.connectingPromise = new Promise((resolve, reject) => {
       const sqliteDb = new sqlite3.Database(dbConfig.path, (err) => {
         if (err) {
           logger.error("Error connecting to database:", err);
+          logger.error(`Database path attempted: ${dbConfig.path}`);
+          logger.error(`Directory exists: ${fs.existsSync(dbDir)}`);
+          logger.error(`File exists: ${fs.existsSync(dbConfig.path)}`);
           reject(err);
           return;
         }
 
-        logger.info("Connected to database");
+        logger.info(`Successfully connected to database at: ${dbConfig.path}`);
         resolve(sqliteDb);
       });
 

@@ -92,7 +92,20 @@ async function generateInvoicePDF(transactionId, transactionType) {
     }
 
     // Get company settings
-    const settingsFile = path.join(__dirname, "../../data/settings.json");
+    // Use same path resolution as settingsHandlers
+    const { app } = require("electron");
+    const fsSync = require("fs");
+    let settingsFile;
+    try {
+      if (app && typeof app.getPath === "function" && app.isPackaged) {
+        const userDataPath = app.getPath("userData");
+        settingsFile = path.join(userDataPath, "settings.json");
+      } else {
+        settingsFile = path.join(__dirname, "../../../data/settings.json");
+      }
+    } catch (error) {
+      settingsFile = path.join(__dirname, "../../../data/settings.json");
+    }
     let settings = {
       companyName: "RIMS",
       address: "-",

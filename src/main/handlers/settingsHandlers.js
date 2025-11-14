@@ -1,21 +1,86 @@
-const { ipcMain } = require("electron");
+const { ipcMain, app } = require("electron");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
 const database = require("../helpers/database");
 const dbConfig = require("../config/database");
 const logger = require("../helpers/logger");
 const { cleanupTempFiles, cleanupAllTempFiles } = require("../helpers/cleanup");
 
-// File paths
-const SETTINGS_FILE = path.join(__dirname, "../../../data/settings.json");
-const BACKUPS_DIR = path.join(__dirname, "../../../data/backups");
+/**
+ * Resolve settings file path
+ * In production (packaged app), use userData directory
+ * In development, use project data folder
+ */
+function resolveSettingsPath() {
+  try {
+    // If app is packaged, use userData directory (same as database and logs)
+    if (app && typeof app.getPath === "function" && app.isPackaged) {
+      const userDataPath = app.getPath("userData");
+      const settingsPath = path.join(userDataPath, "settings.json");
+      // Ensure directory exists
+      fsSync.mkdirSync(userDataPath, { recursive: true });
+      return settingsPath;
+    }
+  } catch (error) {
+    // Fall back to project data folder if app.getPath fails
+    logger.warn("Error resolving userData path for settings, using project path:", error);
+  }
+  
+  // Development: use project data folder
+  const projectDataPath = path.join(__dirname, "../../../data");
+  fsSync.mkdirSync(projectDataPath, { recursive: true });
+  return path.join(projectDataPath, "settings.json");
+}
+
+/**
+ * Resolve backups directory path
+ */
+function resolveBackupsPath() {
+  try {
+    if (app && typeof app.getPath === "function" && app.isPackaged) {
+      const userDataPath = app.getPath("userData");
+      const backupsPath = path.join(userDataPath, "backups");
+      fsSync.mkdirSync(backupsPath, { recursive: true });
+      return backupsPath;
+    }
+  } catch (error) {
+    logger.warn("Error resolving userData path for backups, using project path:", error);
+  }
+  
+  const projectDataPath = path.join(__dirname, "../../../data");
+  fsSync.mkdirSync(projectDataPath, { recursive: true });
+  return path.join(projectDataPath, "backups");
+}
+
+// File paths (lazy resolution with caching)
+let cachedSettingsPath = null;
+let cachedBackupsPath = null;
+
+function getSettingsFile() {
+  if (!cachedSettingsPath) {
+    cachedSettingsPath = resolveSettingsPath();
+    logger.info(`Settings file resolved: ${cachedSettingsPath}`);
+  }
+  return cachedSettingsPath;
+}
+
+function getBackupsDir() {
+  if (!cachedBackupsPath) {
+    cachedBackupsPath = resolveBackupsPath();
+    logger.info(`Backups directory resolved: ${cachedBackupsPath}`);
+  }
+  return cachedBackupsPath;
+}
+
 const DATABASE_FILE = dbConfig.path;
 
 function setupSettingsHandlers() {
   // Get settings
   ipcMain.handle("settings:get", async () => {
     try {
-      const data = await fs.readFile(SETTINGS_FILE, "utf8");
+      const settingsFile = getSettingsFile();
+      const data = await fs.readFile(settingsFile, "utf8");
       return JSON.parse(data);
     } catch (error) {
       if (error.code === "ENOENT") {
@@ -40,8 +105,9 @@ function setupSettingsHandlers() {
     try {
       // Read existing settings first
       let existingSettings = {};
+      const settingsFile = getSettingsFile();
       try {
-        const data = await fs.readFile(SETTINGS_FILE, "utf8");
+        const data = await fs.readFile(settingsFile, "utf8");
         existingSettings = JSON.parse(data);
       } catch (error) {
         // If file doesn't exist or can't be read, start with empty object
@@ -62,7 +128,7 @@ function setupSettingsHandlers() {
       }
 
       await fs.writeFile(
-        SETTINGS_FILE,
+        settingsFile,
         JSON.stringify(mergedSettings, null, 2),
       );
       logger.info("Settings saved successfully");
@@ -124,11 +190,13 @@ function setupSettingsHandlers() {
   // Get backup list
   ipcMain.handle("backup:list", async () => {
     try {
-      const files = await fs.readdir(BACKUPS_DIR);
+      const backupsDir = getBackupsDir();
+      const files = await fs.readdir(backupsDir);
       return files.filter((file) => file.endsWith(".sqlite"));
     } catch (error) {
       if (error.code === "ENOENT") {
-        await fs.mkdir(BACKUPS_DIR, { recursive: true });
+        const backupsDir = getBackupsDir();
+        await fs.mkdir(backupsDir, { recursive: true });
         return [];
       }
       logger.error("Error listing backups:", error);
@@ -186,13 +254,14 @@ function setupSettingsHandlers() {
   // Get last backup date
   ipcMain.handle("backup:getLastDate", async () => {
     try {
-      const files = await fs.readdir(BACKUPS_DIR);
+      const backupsDir = getBackupsDir();
+      const files = await fs.readdir(backupsDir);
       const backups = files.filter((file) => file.endsWith(".sqlite"));
 
       if (backups.length === 0) return null;
 
       const stats = await Promise.all(
-        backups.map((file) => fs.stat(path.join(BACKUPS_DIR, file))),
+        backups.map((file) => fs.stat(path.join(backupsDir, file))),
       );
 
       const latestStat = stats.reduce((latest, current) => {
@@ -210,10 +279,11 @@ function setupSettingsHandlers() {
   ipcMain.handle("backup:create", async () => {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const backupFile = path.join(BACKUPS_DIR, `backup-${timestamp}.sqlite`);
+      const backupsDir = getBackupsDir();
+      const backupFile = path.join(backupsDir, `backup-${timestamp}.sqlite`);
 
       // Ensure backup directory exists
-      await fs.mkdir(BACKUPS_DIR, { recursive: true });
+      await fs.mkdir(backupsDir, { recursive: true });
 
       // Use VACUUM INTO to create backup without closing database
       // This is safer than closing and copying, as it doesn't interrupt other operations
@@ -279,7 +349,8 @@ function setupSettingsHandlers() {
   ipcMain.handle("backup:restore", async (event, backupFile) => {
     let databaseWasClosed = false;
     try {
-      const backupPath = path.join(BACKUPS_DIR, backupFile);
+      const backupsDir = getBackupsDir();
+      const backupPath = path.join(backupsDir, backupFile);
 
       // Verify backup file exists
       await fs.access(backupPath);
