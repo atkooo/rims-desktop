@@ -62,6 +62,10 @@
             <span>Rencana Kembali</span>
             <strong>{{ formatDate(rental.planned_return_date) }}</strong>
           </div>
+          <div class="detail-item" v-if="rental.actual_return_date">
+            <span>Tanggal Kembali</span>
+            <strong>{{ formatDate(rental.actual_return_date) }}</strong>
+          </div>
           <div class="detail-item">
             <span>Kode</span>
             <strong>{{ rental.transaction_code || "-" }}</strong>
@@ -130,7 +134,18 @@
     <section class="card-section" v-if="!loading && !error && rental">
       <div class="section-header">
         <h3 class="section-title">Item Sewa</h3>
-        <p v-if="code" class="section-subtitle">{{ code }}</p>
+        <div class="section-header-right">
+          <p v-if="code" class="section-subtitle">{{ code }}</p>
+          <AppButton
+            v-if="!isAllReturned && isPaid(rental) && !isCancelled(rental)"
+            variant="primary"
+            size="small"
+            @click="openReturnDialog(null)"
+          >
+            <Icon name="package" :size="18" />
+            Kembalikan Semua Item
+          </AppButton>
+        </div>
       </div>
 
       <div v-if="detailsLoading" class="detail-state">
@@ -157,7 +172,9 @@
             <th>Harga Sewa</th>
             <th>Subtotal</th>
             <th>Dikembalikan</th>
+            <th>Kondisi</th>
             <th>Catatan</th>
+            <th v-if="!isAllReturned && isPaid(rental) && !isCancelled(rental)">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -166,8 +183,30 @@
             <td>{{ detail.quantity }}</td>
             <td>{{ formatCurrency(detail.rental_price) }}</td>
             <td>{{ formatCurrency(detail.subtotal) }}</td>
-            <td>{{ detail.is_returned ? "Ya" : "Belum" }}</td>
+            <td>
+              <span :class="{ 'status-badge': true, 'returned': detail.is_returned, 'not-returned': !detail.is_returned }">
+                {{ detail.is_returned ? "Ya" : "Belum" }}
+              </span>
+            </td>
+            <td>
+              <span v-if="detail.is_returned" class="condition-badge" :class="detail.return_condition || 'good'">
+                {{ getConditionLabel(detail.return_condition) }}
+              </span>
+              <span v-else>-</span>
+            </td>
             <td>{{ detail.notes || "-" }}</td>
+            <td v-if="!isAllReturned && isPaid(rental) && !isCancelled(rental)">
+              <AppButton
+                v-if="!detail.is_returned"
+                variant="secondary"
+                size="small"
+                @click="openReturnDialog([detail.id])"
+              >
+                <Icon name="package" :size="16" />
+                Kembalikan
+              </AppButton>
+              <span v-else class="text-muted">Sudah dikembalikan</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -190,6 +229,58 @@
     transaction-type="rental"
     @printed="handleReceiptPrinted"
   />
+
+  <!-- Return Items Dialog -->
+  <AppDialog
+    v-model="showReturnDialog"
+    title="Kembalikan Item Sewa"
+    :show-footer="true"
+    confirm-text="Kembalikan"
+    cancel-text="Batal"
+    :loading="returning"
+    @confirm="handleReturnItems"
+    :max-width="500"
+  >
+    <div class="return-dialog">
+      <div class="return-info">
+        <p v-if="returnDetailIds && returnDetailIds.length > 0">
+          Mengembalikan <strong>{{ returnDetailIds.length }}</strong> item
+        </p>
+        <p v-else>
+          Mengembalikan <strong>semua item</strong> yang belum dikembalikan
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="returnDate" class="form-label">Tanggal Kembali</label>
+        <input
+          id="returnDate"
+          type="date"
+          v-model="returnForm.actualReturnDate"
+          class="form-input"
+          :max="new Date().toISOString().split('T')[0]"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="returnCondition" class="form-label">Kondisi Item</label>
+        <select
+          id="returnCondition"
+          v-model="returnForm.returnCondition"
+          class="form-select"
+        >
+          <option value="good">Baik</option>
+          <option value="damaged">Rusak</option>
+          <option value="lost">Hilang</option>
+        </select>
+        <p class="form-help">
+          <span v-if="returnForm.returnCondition === 'good'">Item dalam kondisi baik, stok akan dikembalikan.</span>
+          <span v-else-if="returnForm.returnCondition === 'damaged'">Item rusak, stok akan dikembalikan.</span>
+          <span v-else>Item hilang, stok tidak akan dikembalikan.</span>
+        </p>
+      </div>
+    </div>
+  </AppDialog>
 </template>
 
 <script>
@@ -197,17 +288,20 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
 import {
   fetchRentalTransactions,
   fetchRentalDetails,
+  returnRentalItems,
 } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
+import { getCurrentUser } from "@/services/auth";
 
 export default {
   name: "RentalTransactionDetailView",
-  components: { AppButton, Icon, PaymentModal, ReceiptPreviewDialog },
+  components: { AppButton, Icon, AppDialog, PaymentModal, ReceiptPreviewDialog },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -222,7 +316,14 @@ export default {
     const showPaymentModal = ref(false);
     const showReceiptPreview = ref(false);
     const showCancelledBanner = ref(true);
-    const { showSuccess } = useNotification();
+    const showReturnDialog = ref(false);
+    const returning = ref(false);
+    const returnDetailIds = ref(null);
+    const returnForm = ref({
+      actualReturnDate: new Date().toISOString().split("T")[0],
+      returnCondition: "good",
+    });
+    const { showSuccess, showError } = useNotification();
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -254,6 +355,11 @@ export default {
       return details.value.filter(
         (detail) => detail.transaction_code === rental.value.transaction_code,
       );
+    });
+
+    const isAllReturned = computed(() => {
+      if (!filteredDetails.value.length) return false;
+      return filteredDetails.value.every((detail) => detail.is_returned);
     });
 
     const loadRental = async () => {
@@ -374,6 +480,58 @@ export default {
       }
     };
 
+    const openReturnDialog = (detailIds) => {
+      if (!rental.value) return;
+      returnDetailIds.value = detailIds;
+      returnForm.value = {
+        actualReturnDate: new Date().toISOString().split("T")[0],
+        returnCondition: "good",
+      };
+      showReturnDialog.value = true;
+    };
+
+    const handleReturnItems = async () => {
+      if (!rental.value?.id) return;
+
+      returning.value = true;
+      try {
+        const user = await getCurrentUser();
+        // Ensure all values are primitives and serializable
+        const result = await returnRentalItems({
+          rentalTransactionId: Number(rental.value.id),
+          detailIds: Array.isArray(returnDetailIds.value) ? returnDetailIds.value.map(id => Number(id)) : null,
+          returnCondition: String(returnForm.value.returnCondition || "good"),
+          actualReturnDate: String(returnForm.value.actualReturnDate || ""),
+          userId: user?.id ? Number(user.id) : null,
+        });
+
+        if (result.success) {
+          showSuccess(
+            result.allItemsReturned
+              ? `Semua item berhasil dikembalikan!`
+              : `${result.itemsReturned} item berhasil dikembalikan!`,
+          );
+          showReturnDialog.value = false;
+          // Reload data to reflect changes
+          await loadRental();
+          await loadDetails(true);
+        }
+      } catch (err) {
+        showError(err.message || "Gagal mengembalikan item");
+      } finally {
+        returning.value = false;
+      }
+    };
+
+    const getConditionLabel = (condition) => {
+      const labels = {
+        good: "Baik",
+        damaged: "Rusak",
+        lost: "Hilang",
+      };
+      return labels[condition] || "-";
+    };
+
     watch(code, (newCode, oldCode) => {
       if (newCode !== oldCode) {
         loadRental();
@@ -402,10 +560,18 @@ export default {
       showPaymentModal,
       showReceiptPreview,
       showCancelledBanner,
+      showReturnDialog,
+      returning,
+      returnDetailIds,
+      returnForm,
+      isAllReturned,
       openPaymentModal,
       handlePaymentSuccess,
       handlePaymentModalClose,
       handleReceiptPrinted,
+      openReturnDialog,
+      handleReturnItems,
+      getConditionLabel,
     };
   },
 };
@@ -418,6 +584,12 @@ export default {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.section-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .section-title {
@@ -602,5 +774,115 @@ export default {
 
 .detail-item.edit-action button {
   width: 100%;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-badge.returned {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.not-returned {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Condition badges */
+.condition-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.condition-badge.good {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.condition-badge.damaged {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.condition-badge.lost {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.text-muted {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Return dialog styles */
+.return-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.return-info {
+  padding: 0.75rem;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+}
+
+.return-info p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.return-info strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-input,
+.form-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1f2937;
+  background-color: white;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-help {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-style: italic;
 }
 </style>

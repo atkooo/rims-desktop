@@ -50,3 +50,17 @@ export function deleteStockMovement(id) {
 export function cancelTransaction(id, transactionType) {
   return ipcRenderer.invoke("transactions:cancel", id, transactionType);
 }
+
+// Return rental items
+export function returnRentalItems({ rentalTransactionId, detailIds, returnCondition, actualReturnDate, userId }) {
+  // Ensure all values are serializable (no undefined, handle null properly)
+  const payload = {
+    rentalTransactionId: rentalTransactionId || null,
+    detailIds: detailIds && Array.isArray(detailIds) ? detailIds : null,
+    returnCondition: returnCondition || "good",
+    actualReturnDate: actualReturnDate || null,
+    userId: userId || null,
+  };
+  
+  return ipcRenderer.invoke("rentals:returnItems", payload);
+}

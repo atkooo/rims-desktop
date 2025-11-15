@@ -868,6 +868,163 @@ function setupTransactionHandlers() {
       throw error;
     }
   });
+
+  // Return rental items
+  ipcMain.handle("rentals:returnItems", async (event, data) => {
+    try {
+      // Ensure data is properly parsed and extract values
+      const rentalTransactionId = data?.rentalTransactionId ? Number(data.rentalTransactionId) : null;
+      const detailIds = Array.isArray(data?.detailIds) ? data.detailIds.map(id => Number(id)) : null;
+      const returnCondition = data?.returnCondition || "good";
+      const actualReturnDate = data?.actualReturnDate || null;
+      const userId = data?.userId ? Number(data.userId) : null;
+
+      if (!rentalTransactionId) {
+        throw new Error("ID transaksi rental harus diisi");
+      }
+
+      // Validate rental transaction exists
+      const rental = await database.queryOne(
+        "SELECT id, user_id, transaction_code, status FROM rental_transactions WHERE id = ?",
+        [rentalTransactionId],
+      );
+
+      if (!rental) {
+        throw new Error("Transaksi rental tidak ditemukan");
+      }
+
+      if (rental.status === "cancelled") {
+        throw new Error("Transaksi yang dibatalkan tidak dapat dikembalikan");
+      }
+
+      // Start transaction
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        const validReturnCondition = returnCondition;
+        if (!["good", "damaged", "lost"].includes(validReturnCondition)) {
+          throw new Error("Kondisi pengembalian tidak valid (harus: good, damaged, atau lost)");
+        }
+
+        // Get rental items to return
+        let rentalItems;
+        if (detailIds && Array.isArray(detailIds) && detailIds.length > 0) {
+          // Return specific items
+          const placeholders = detailIds.map(() => "?").join(",");
+          rentalItems = await database.query(
+            `SELECT rtd.id, rtd.item_id, rtd.quantity, rtd.is_returned, rtd.rental_transaction_id
+             FROM rental_transaction_details rtd
+             WHERE rtd.id IN (${placeholders}) AND rtd.rental_transaction_id = ? AND rtd.is_returned = 0`,
+            [...detailIds, rentalTransactionId],
+          );
+        } else {
+          // Return all items
+          rentalItems = await database.query(
+            `SELECT rtd.id, rtd.item_id, rtd.quantity, rtd.is_returned, rtd.rental_transaction_id
+             FROM rental_transaction_details rtd
+             WHERE rtd.rental_transaction_id = ? AND rtd.is_returned = 0`,
+            [rentalTransactionId],
+          );
+        }
+
+        if (rentalItems.length === 0) {
+          throw new Error("Tidak ada item yang dapat dikembalikan");
+        }
+
+        const returnUserId = userId || rental.user_id;
+
+        // Process each item
+        for (const item of rentalItems) {
+          // Get current stock before update
+          const itemBefore = await database.queryOne(
+            "SELECT available_quantity FROM items WHERE id = ?",
+            [item.item_id],
+          );
+          const stockBefore = itemBefore?.available_quantity || 0;
+
+          // Mark item as returned
+          await database.execute(
+            "UPDATE rental_transaction_details SET is_returned = 1, return_condition = ? WHERE id = ?",
+            [validReturnCondition, item.id],
+          );
+
+          // Restore available quantity (only for good condition, or always restore and handle differently for damaged/lost)
+          // For now, we restore stock for all conditions - you can adjust this logic if needed
+          if (validReturnCondition !== "lost") {
+            await database.execute(
+              "UPDATE items SET available_quantity = available_quantity + ? WHERE id = ?",
+              [item.quantity, item.item_id],
+            );
+
+            // Get stock after update
+            const stockAfter = stockBefore + item.quantity;
+
+            // Create stock movement record for return
+            await createStockMovement({
+              itemId: item.item_id,
+              movementType: "IN",
+              referenceType: "rental_return",
+              referenceId: rentalTransactionId,
+              quantity: item.quantity,
+              stockBefore,
+              stockAfter,
+              userId: returnUserId,
+              notes: `Return rental item: ${rental.transaction_code} (Condition: ${validReturnCondition})`,
+            });
+          } else {
+            // Item is lost - create stock movement record but don't restore stock
+            await createStockMovement({
+              itemId: item.item_id,
+              movementType: "IN",
+              referenceType: "rental_return_lost",
+              referenceId: rentalTransactionId,
+              quantity: item.quantity,
+              stockBefore,
+              stockAfter: stockBefore, // Stock tidak bertambah karena item hilang
+              userId: returnUserId,
+              notes: `Return rental item (LOST): ${rental.transaction_code}`,
+            });
+          }
+        }
+
+        // Check if all items are returned
+        const remainingItems = await database.queryOne(
+          `SELECT COUNT(*) as count FROM rental_transaction_details 
+           WHERE rental_transaction_id = ? AND is_returned = 0`,
+          [rentalTransactionId],
+        );
+
+        // Update actual_return_date and status if all items are returned
+        if (remainingItems.count === 0) {
+          const returnDate = actualReturnDate || new Date().toISOString().split("T")[0];
+          await database.execute(
+            "UPDATE rental_transactions SET actual_return_date = ?, status = 'returned' WHERE id = ?",
+            [returnDate, rentalTransactionId],
+          );
+        } else if (actualReturnDate) {
+          // Update return date even if not all items are returned yet
+          await database.execute(
+            "UPDATE rental_transactions SET actual_return_date = ? WHERE id = ?",
+            [actualReturnDate, rentalTransactionId],
+          );
+        }
+
+        await database.execute("COMMIT");
+
+        return {
+          success: true,
+          itemsReturned: rentalItems.length,
+          allItemsReturned: remainingItems.count === 0,
+        };
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error returning rental items:", error);
+      throw error;
+    }
+  });
 }
 
 
