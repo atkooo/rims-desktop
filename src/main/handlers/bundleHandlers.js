@@ -17,38 +17,9 @@ const sanitizeBundleType = (value) => {
   return normalized === "sale" ? "sale" : "rental";
 };
 
-/**
- * Validate and normalize discount group ID
- */
-async function validateDiscountGroupId(discountGroupId) {
-  if (
-    discountGroupId === undefined ||
-    discountGroupId === null ||
-    discountGroupId === ""
-  ) {
-    return null;
-  }
-
-  const id = Number(discountGroupId);
-  if (!id) {
-    return null;
-  }
-
-  const discountGroup = await database.queryOne(
-    "SELECT id FROM discount_groups WHERE id = ?",
-    [id],
-  );
-
-  if (!discountGroup) {
-    throw new Error("Grup diskon tidak ditemukan");
-  }
-
-  return id;
-}
-
 async function buildPayload(raw, isEdit = false) {
   // Validate discount_group_id if provided
-  const discountGroupId = await validateDiscountGroupId(
+  const discountGroupId = await validator.validateDiscountGroupId(
     raw.discount_group_id,
   );
 
@@ -253,7 +224,7 @@ function setupBundleHandlers() {
 
       // Process discount_group_id separately
       if (rawPayload.discount_group_id !== undefined) {
-        const discountGroupId = await validateDiscountGroupId(
+        const discountGroupId = await validator.validateDiscountGroupId(
           rawPayload.discount_group_id,
         );
         fields.push("discount_group_id = ?");

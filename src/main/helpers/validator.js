@@ -42,6 +42,34 @@ const formatError = (field, message) => ({
   message,
 });
 
+// Validate and normalize discount group ID
+const validateDiscountGroupId = async (discountGroupId) => {
+  if (
+    discountGroupId === undefined ||
+    discountGroupId === null ||
+    discountGroupId === ""
+  ) {
+    return null;
+  }
+
+  const id = Number(discountGroupId);
+  if (!id) {
+    return null;
+  }
+
+  const database = require("./database");
+  const discountGroup = await database.queryOne(
+    "SELECT id FROM discount_groups WHERE id = ?",
+    [id],
+  );
+
+  if (!discountGroup) {
+    throw new Error("Grup diskon tidak ditemukan");
+  }
+
+  return id;
+};
+
 module.exports = {
   isNotEmpty,
   isPositiveNumber,
@@ -49,4 +77,5 @@ module.exports = {
   isValidEmail,
   isValidDateRange,
   formatError,
+  validateDiscountGroupId,
 };

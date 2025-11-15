@@ -214,10 +214,93 @@ async function executeStatements(
   }
 }
 
+/**
+ * Execute SQL file with retry logic and error handling
+ * @param {Object} dbOps - Database operations object with runAsync, allAsync, getAsync
+ * @param {string} filePath - Path to SQL file
+ * @param {Object} options - Options for execution
+ * @param {number} options.maxRetries - Maximum retries for SQLITE_BUSY errors (default: 5)
+ * @param {boolean} options.skipEmpty - Skip empty statements (default: true)
+ * @param {boolean} options.allowDuplicateColumn - Allow duplicate column errors (default: true)
+ * @param {boolean} options.allowMissingTable - Allow missing table errors (default: false)
+ * @returns {Promise<void>}
+ */
+async function executeSqlFile(dbOps, filePath, options = {}) {
+  const {
+    maxRetries = 5,
+    skipEmpty = true,
+    allowDuplicateColumn = true,
+    allowMissingTable = false,
+  } = options;
+
+  const sqlContent = fs.readFileSync(filePath, "utf8");
+  const statements = parseSqlStatements(sqlContent);
+
+  for (const statement of statements) {
+    // Skip empty statements
+    if (skipEmpty && (!statement || !statement.trim())) {
+      continue;
+    }
+
+    // Retry logic for SQLITE_BUSY errors
+    let retries = maxRetries;
+    let executed = false;
+
+    while (retries > 0 && !executed) {
+      try {
+        await dbOps.runAsync(statement);
+        executed = true;
+      } catch (error) {
+        const errorMsg = error.message || String(error);
+
+        // Retry for SQLITE_BUSY errors
+        if (errorMsg.includes("SQLITE_BUSY") && retries > 1) {
+          retries--;
+          await new Promise((resolve) =>
+            setTimeout(resolve, 100 * (maxRetries + 1 - retries)),
+          );
+          continue;
+        }
+
+        // Handle duplicate column errors (acceptable for ALTER TABLE ADD COLUMN)
+        if (
+          allowDuplicateColumn &&
+          (errorMsg.includes("duplicate column") ||
+            errorMsg.includes("already exists"))
+        ) {
+          console.log(
+            `Warning: Column/object already exists. Skipping statement: ${statement.substring(0, 50)}...`,
+          );
+          executed = true;
+          break;
+        }
+
+        // Handle missing table errors (acceptable for migrations on existing databases)
+        if (allowMissingTable && errorMsg.includes("no such table")) {
+          console.log(
+            `Info: Table doesn't exist yet (fresh install). Skipping statement: ${statement.substring(0, 50)}...`,
+          );
+          executed = true;
+          break;
+        }
+
+        // Re-throw other errors if no more retries
+        if (retries === 1) {
+          throw error;
+        }
+
+        retries--;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+  }
+}
+
 module.exports = {
   createDatabaseConnection,
   promisifyDb,
   collectSqlFiles,
   parseSqlStatements,
   executeStatements,
+  executeSqlFile,
 };

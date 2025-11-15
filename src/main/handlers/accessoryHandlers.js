@@ -19,35 +19,6 @@ const toBoolean = (value) =>
   value === "true" ||
   value === "TRUE";
 
-/**
- * Validate and normalize discount group ID
- */
-async function validateDiscountGroupId(discountGroupId) {
-  if (
-    discountGroupId === undefined ||
-    discountGroupId === null ||
-    discountGroupId === ""
-  ) {
-    return null;
-  }
-
-  const id = Number(discountGroupId);
-  if (!id) {
-    return null;
-  }
-
-  const discountGroup = await database.queryOne(
-    "SELECT id FROM discount_groups WHERE id = ?",
-    [id],
-  );
-
-  if (!discountGroup) {
-    throw new Error("Grup diskon tidak ditemukan");
-  }
-
-  return id;
-}
-
 function setupAccessoryHandlers() {
   ipcMain.handle("accessories:create", async (_event, payload = {}) => {
     try {
@@ -69,7 +40,7 @@ function setupAccessoryHandlers() {
       const now = new Date().toISOString();
 
       // Validate discount_group_id if provided
-      const discountGroupId = await validateDiscountGroupId(
+      const discountGroupId = await validator.validateDiscountGroupId(
         payload.discount_group_id,
       );
 
@@ -183,7 +154,7 @@ function setupAccessoryHandlers() {
 
       // Validate discount_group_id if provided
       if (payload.discount_group_id !== undefined) {
-        updates.discount_group_id = await validateDiscountGroupId(
+        updates.discount_group_id = await validator.validateDiscountGroupId(
           payload.discount_group_id,
         );
       }

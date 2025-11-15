@@ -71,6 +71,7 @@ import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
+import { formatCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "AccessoryPickerDialog",
@@ -120,13 +121,6 @@ export default {
         })
         .slice(0, 80);
     });
-
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(value || 0);
-    };
 
     const loadAccessories = async () => {
       if (accessories.value.length > 0) return;

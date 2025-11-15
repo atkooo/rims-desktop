@@ -74,6 +74,7 @@ import { ref, computed } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
 import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
+import { formatCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "AccessorySelector",
@@ -112,13 +113,6 @@ export default {
         return sum + price * (accessory.quantity || 1);
       }, 0);
     });
-
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(value || 0);
-    };
 
     const selectAccessory = (accessory) => {
       if (!accessory.is_available_for_sale || !accessory.is_active) return;

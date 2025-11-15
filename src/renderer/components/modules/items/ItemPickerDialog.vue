@@ -81,6 +81,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { useItemType } from "@/composables/useItemType";
+import { formatCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "ItemPickerDialog",
@@ -156,13 +157,6 @@ export default {
         })
         .slice(0, 80);
     });
-
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(value || 0);
-    };
 
     const selectItem = (item) => {
       emit("select", { ...item });

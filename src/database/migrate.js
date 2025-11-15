@@ -1,9 +1,11 @@
+const fs = require("fs");
 const path = require("path");
 const {
   createDatabaseConnection,
   promisifyDb,
   collectSqlFiles,
   parseSqlStatements,
+  executeSqlFile,
 } = require("./utils/db-utils");
 
 // Create a function to get fresh database connection and promisified methods
@@ -119,84 +121,18 @@ async function runMigrations(providedDb = null) {
 
     for (const file of pendingFiles) {
       console.log(`Running migration: ${file.displayName}`);
-      const migration = require("fs").readFileSync(file.fullPath, "utf8");
-
-      // Parse SQL file into individual statements
-      const statements = parseSqlStatements(migration);
-
-      // Execute each statement
-      for (const statement of statements) {
-        // Skip empty statements
-        if (!statement || !statement.trim()) {
-          continue;
-        }
-        
-        // Retry logic for SQLITE_BUSY errors
-        let retries = 5;
-        let executed = false;
-        while (retries > 0 && !executed) {
-          try {
-            await runAsync(statement);
-            executed = true;
-          } catch (error) {
-            const errorMsg = error.message || String(error);
-            
-            // Retry for SQLITE_BUSY errors
-            if (errorMsg.includes("SQLITE_BUSY") && retries > 1) {
-              // Wait and retry for busy database
-              retries--;
-              await new Promise(resolve => setTimeout(resolve, 100 * (6 - retries)));
-              continue;
-            }
-            
-            // If error is about duplicate column, it means column already exists
-            // This is acceptable for ALTER TABLE ADD COLUMN operations
-            // Also handle "no such table" errors for migrations that only apply to existing databases
-            if (
-              errorMsg.includes("duplicate column") ||
-              errorMsg.includes("already exists") ||
-              errorMsg.includes("SQLITE_MISUSE") ||
-              errorMsg.includes("no such table")
-            ) {
-              // Check if it's a column already exists error by trying to query the table schema
-              try {
-                const tableInfo = await allAsync(
-                  "PRAGMA table_info(rental_transactions)",
-                );
-                const hasTaxColumn = tableInfo.some(
-                  (col) => col.name === "tax",
-                );
-                if (hasTaxColumn) {
-                  console.log(
-                    `Warning: Column 'tax' already exists in rental_transactions. Skipping ALTER TABLE statement.`,
-                  );
-                  executed = true; // Mark as executed to skip
-                  break;
-                }
-              } catch (pragmaError) {
-                // If we can't check, re-throw the original error
-              }
-            }
-            
-            // Handle "no such table" errors - this means migration is for existing databases only
-            // and can be skipped for fresh installs
-            if (errorMsg.includes("no such table")) {
-              console.log(
-                `Info: Table doesn't exist yet (fresh install). Skipping migration statement that requires existing table.`,
-              );
-              executed = true;
-              break;
-            }
-            
-            // Re-throw other errors if no more retries
-            if (retries === 1) {
-              throw error;
-            }
-            retries--;
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        }
-      }
+      
+      // Execute SQL file with proper error handling
+      await executeSqlFile(
+        dbOps,
+        file.fullPath,
+        {
+          maxRetries: 5,
+          skipEmpty: true,
+          allowDuplicateColumn: true,
+          allowMissingTable: true, // Allow missing table errors for migrations that target existing databases
+        },
+      );
 
       // Record the migration
       await runAsync(

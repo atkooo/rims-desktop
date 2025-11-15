@@ -8,35 +8,6 @@ const {
   toInteger,
 } = require("../helpers/codeUtils");
 
-/**
- * Validate and normalize discount group ID
- */
-async function validateDiscountGroupId(discountGroupId) {
-  if (
-    discountGroupId === undefined ||
-    discountGroupId === null ||
-    discountGroupId === ""
-  ) {
-    return null;
-  }
-
-  const id = Number(discountGroupId);
-  if (!id) {
-    return null;
-  }
-
-  const discountGroup = await database.queryOne(
-    "SELECT id FROM discount_groups WHERE id = ?",
-    [id],
-  );
-
-  if (!discountGroup) {
-    throw new Error("Grup diskon tidak ditemukan");
-  }
-
-  return id;
-}
-
 // Setup item handlers
 function setupItemHandlers() {
   // Get all items
@@ -106,7 +77,7 @@ function setupItemHandlers() {
       const isAvailableForSale = availability.is_available_for_sale;
 
       // Validate discount_group_id if provided
-      const discountGroupId = await validateDiscountGroupId(
+      const discountGroupId = await validator.validateDiscountGroupId(
         itemData.discount_group_id,
       );
 
@@ -292,7 +263,7 @@ function setupItemHandlers() {
 
       // Validate discount_group_id if provided
       if (updates.discount_group_id !== undefined) {
-        normalizedUpdates.discount_group_id = await validateDiscountGroupId(
+        normalizedUpdates.discount_group_id = await validator.validateDiscountGroupId(
           updates.discount_group_id,
         );
       }

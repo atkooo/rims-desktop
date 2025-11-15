@@ -5,6 +5,7 @@ const {
   promisifyDb,
   collectSqlFiles,
   parseSqlStatements,
+  executeSqlFile,
 } = require("./utils/db-utils");
 
 // Setup database connection using shared config
@@ -32,15 +33,18 @@ async function runSeeders() {
 
     for (const file of files) {
       console.log(`Running seeder: ${file.displayName}`);
-      const seeder = fs.readFileSync(file.fullPath, "utf8");
-
-      // Parse SQL file into individual statements
-      const statements = parseSqlStatements(seeder);
-
-      // Execute each statement
-      for (const statement of statements) {
-        await runAsync(statement);
-      }
+      
+      // Execute SQL file using shared helper
+      await executeSqlFile(
+        dbPromisified,
+        file.fullPath,
+        {
+          maxRetries: 3,
+          skipEmpty: true,
+          allowDuplicateColumn: false, // Seeders should fail if duplicate
+          allowMissingTable: false, // Seeders should fail if table doesn't exist
+        },
+      );
 
       console.log(`Completed seeder: ${file.displayName}`);
     }
