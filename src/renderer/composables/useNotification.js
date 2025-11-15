@@ -1,4 +1,5 @@
 import { ref, reactive } from "vue";
+import { getErrorMessage, formatErrorMessage } from "@/utils/errorMessage";
 
 // Global notification state
 const notification = reactive({
@@ -48,11 +49,16 @@ export function showSuccess(message, title = "Berhasil", duration = 3000) {
 
 /**
  * Show error notification
- * @param {string} message - Error message
+ * @param {Error|string} error - Error object or error message
  * @param {string} title - Optional title (default: "Gagal")
- * @param {number} duration - Duration in milliseconds (default: 4000)
+ * @param {number} duration - Optional duration in milliseconds (default: 4000)
  */
-export function showError(message, title = "Gagal", duration = 4000) {
+export function showError(error, title = "Gagal", duration = 4000) {
+  // Clean and simplify error message
+  // If error is a string, treat it as error message directly
+  // If error is an Error object, extract and clean the message
+  const message = getErrorMessage(error);
+  
   showNotification({
     type: "error",
     title,

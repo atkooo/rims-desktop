@@ -363,7 +363,7 @@ export default {
         clearMessages();
       } catch (error) {
         console.error("Error restoring backup:", error);
-        showError(error.message || "Gagal restore backup");
+        showError(error);
         clearMessages();
       } finally {
         restoreLoading.value = false;

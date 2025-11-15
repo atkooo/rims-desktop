@@ -470,9 +470,7 @@ export default {
         }
       } catch (error) {
         console.error("Gagal menyimpan transaksi:", error);
-        showError(
-          error?.message || "Gagal menyimpan transaksi. Silakan coba lagi.",
-        );
+        showError(error);
       } finally {
         loading.value = false;
       }

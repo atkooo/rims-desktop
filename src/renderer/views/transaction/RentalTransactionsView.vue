@@ -475,7 +475,7 @@ export default {
         showSuccess("Transaksi berhasil di-cancel. Stok telah dikembalikan.");
         await loadData();
       } catch (error) {
-        showError(error.message || "Gagal membatalkan transaksi.");
+        showError(error);
       }
     };
 

@@ -212,7 +212,7 @@ export default {
         await loadSizes();
         showSuccess("Ukuran berhasil disimpan");
       } catch (error) {
-        showError(error?.message || "Gagal menyimpan ukuran");
+        showError(error);
       }
     };
 
@@ -223,7 +223,7 @@ export default {
         await loadSizes();
         showSuccess("Ukuran berhasil dihapus");
       } catch (error) {
-        showError(error?.message || "Gagal menghapus ukuran");
+        showError(error);
         console.error(error);
       }
     };

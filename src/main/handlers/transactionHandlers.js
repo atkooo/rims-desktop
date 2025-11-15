@@ -32,15 +32,12 @@ async function validateStock(itemId, requiredQuantity) {
   );
 
   if (!item) {
-    throw new Error(`Item dengan ID ${itemId} tidak ditemukan`);
+    throw new Error("Item tidak ditemukan");
   }
 
   const availableStock = item.available_quantity || 0;
   if (availableStock < requiredQuantity) {
-    const itemName = item.name || item.code || `Item ID ${itemId}`;
-    throw new Error(
-      `Stok tidak mencukupi untuk ${itemName}. Stok tersedia: ${availableStock}, dibutuhkan: ${requiredQuantity}`,
-    );
+    throw new Error("Stok tidak cukup");
   }
 
   return item;
@@ -109,7 +106,7 @@ async function getTransactionPaymentStatus(transactionType, transactionId) {
  */
 async function validateCashierSession(userId) {
   if (!userId) {
-    throw new Error("User ID harus diisi untuk membuat transaksi");
+    throw new Error("Data tidak valid");
   }
 
   const cashierTableExists = await database.tableExists("cashier_sessions");
@@ -125,9 +122,7 @@ async function validateCashierSession(userId) {
   );
 
   if (!activeSession) {
-    throw new Error(
-      "Sesi kasir belum dibuka. Silakan buka sesi kasir terlebih dahulu sebelum membuat transaksi dengan pembayaran cash.",
-    );
+    throw new Error("Sesi kasir belum dibuka");
   }
 
   return activeSession.id;
@@ -140,14 +135,14 @@ async function expandBundleSelections(selections = []) {
   for (const selection of selections) {
     const bundleId = toInteger(selection.bundleId);
     if (!bundleId) {
-      throw new Error("Bundle tidak valid");
+      throw new Error("Data tidak valid");
     }
     const bundleQuantity = Math.max(1, toInteger(selection.quantity));
 
     if (!cache.has(bundleId)) {
       const details = await fetchBundleItemDetails(bundleId);
       if (!details.length) {
-        throw new Error(`Bundle ${bundleId} tidak memiliki item penjualan`);
+        throw new Error("Data tidak valid");
       }
       cache.set(bundleId, details);
     }
@@ -249,10 +244,10 @@ function setupTransactionHandlers() {
     try {
       // Validasi input
       if (!validator.isValidDate(transactionData.transactionDate)) {
-        throw new Error("Tanggal transaksi tidak valid");
+        throw new Error("Data tidak valid");
       }
       if (!validator.isPositiveNumber(transactionData.totalAmount)) {
-        throw new Error("Total amount harus berupa angka positif");
+        throw new Error("Data tidak valid");
       }
       const saleItems = Array.isArray(transactionData.items)
         ? transactionData.items
@@ -261,7 +256,7 @@ function setupTransactionHandlers() {
         Array.isArray(transactionData.bundles) &&
         transactionData.bundles.length > 0;
       if (saleItems.length === 0 && !hasBundles) {
-        throw new Error("Transaksi harus memiliki minimal 1 item atau paket");
+        throw new Error("Data tidak valid");
       }
 
       // Validate cashier session for cash payments
@@ -464,7 +459,7 @@ function setupTransactionHandlers() {
   ipcMain.handle("transactions:updateStatus", async (event, id, status) => {
     try {
       if (!Object.values(TRANSACTION_STATUS).includes(status)) {
-        throw new Error("Status transaksi tidak valid");
+        throw new Error("Data tidak valid");
       }
 
       await database.execute("BEGIN TRANSACTION");
@@ -583,12 +578,12 @@ function setupTransactionHandlers() {
 
         // Cegah update jika status sudah cancelled
         if (transactionStatus === 'cancelled') {
-          throw new Error("Transaksi yang sudah dibatalkan tidak dapat di-edit.");
+          throw new Error("Transaksi tidak dapat diubah");
         }
 
         // Cegah update jika status sudah paid
         if (paymentStatus === 'paid') {
-          throw new Error("Transaksi yang sudah dibayar tidak dapat di-edit.");
+          throw new Error("Transaksi tidak dapat diubah");
         }
 
         if (isRental) {
@@ -742,15 +737,15 @@ function setupTransactionHandlers() {
           const rental = await getTransactionPaymentStatus("rental", id);
 
           if (!rental) {
-            throw new Error("Transaksi sewa tidak ditemukan");
+            throw new Error("Transaksi tidak ditemukan");
           }
 
           if (rental.calculated_payment_status === "paid") {
-            throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
+            throw new Error("Transaksi tidak dapat dibatalkan");
           }
 
           if (rental.status === "cancelled") {
-            throw new Error("Transaksi sudah di-cancel sebelumnya.");
+            throw new Error("Transaksi tidak dapat dibatalkan");
           }
 
           // Get transaction details untuk restore stock
@@ -801,15 +796,15 @@ function setupTransactionHandlers() {
           const sale = await getTransactionPaymentStatus("sale", id);
 
           if (!sale) {
-            throw new Error("Transaksi penjualan tidak ditemukan");
+            throw new Error("Transaksi tidak ditemukan");
           }
 
           if (sale.calculated_payment_status === "paid") {
-            throw new Error("Transaksi yang sudah dibayar tidak dapat di-cancel.");
+            throw new Error("Transaksi tidak dapat dibatalkan");
           }
 
           if (sale.status === "cancelled") {
-            throw new Error("Transaksi sudah di-cancel sebelumnya.");
+            throw new Error("Transaksi tidak dapat dibatalkan");
           }
 
           // Get transaction details untuk restore stock
@@ -880,7 +875,7 @@ function setupTransactionHandlers() {
       const userId = data?.userId ? Number(data.userId) : null;
 
       if (!rentalTransactionId) {
-        throw new Error("ID transaksi rental harus diisi");
+        throw new Error("Data tidak valid");
       }
 
       // Validate rental transaction exists
@@ -890,11 +885,11 @@ function setupTransactionHandlers() {
       );
 
       if (!rental) {
-        throw new Error("Transaksi rental tidak ditemukan");
+        throw new Error("Transaksi tidak ditemukan");
       }
 
       if (rental.status === "cancelled") {
-        throw new Error("Transaksi yang dibatalkan tidak dapat dikembalikan");
+        throw new Error("Transaksi tidak dapat dikembalikan");
       }
 
       // Start transaction
@@ -903,7 +898,7 @@ function setupTransactionHandlers() {
       try {
         const validReturnCondition = returnCondition;
         if (!["good", "damaged", "lost"].includes(validReturnCondition)) {
-          throw new Error("Kondisi pengembalian tidak valid (harus: good, damaged, atau lost)");
+          throw new Error("Data tidak valid");
         }
 
         // Get rental items to return
@@ -928,7 +923,7 @@ function setupTransactionHandlers() {
         }
 
         if (rentalItems.length === 0) {
-          throw new Error("Tidak ada item yang dapat dikembalikan");
+          throw new Error("Data tidak valid");
         }
 
         const returnUserId = userId || rental.user_id;
@@ -1034,10 +1029,10 @@ function setupPaymentHandlers() {
   ipcMain.handle("payments:create", async (event, paymentData) => {
     try {
       if (!validator.isPositiveNumber(paymentData.amount)) {
-        throw new Error("Jumlah pembayaran harus berupa angka positif");
+        throw new Error("Data tidak valid");
       }
       if (!paymentData.transactionType || !paymentData.transactionId) {
-        throw new Error("Transaksi referensi harus diisi");
+        throw new Error("Data tidak valid");
       }
 
       // Check transaction status before creating payment
@@ -1051,17 +1046,15 @@ function setupPaymentHandlers() {
           paymentData.transactionType === "rental"
             ? "sewa"
             : "penjualan";
-        throw new Error(`Transaksi ${typeLabel} tidak ditemukan`);
+        throw new Error("Transaksi tidak ditemukan");
       }
 
       if (transaction.status === "cancelled") {
-        throw new Error("Transaksi yang sudah dibatalkan tidak dapat dibayar.");
+        throw new Error("Transaksi tidak dapat dibayar");
       }
 
       if (transaction.total_paid >= transaction.total_amount) {
-        throw new Error(
-          "Transaksi ini sudah dibayar lunas dan tidak dapat dibayar lagi.",
-        );
+        throw new Error("Transaksi tidak dapat dibayar");
       }
 
       // Validate cashier session for cash payments
@@ -1185,10 +1178,10 @@ function setupStockMovementHandlers() {
   ipcMain.handle("stockMovements:create", async (event, movementData) => {
     try {
       if (!validator.isPositiveNumber(movementData.quantity)) {
-        throw new Error("Jumlah harus berupa angka positif");
+        throw new Error("Data tidak valid");
       }
       if (!["IN", "OUT"].includes(movementData.movementType)) {
-        throw new Error("Jenis pergerakan harus IN atau OUT");
+        throw new Error("Data tidak valid");
       }
 
       // Get current stock
@@ -1209,7 +1202,7 @@ function setupStockMovementHandlers() {
           : stockBefore - movementData.quantity;
 
       if (stockAfter < 0) {
-        throw new Error("Stok tidak mencukupi");
+        throw new Error("Stok tidak cukup");
       }
 
       await database.execute("BEGIN TRANSACTION");
@@ -1285,7 +1278,7 @@ function setupStockMovementHandlers() {
         );
 
         if (!movement) {
-          throw new Error("Pergerakan stok tidak ditemukan");
+          throw new Error("Data tidak ditemukan");
         }
 
         // Reverse stock change

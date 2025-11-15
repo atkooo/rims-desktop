@@ -10,7 +10,7 @@
     <nav>
       <router-link
         to="/"
-        active-class="active"
+        :class="{ active: route.path === '/' }"
         :title="collapsed ? 'Dashboard' : null"
       >
         <Icon name="dashboard" class="icon" />
@@ -26,7 +26,7 @@
             v-for="item in group.items"
             :key="item.to"
             :to="item.to"
-            active-class="active"
+            :class="{ active: isActive(item.to) }"
             :title="collapsed ? item.label : null"
           >
             <Icon :name="item.icon" class="icon" />
@@ -40,6 +40,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import Icon from "../ui/Icon.vue";
 import { menuGroups } from "@/constants/menu-groups";
 import {
@@ -52,8 +53,28 @@ const props = defineProps({
   collapsed: { type: Boolean, default: false },
 });
 
+const route = useRoute();
 const { hasPermissionSync } = usePermissions();
 const permissionsInitialized = ref(false);
+
+// Check if a menu item should be active (prefix match - includes sub-routes)
+const isActive = (menuPath) => {
+  const currentPath = route.path;
+  
+  // Exact match - always active
+  if (currentPath === menuPath) {
+    return true;
+  }
+  
+  // Prefix match - active if current path starts with menu path followed by /
+  // This ensures /transactions/sales/new activates /transactions/sales
+  // But /transactions/rentals doesn't activate /transactions/sales
+  if (currentPath.startsWith(menuPath + "/")) {
+    return true;
+  }
+  
+  return false;
+};
 
 // Filter menu groups based on permissions
 const filteredGroups = computed(() => {

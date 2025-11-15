@@ -616,9 +616,7 @@ export default {
         }
       } catch (error) {
         console.error("Gagal menyimpan penjualan:", error);
-        showError(
-          error?.message || "Gagal menyimpan penjualan. Silakan coba lagi.",
-        );
+        showError(error);
       } finally {
         loading.value = false;
       }
