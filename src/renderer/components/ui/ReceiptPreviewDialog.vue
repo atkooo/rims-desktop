@@ -265,12 +265,17 @@ export default {
     const handlePrintToPrinter = async (printer) => {
       printing.value = true;
       try {
+        // Convert reactive objects to plain objects for IPC
+        const receiptSettingsPlain = JSON.parse(
+          JSON.stringify(receiptSettings.value),
+        );
+
         const result = await ipcRenderer.invoke("receipt:print", {
           transactionId: props.transactionId,
           transactionType: props.transactionType,
           printerName: printer.name,
           silent: false,
-          receiptSettings: receiptSettings.value,
+          receiptSettings: receiptSettingsPlain,
         });
 
         if (result.success) {
