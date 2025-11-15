@@ -66,29 +66,30 @@
 
         <div class="form-grid dates-grid">
           <div class="field-group" v-if="isRental">
-            <FormInput
+            <DatePicker
               id="rentalDate"
               label="Tanggal Sewa"
-              type="date"
               v-model="form.rentalDate"
+              mode="rental"
               :error="errors.rentalDate"
             />
           </div>
           <div class="field-group" v-if="isRental">
-            <FormInput
+            <DatePicker
               id="plannedReturnDate"
               label="Rencana Kembali"
-              type="date"
               v-model="form.plannedReturnDate"
+              mode="plannedReturn"
+              :min-date="form.rentalDate"
               :error="errors.plannedReturnDate"
             />
           </div>
           <div class="field-group" v-else>
-            <FormInput
+            <DatePicker
               id="saleDate"
               label="Tanggal Penjualan"
-              type="date"
               v-model="form.saleDate"
+              mode="sale"
               :error="errors.saleDate"
             />
           </div>
@@ -273,6 +274,7 @@ import { useTransactionStore } from "@/store/transactions";
 import { useItemStore } from "@/store/items";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
@@ -332,6 +334,7 @@ export default {
   components: {
     AppDialog,
     FormInput,
+    DatePicker,
     ItemSelector,
     BundleSelector,
     AccessorySelector,

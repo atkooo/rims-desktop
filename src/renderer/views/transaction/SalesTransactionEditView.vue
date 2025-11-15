@@ -47,13 +47,13 @@
           </select>
         </div>
         <div class="cashier-field-inline">
-          <label for="saleDate" class="cashier-label-inline">Tanggal:</label>
-          <input
+          <DatePicker
             id="saleDate"
-            type="date"
+            label="Tanggal:"
             v-model="form.saleDate"
-            class="cashier-input-inline"
-            :class="{ error: errors.saleDate }"
+            mode="sale"
+            :error="errors.saleDate"
+            class="cashier-date-inline"
           />
         </div>
       </div>
@@ -176,6 +176,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";

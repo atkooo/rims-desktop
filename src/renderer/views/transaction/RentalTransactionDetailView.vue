@@ -251,16 +251,12 @@
         </p>
       </div>
 
-      <div class="form-group">
-        <label for="returnDate" class="form-label">Tanggal Kembali</label>
-        <input
-          id="returnDate"
-          type="date"
-          v-model="returnForm.actualReturnDate"
-          class="form-input"
-          :max="new Date().toISOString().split('T')[0]"
-        />
-      </div>
+      <DatePicker
+        id="returnDate"
+        label="Tanggal Kembali"
+        v-model="returnForm.actualReturnDate"
+        mode="actualReturn"
+      />
 
       <div class="form-group">
         <label for="returnCondition" class="form-label">Kondisi Item</label>
@@ -289,6 +285,7 @@ import { useRoute, useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
 import {
@@ -301,7 +298,7 @@ import { getCurrentUser } from "@/services/auth";
 
 export default {
   name: "RentalTransactionDetailView",
-  components: { AppButton, Icon, AppDialog, PaymentModal, ReceiptPreviewDialog },
+  components: { AppButton, Icon, AppDialog, DatePicker, PaymentModal, ReceiptPreviewDialog },
   setup() {
     const route = useRoute();
     const router = useRouter();

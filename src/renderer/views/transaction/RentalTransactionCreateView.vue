@@ -90,23 +90,24 @@
           </select>
         </div>
         <div class="cashier-field-inline">
-          <label for="rentalDate" class="cashier-label-inline">Tanggal Sewa:</label>
-          <input
+          <DatePicker
             id="rentalDate"
-            type="date"
+            label="Tanggal Sewa:"
             v-model="form.rentalDate"
-            class="cashier-input-inline"
-            :class="{ error: errors.rentalDate }"
+            mode="rental"
+            :error="errors.rentalDate"
+            class="cashier-date-inline"
           />
         </div>
         <div class="cashier-field-inline">
-          <label for="plannedReturnDate" class="cashier-label-inline">Rencana Kembali:</label>
-          <input
+          <DatePicker
             id="plannedReturnDate"
-            type="date"
+            label="Rencana Kembali:"
             v-model="form.plannedReturnDate"
-            class="cashier-input-inline"
-            :class="{ error: errors.plannedReturnDate }"
+            mode="plannedReturn"
+            :min-date="form.rentalDate"
+            :error="errors.plannedReturnDate"
+            class="cashier-date-inline"
           />
         </div>
       </div>
@@ -229,6 +230,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
+import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
@@ -269,6 +271,7 @@ export default {
   name: "RentalTransactionCreateView",
   components: {
     AppButton,
+    DatePicker,
     ItemSelector,
     BundleSelector,
     PaymentModal,
@@ -735,6 +738,24 @@ export default {
   font-weight: 500;
   color: #374151;
   white-space: nowrap;
+}
+
+.cashier-date-inline {
+  margin-bottom: 0;
+}
+
+.cashier-date-inline :deep(.form-label) {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cashier-date-inline :deep(.form-input) {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
 }
 
 .cashier-input-inline,

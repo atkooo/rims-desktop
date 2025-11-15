@@ -24,3 +24,5 @@ FROM items i
 LEFT JOIN categories c ON c.id = i.category_id;
 
 
+
+
