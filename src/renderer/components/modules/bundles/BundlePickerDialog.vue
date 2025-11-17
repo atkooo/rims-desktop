@@ -36,7 +36,7 @@
           :key="bundle.id"
           class="picker-row"
           :class="{ 
-            unavailable: !allowZeroStock && bundle.available_quantity <= 0 
+            unavailable: restrictStock && bundle.available_quantity <= 0 
           }"
         >
           <div class="picker-meta">
@@ -59,7 +59,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="!allowZeroStock && bundle.available_quantity <= 0"
+              :disabled="restrictStock && bundle.available_quantity <= 0"
               @click="selectBundle(bundle)"
             >
               Pilih
@@ -100,7 +100,11 @@ export default {
     },
     allowZeroStock: {
       type: Boolean,
-      default: false, // Jika true, bundle dengan stok 0 bisa dipilih (untuk pergerakan stok)
+      default: false, // Deprecated: gunakan restrictStock sebagai gantinya
+    },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
     },
   },
   emits: ["update:modelValue", "select"],
@@ -193,6 +197,14 @@ export default {
       }
     };
 
+    // Compute restrictStock: prioritize restrictStock prop, fallback to !allowZeroStock for backward compatibility
+    const restrictStock = computed(() => {
+      // If restrictStock prop is explicitly provided (not default), use it
+      // Otherwise, use allowZeroStock for backward compatibility (restrictStock = !allowZeroStock)
+      // Note: Since default is true, we check if allowZeroStock was explicitly set
+      return props.restrictStock;
+    });
+
     return {
       search,
       statusFilter,
@@ -203,7 +215,7 @@ export default {
       getDialogTitle,
       getBundlePriceDisplay,
       bundleType: toRef(props, "bundleType"),
-      allowZeroStock: toRef(props, "allowZeroStock"),
+      restrictStock,
     };
   },
 };

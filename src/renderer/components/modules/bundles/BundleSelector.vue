@@ -51,7 +51,7 @@
                 type="number"
                 v-model.number="bundle.quantity"
                 min="1"
-                :max="bundle.available_quantity || 0"
+                :max="restrictStock ? (bundle.available_quantity || 0) : undefined"
                 class="quantity-input"
                 @input="updateQuantity(index, $event)"
               />
@@ -93,6 +93,7 @@
       v-model="pickerOpen"
       :excluded-ids="selectedBundles.map((bundle) => bundle.id)"
       :bundle-type="bundleType"
+      :restrict-stock="restrictStock"
       @select="selectBundle"
     />
   </div>
@@ -120,6 +121,10 @@ export default {
     bundleType: {
       type: String,
       default: "sale", // "sale" or "rental"
+    },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
     },
   },
   emits: ["update:modelValue"],
@@ -158,31 +163,47 @@ export default {
     );
 
     const selectBundle = (bundle) => {
-      // Cek apakah bundle sudah ada di selected bundles
-      const existingBundle = selectedBundles.value.find((b) => b.id === bundle.id);
-      if (existingBundle) {
-        // Jika sudah ada, cek stok sebelum menambah quantity
-        const currentQuantity = existingBundle.quantity || 1;
-        const availableStock = bundle.available_quantity || 0;
-        
-        if (currentQuantity >= availableStock) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          return;
+      // Jika restrictStock aktif, cek stok
+      if (props.restrictStock) {
+        // Cek apakah bundle sudah ada di selected bundles
+        const existingBundle = selectedBundles.value.find((b) => b.id === bundle.id);
+        if (existingBundle) {
+          // Jika sudah ada, cek stok sebelum menambah quantity
+          const currentQuantity = existingBundle.quantity || 1;
+          const availableStock = bundle.available_quantity || 0;
+          
+          if (currentQuantity >= availableStock) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          existingBundle.quantity = currentQuantity + 1;
+        } else {
+          // Bundle baru, cek stok tersedia
+          const availableStock = bundle.available_quantity || 0;
+          if (availableStock < 1) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          selectedBundles.value.push({
+            ...bundle,
+            quantity: 1,
+          });
         }
-        
-        existingBundle.quantity = currentQuantity + 1;
       } else {
-        // Bundle baru, cek stok tersedia
-        const availableStock = bundle.available_quantity || 0;
-        if (availableStock < 1) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          return;
+        // Jika tidak restrictStock, tambah tanpa cek stok
+        const existingBundle = selectedBundles.value.find((b) => b.id === bundle.id);
+        if (existingBundle) {
+          // Jika sudah ada, tambah quantity tanpa cek stok
+          existingBundle.quantity = (existingBundle.quantity || 1) + 1;
+        } else {
+          // Bundle baru, tambah tanpa cek stok
+          selectedBundles.value.push({
+            ...bundle,
+            quantity: 1,
+          });
         }
-        
-        selectedBundles.value.push({
-          ...bundle,
-          quantity: 1,
-        });
       }
       
       pickerOpen.value = false;
@@ -197,13 +218,18 @@ export default {
         selectedBundles.value[index].quantity = 1;
       } else {
         const newQuantity = Math.max(1, Math.floor(value));
-        const availableStock = bundle.available_quantity || 0;
         
-        // Validasi tidak boleh melebihi stok tersedia
-        if (newQuantity > availableStock) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          selectedBundles.value[index].quantity = Math.min(availableStock, bundle.quantity || 1);
+        // Jika restrictStock aktif, validasi tidak boleh melebihi stok tersedia
+        if (props.restrictStock) {
+          const availableStock = bundle.available_quantity || 0;
+          if (newQuantity > availableStock) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            selectedBundles.value[index].quantity = Math.min(availableStock, bundle.quantity || 1);
+          } else {
+            selectedBundles.value[index].quantity = newQuantity;
+          }
         } else {
+          // Jika tidak restrictStock, tidak ada batasan maksimal
           selectedBundles.value[index].quantity = newQuantity;
         }
       }
@@ -229,6 +255,7 @@ export default {
       updateQuantity,
       removeBundle,
       openPicker,
+      restrictStock: props.restrictStock,
     };
   },
 };

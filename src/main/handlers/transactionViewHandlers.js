@@ -139,7 +139,14 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         sm.id,
-        i.name AS item_name,
+        COALESCE(i.name, a.name, b.name) AS item_name,
+        COALESCE(i.code, a.code, b.code) AS product_code,
+        CASE 
+          WHEN sm.item_id IS NOT NULL THEN 'Item'
+          WHEN sm.accessory_id IS NOT NULL THEN 'Aksesoris'
+          WHEN sm.bundle_id IS NOT NULL THEN 'Paket/Bundle'
+          ELSE 'Unknown'
+        END AS product_type,
         sm.movement_type,
         sm.reference_type,
         sm.reference_id,
@@ -151,6 +158,8 @@ function setupTransactionViewHandlers() {
         sm.created_at
       FROM stock_movements sm
       LEFT JOIN items i ON sm.item_id = i.id
+      LEFT JOIN accessories a ON sm.accessory_id = a.id
+      LEFT JOIN bundles b ON sm.bundle_id = b.id
       LEFT JOIN users u ON sm.user_id = u.id
       ORDER BY sm.created_at DESC
     `,

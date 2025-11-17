@@ -43,13 +43,13 @@
               </div>
               <div class="picker-detail">
                 {{ item.type || "General" }} ·
-                {{ formatCurrency(item.sale_price ?? item.price ?? 0) }} ·
+                {{ getItemPriceDisplay(item) }} ·
                 Stok: {{ item.available_quantity || 0 }}
                 <span
-                  v-if="item.sale_price && item.sale_price !== item.price"
+                  v-if="getPriceNote(item)"
                   class="price-note"
                 >
-                  (Harga: {{ formatCurrency(item.price) }})
+                  {{ getPriceNote(item) }}
                 </span>
               </div>
             </div>
@@ -167,6 +167,37 @@ export default {
       visible.value = false;
     };
 
+    // Get item price display based on transaction type
+    const getItemPriceDisplay = (item) => {
+      if (props.transactionType === 'RENTAL') {
+        // For rental, show rental_price_per_day
+        const rentalPrice = item.rental_price_per_day ?? item.price ?? 0;
+        return formatCurrency(rentalPrice) + "/hari";
+      } else {
+        // For sale or null, show sale_price
+        return formatCurrency(item.sale_price ?? item.price ?? 0);
+      }
+    };
+
+    // Get price note (additional price info)
+    const getPriceNote = (item) => {
+      if (props.transactionType === 'RENTAL') {
+        // For rental, show sale_price if different from rental_price_per_day
+        const rentalPrice = item.rental_price_per_day ?? item.price ?? 0;
+        const salePrice = item.sale_price ?? item.price ?? 0;
+        if (salePrice && salePrice !== rentalPrice) {
+          return `(Harga jual: ${formatCurrency(salePrice)})`;
+        }
+        return null;
+      } else {
+        // For sale, show original price if different from sale_price
+        if (item.sale_price && item.sale_price !== item.price) {
+          return `(Harga: ${formatCurrency(item.price)})`;
+        }
+        return null;
+      }
+    };
+
     watch(
       () => props.modelValue,
       (value) => {
@@ -185,6 +216,8 @@ export default {
       formatCurrency,
       selectItem,
       restrictStock: props.restrictStock,
+      getItemPriceDisplay,
+      getPriceNote,
     };
   },
 };

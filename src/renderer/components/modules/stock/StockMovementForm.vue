@@ -1,7 +1,7 @@
 <template>
   <AppDialog
     v-model="showDialog"
-    title="Pergerakan Stok Baru"
+    title="Mutasi Stok Baru"
     confirm-text="Simpan"
     :loading="loading"
     @confirm="handleSubmit"
@@ -41,7 +41,7 @@
             </select>
           </div>
           <div class="field-group">
-            <label for="movementType">Jenis Pergerakan</label>
+            <label for="movementType">Jenis Mutasi</label>
             <select
               id="movementType"
               v-model="form.movementType"
@@ -152,7 +152,7 @@
               label="Catatan"
               v-model="form.notes"
               type="textarea"
-              placeholder="Alasan pergerakan stok"
+              placeholder="Alasan mutasi stok"
             />
           </div>
         </div>
@@ -168,7 +168,7 @@
     <BundlePickerDialog
       v-model="showBundlePicker"
       :bundle-type="form.bundleType || 'both'"
-      :allow-zero-stock="true"
+      :restrict-stock="false"
       @select="handleBundleSelect"
     />
     <AccessoryPickerDialog
@@ -336,7 +336,7 @@ export default {
       }
 
       if (!form.value.movementType) {
-        newErrors.movementType = "Jenis pergerakan harus dipilih";
+        newErrors.movementType = "Jenis mutasi harus dipilih";
       }
 
       if (!form.value.quantity || form.value.quantity < 1) {
@@ -384,7 +384,7 @@ export default {
       } catch (error) {
         console.error("Error saving stock movement:", error);
         errors.value.submit =
-          error.message || "Gagal menyimpan pergerakan stok";
+          error.message || "Gagal menyimpan mutasi stok";
       } finally {
         loading.value = false;
       }

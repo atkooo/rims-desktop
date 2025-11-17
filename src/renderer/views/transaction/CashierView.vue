@@ -73,7 +73,7 @@
         {{ error }}
       </div>
 
-      <form @submit.prevent="handleOpenSession" class="cashier-form">
+      <form class="cashier-form">
         <div class="form-group">
           <label for="openingBalance">Saldo Awal (Rp)</label>
           <input
@@ -104,16 +104,47 @@
 
         <div class="form-actions">
           <AppButton
-            type="submit"
+            type="button"
             variant="primary"
-            :loading="opening"
             :disabled="!openForm.openingBalance || openForm.openingBalance <= 0"
+            @click="showConfirmDialog = true"
           >
             Buka Kasir
           </AppButton>
         </div>
       </form>
     </section>
+
+    <!-- Confirm Open Session Dialog -->
+    <AppDialog
+      v-model="showConfirmDialog"
+      title="Konfirmasi Buka Kasir"
+      confirm-text="Ya, Buka Kasir"
+      cancel-text="Batal"
+      confirm-variant="primary"
+      :loading="opening"
+      @confirm="confirmOpenSession"
+      @cancel="showConfirmDialog = false"
+    >
+      <div class="confirm-dialog-content">
+        <p class="confirm-message">
+          Apakah Anda yakin ingin membuka sesi kasir baru?
+        </p>
+        <div class="confirm-details">
+          <div class="confirm-row">
+            <span>Saldo Awal:</span>
+            <strong>{{ formatCurrency(openForm.openingBalance) }}</strong>
+          </div>
+          <div v-if="openForm.notes" class="confirm-row">
+            <span>Catatan:</span>
+            <strong>{{ openForm.notes }}</strong>
+          </div>
+        </div>
+        <p class="confirm-warning">
+          Pastikan saldo awal sudah sesuai sebelum melanjutkan.
+        </p>
+      </div>
+    </AppDialog>
 
     <!-- Close Session Dialog -->
     <div
@@ -240,6 +271,7 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import DataTable from "@/components/ui/DataTable.vue";
 import {
   getCurrentSession,
@@ -252,7 +284,7 @@ import { useNumberFormat } from "@/composables/useNumberFormat";
 
 export default {
   name: "CashierView",
-  components: { AppButton, DataTable },
+  components: { AppButton, AppDialog, DataTable },
   setup() {
     const currentSession = ref(null);
     const sessions = ref([]);
@@ -262,6 +294,7 @@ export default {
     const error = ref("");
     const closeError = ref("");
     const showCloseDialog = ref(false);
+    const showConfirmDialog = ref(false);
     const currentUser = ref(null);
 
     const openForm = ref({
@@ -352,10 +385,27 @@ export default {
       }
     };
 
+    const confirmOpenSession = async () => {
+      // Validate before opening
+      errors.value = {};
+      if (
+        !openForm.value.openingBalance ||
+        openForm.value.openingBalance <= 0
+      ) {
+        errors.value.openingBalance = "Saldo awal harus lebih dari 0";
+        showConfirmDialog.value = false;
+        return;
+      }
+      
+      // Proceed to open session
+      await handleOpenSession();
+    };
+
     const handleOpenSession = async () => {
       errors.value = {};
       opening.value = true;
       error.value = "";
+      showConfirmDialog.value = false;
 
       try {
         if (!currentUser.value?.id) {
@@ -462,6 +512,7 @@ export default {
       error,
       closeError,
       showCloseDialog,
+      showConfirmDialog,
       openForm,
       closeForm,
       errors,
@@ -475,6 +526,7 @@ export default {
       columns,
       loadData,
       handleOpenSession,
+      confirmOpenSession,
       handleCloseSession,
     };
   },
@@ -735,5 +787,55 @@ export default {
   font-size: 1.25rem;
   color: #111827;
   font-weight: 600;
+}
+
+/* Confirm Dialog Styles */
+.confirm-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.confirm-message {
+  font-size: 1rem;
+  color: #111827;
+  margin: 0 0 1.5rem 0;
+  font-weight: 500;
+}
+
+.confirm-details {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.confirm-row:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.confirm-row span {
+  color: #6b7280;
+}
+
+.confirm-row strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.confirm-warning {
+  font-size: 0.875rem;
+  color: #d97706;
+  margin: 0;
+  padding: 0.75rem;
+  background: #fef3c7;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
 }
 </style>

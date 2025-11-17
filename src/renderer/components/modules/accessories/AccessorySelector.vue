@@ -123,15 +123,51 @@ export default {
       // Jika restrictStock aktif, cek ketersediaan
       if (props.restrictStock) {
         if (!accessory.is_available_for_sale || !accessory.is_active) return;
+
+        // Cek apakah accessory sudah ada di selected accessories
+        const existingAccessory = selectedAccessories.value.find((a) => a.id === accessory.id);
+        if (existingAccessory) {
+          // Jika sudah ada, cek stok sebelum menambah quantity
+          const currentQuantity = existingAccessory.quantity || 1;
+          const availableStock = accessory.available_quantity || 0;
+          
+          if (currentQuantity >= availableStock) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          existingAccessory.quantity = currentQuantity + 1;
+        } else {
+          // Accessory baru, cek stok tersedia
+          const availableStock = accessory.available_quantity || 0;
+          if (availableStock < 1) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          selectedAccessories.value.push({
+            ...accessory,
+            quantity: 1,
+          });
+        }
       } else {
         // Jika tidak restrictStock, hanya cek is_active
         if (!accessory.is_active) return;
-      }
 
-      selectedAccessories.value.push({
-        ...accessory,
-        quantity: 1,
-      });
+        // Cek apakah accessory sudah ada di selected accessories
+        const existingAccessory = selectedAccessories.value.find((a) => a.id === accessory.id);
+        if (existingAccessory) {
+          // Jika sudah ada, tambah quantity tanpa cek stok
+          existingAccessory.quantity = (existingAccessory.quantity || 1) + 1;
+        } else {
+          // Accessory baru, tambah tanpa cek stok
+          selectedAccessories.value.push({
+            ...accessory,
+            quantity: 1,
+          });
+        }
+      }
+      
       pickerOpen.value = false;
       emit("update:modelValue", selectedAccessories.value);
     };
