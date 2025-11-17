@@ -237,6 +237,7 @@ import {
   fetchBundleDetails,
   deleteBundle,
 } from "@/services/masterData";
+import { useBundleStore } from "@/store/bundles";
 
 export default {
   name: "BundlesView",
@@ -250,6 +251,7 @@ export default {
   },
   setup() {
     const router = useRouter();
+    const bundleStore = useBundleStore();
     const bundles = ref([]);
     const bundleDetails = ref([]);
     const loading = ref(false);
@@ -309,7 +311,7 @@ export default {
         0,
       );
       const rentalBundles = bundles.value.filter(
-        (bundle) => bundle.bundle_type === "rental",
+        (bundle) => bundle.bundle_type === "rental" || bundle.bundle_type === "both",
       ).length;
 
       return { totalBundles, activeBundles, totalStock, rentalBundles };
@@ -389,10 +391,12 @@ export default {
       showForm.value = true;
     };
 
-    const handleFormSaved = () => {
+    const handleFormSaved = async () => {
       editingBundle.value = null;
-      loadData();
-      loadBundleDetails();
+      await loadData();
+      await loadBundleDetails();
+      // Refresh bundle store so picker shows new/updated bundles
+      await bundleStore.fetchBundles(true);
     };
 
     const promptDelete = (bundle) => {
@@ -447,8 +451,10 @@ export default {
         }
         showDeleteConfirm.value = false;
         bundleToDelete.value = null;
-        loadData();
-        loadBundleDetails();
+        await loadData();
+        await loadBundleDetails();
+        // Refresh bundle store so picker reflects deleted bundle
+        await bundleStore.fetchBundles(true);
       } catch (err) {
         error.value = err.message || "Gagal menghapus paket.";
       } finally {

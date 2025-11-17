@@ -140,8 +140,6 @@ function setupTransactionViewHandlers() {
       SELECT
         sm.id,
         i.name AS item_name,
-        b.name AS bundle_name,
-        a.name AS accessory_name,
         sm.movement_type,
         sm.reference_type,
         sm.reference_id,
@@ -153,8 +151,6 @@ function setupTransactionViewHandlers() {
         sm.created_at
       FROM stock_movements sm
       LEFT JOIN items i ON sm.item_id = i.id
-      LEFT JOIN bundles b ON sm.bundle_id = b.id
-      LEFT JOIN accessories a ON sm.accessory_id = a.id
       LEFT JOIN users u ON sm.user_id = u.id
       ORDER BY sm.created_at DESC
     `,

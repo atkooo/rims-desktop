@@ -75,7 +75,7 @@
           :loading="loading"
           :searchable-keys="['transaction_code', 'customer_name', 'status']"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
           show-index
         >
           <template #actions="{ row }">

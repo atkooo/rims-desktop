@@ -153,6 +153,7 @@
     />
     <BundlePickerDialog
       v-model="showBundlePicker"
+      :allow-zero-stock="true"
       @select="handleBundleSelect"
     />
     <AccessoryPickerDialog

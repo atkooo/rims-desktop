@@ -12,16 +12,12 @@ export const useBundleStore = defineStore("bundles", {
     saleBundles: (state) =>
       state.bundles.filter(
         (bundle) =>
-          bundle.bundle_type === "sale" &&
-          bundle.is_active &&
-          (bundle.available_quantity ?? 0) > 0,
+          (bundle.bundle_type === "sale" || bundle.bundle_type === "both") && bundle.is_active,
       ),
     rentalBundles: (state) =>
       state.bundles.filter(
         (bundle) =>
-          bundle.bundle_type === "rental" &&
-          bundle.is_active &&
-          (bundle.available_quantity ?? 0) > 0,
+          (bundle.bundle_type === "rental" || bundle.bundle_type === "both") && bundle.is_active,
       ),
   },
 

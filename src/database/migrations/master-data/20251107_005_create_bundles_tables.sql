@@ -6,7 +6,7 @@ CREATE TABLE bundles (
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    bundle_type VARCHAR(50) CHECK (bundle_type IN ('rental','sale')),
+    bundle_type VARCHAR(50) CHECK (bundle_type IN ('rental','sale','both')),
     price DECIMAL(15,2) DEFAULT 0,
     rental_price_per_day DECIMAL(15,2) DEFAULT 0,
     stock_quantity INTEGER DEFAULT 0,

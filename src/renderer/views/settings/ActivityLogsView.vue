@@ -59,7 +59,7 @@
             'ip_address',
           ]"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
         />
       </div>
     </section>

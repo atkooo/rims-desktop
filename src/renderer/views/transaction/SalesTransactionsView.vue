@@ -66,7 +66,7 @@
             'payment_status',
           ]"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
           show-index
         >
           <template #actions="{ row }">

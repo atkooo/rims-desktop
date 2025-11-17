@@ -13,7 +13,7 @@ const bundleItemSql = `
     COALESCE(i.sale_price, i.price, 0) AS sale_price,
     b.name AS bundle_name
   FROM bundle_details bd
-  JOIN bundles b ON bd.bundle_id = b.id AND b.bundle_type = 'sale'
+  JOIN bundles b ON bd.bundle_id = b.id AND (b.bundle_type = 'sale' OR b.bundle_type = 'both')
   JOIN items i ON bd.item_id = i.id
   WHERE bd.bundle_id = ?
 `;

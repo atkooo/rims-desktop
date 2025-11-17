@@ -37,7 +37,7 @@
           :loading="loading"
           :searchable-keys="['username', 'full_name', 'email', 'role_name']"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
         >
           <template #cell-is_active="{ row }">
             {{ row.is_active ? "Aktif" : "Nonaktif" }}

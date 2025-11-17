@@ -82,7 +82,7 @@
             'size_name',
           ]"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
         >
           <template #cell-code="{ row }">
             <a href="#" class="row-link" @click.prevent="handleViewDetail(row)">

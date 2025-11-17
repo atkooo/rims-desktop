@@ -14,7 +14,9 @@ const toNumber = (value) => {
 
 const sanitizeBundleType = (value) => {
   const normalized = (value || "").toString().trim().toLowerCase();
-  return normalized === "sale" ? "sale" : "rental";
+  if (normalized === "sale") return "sale";
+  if (normalized === "both") return "both";
+  return "rental";
 };
 
 async function buildPayload(raw, isEdit = false) {
@@ -54,7 +56,7 @@ function validatePayload(payload) {
   if (!validator.isNotEmpty(payload.name)) {
     throw new Error("Nama paket wajib diisi");
   }
-  if (!["rental", "sale"].includes(payload.bundle_type)) {
+  if (!["rental", "sale", "both"].includes(payload.bundle_type)) {
     throw new Error("Tipe paket tidak valid");
   }
   if (payload.price < 0) {

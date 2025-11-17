@@ -35,7 +35,9 @@
           v-for="bundle in filteredBundles"
           :key="bundle.id"
           class="picker-row"
-          :class="{ unavailable: bundle.available_quantity <= 0 }"
+          :class="{ 
+            unavailable: !allowZeroStock && bundle.available_quantity <= 0 
+          }"
         >
           <div class="picker-meta">
             <Icon name="box" :size="20" class="picker-icon" />
@@ -43,7 +45,7 @@
               <div class="picker-name">{{ bundle.name }}</div>
               <div class="picker-detail">
                 {{ bundle.code }} · 
-                {{ props.bundleType === "rental" 
+                {{ bundleType === "rental" 
                   ? formatCurrency(bundle.rental_price_per_day || 0) + "/hari"
                   : formatCurrency(bundle.price || 0) }}
               </div>
@@ -59,7 +61,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="bundle.available_quantity <= 0"
+              :disabled="!allowZeroStock && bundle.available_quantity <= 0"
               @click="selectBundle(bundle)"
             >
               Pilih
@@ -72,7 +74,7 @@
 </template>
 
 <script>
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, toRef } from "vue";
 import { useBundleStore } from "@/store/bundles";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
@@ -97,6 +99,10 @@ export default {
     bundleType: {
       type: String,
       default: "sale", // "sale" or "rental"
+    },
+    allowZeroStock: {
+      type: Boolean,
+      default: false, // Jika true, bundle dengan stok 0 bisa dipilih (untuk pergerakan stok)
     },
   },
   emits: ["update:modelValue", "select"],
@@ -145,8 +151,9 @@ export default {
     watch(
       () => props.modelValue,
       (value) => {
-        if (value && !bundleStore.bundles.length) {
-          bundleStore.fetchBundles().catch((error) => {
+        if (value) {
+          // Always refresh bundles when picker opens to get latest data
+          bundleStore.fetchBundles(true).catch((error) => {
             console.error("Gagal memuat paket:", error);
           });
         }
@@ -160,6 +167,8 @@ export default {
       filteredBundles,
       formatCurrency,
       selectBundle,
+      bundleType: toRef(props, "bundleType"),
+      allowZeroStock: toRef(props, "allowZeroStock"),
     };
   },
 };

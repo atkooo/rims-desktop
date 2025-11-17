@@ -45,9 +45,9 @@
               <div class="detail-value">
                 <span
                   class="status-badge"
-                  :class="bundle.bundle_type === 'rental' ? 'rental' : 'sale'"
+                  :class="bundle.bundle_type === 'rental' ? 'rental' : bundle.bundle_type === 'both' ? 'both' : 'sale'"
                 >
-                  {{ bundle.bundle_type === "rental" ? "Rental" : "Penjualan" }}
+                  {{ bundle.bundle_type === "rental" ? "Rental" : bundle.bundle_type === "both" ? "Both" : "Penjualan" }}
                 </span>
               </div>
             </div>
@@ -77,7 +77,7 @@
               <label>Harga Paket</label>
               <div class="detail-value">{{ formatCurrency(bundle.price) }}</div>
             </div>
-            <div v-if="bundle.bundle_type === 'rental'" class="detail-row">
+            <div v-if="bundle.bundle_type === 'rental' || bundle.bundle_type === 'both'" class="detail-row">
               <label>Harga Sewa/Hari</label>
               <div class="detail-value">{{ formatCurrency(bundle.rental_price_per_day) }}</div>
             </div>
@@ -502,6 +502,11 @@ export default {
 .status-badge.sale {
   background-color: #fef3c7;
   color: #92400e;
+}
+
+.status-badge.both {
+  background-color: #e9d5ff;
+  color: #6b21a8;
 }
 
 .detail-state {

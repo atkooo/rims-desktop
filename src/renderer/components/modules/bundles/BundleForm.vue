@@ -24,6 +24,7 @@
           >
             <option value="rental">Rental</option>
             <option value="sale">Sale</option>
+            <option value="both">Both</option>
           </select>
         </div>
         <div class="form-group">
@@ -195,7 +196,7 @@ export default {
       if (!form.value.name || !form.value.name.trim()) {
         validationErrors.name = "Nama wajib diisi";
       }
-      if (!["rental", "sale"].includes(form.value.bundle_type)) {
+      if (!["rental", "sale", "both"].includes(form.value.bundle_type)) {
         validationErrors.bundle_type = "Tipe tidak valid";
       }
 
