@@ -30,17 +30,22 @@ CREATE TABLE sales_transactions (
 CREATE TABLE sales_transaction_details (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sales_transaction_id INTEGER NOT NULL,
-    item_id INTEGER NOT NULL,
+    item_id INTEGER,
+    accessory_id INTEGER,
     quantity INTEGER NOT NULL,
     sale_price DECIMAL(15,2) NOT NULL,
     subtotal DECIMAL(15,2) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sales_transaction_id) REFERENCES sales_transactions(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT,
+    FOREIGN KEY (accessory_id) REFERENCES accessories(id) ON DELETE RESTRICT,
     CHECK (quantity > 0),
     CHECK (sale_price >= 0),
     CHECK (subtotal >= 0)
 );
+
+-- Create index for accessory_id
+CREATE INDEX IF NOT EXISTS idx_sales_transaction_details_accessory ON sales_transaction_details(accessory_id);
 
 -- Create indexes for better query performance
 CREATE INDEX idx_sales_transactions_customer ON sales_transactions(customer_id);
@@ -50,4 +55,5 @@ CREATE INDEX idx_sales_transactions_date ON sales_transactions(sale_date);
 
 CREATE INDEX idx_sales_transaction_details_transaction ON sales_transaction_details(sales_transaction_id);
 CREATE INDEX idx_sales_transaction_details_item ON sales_transaction_details(item_id);
+CREATE INDEX IF NOT EXISTS idx_sales_transactions_status ON sales_transactions(status);
 

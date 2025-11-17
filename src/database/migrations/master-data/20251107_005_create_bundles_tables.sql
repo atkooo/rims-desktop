@@ -13,9 +13,14 @@ CREATE TABLE bundles (
     available_quantity INTEGER DEFAULT 0,
     image_path VARCHAR(255),
     is_active BOOLEAN DEFAULT 1,
+    discount_group_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (discount_group_id) REFERENCES discount_groups(id) ON DELETE SET NULL
 );
+
+-- Create index for discount_group_id
+CREATE INDEX IF NOT EXISTS idx_bundles_discount_group ON bundles(discount_group_id);
 
 CREATE TABLE bundle_details (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

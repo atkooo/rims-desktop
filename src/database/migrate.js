@@ -129,8 +129,8 @@ async function runMigrations(providedDb = null) {
         {
           maxRetries: 5,
           skipEmpty: true,
-          allowDuplicateColumn: true,
-          allowMissingTable: true, // Allow missing table errors for migrations that target existing databases
+          allowDuplicateColumn: false, // All migrations are now CREATE TABLE, no duplicates expected
+          allowMissingTable: false, // All migrations create tables, tables should not exist
         },
       );
 

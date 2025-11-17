@@ -16,7 +16,12 @@ CREATE TABLE accessories (
     is_available_for_rent BOOLEAN DEFAULT 1,
     is_available_for_sale BOOLEAN DEFAULT 1,
     is_active BOOLEAN DEFAULT 1,
+    discount_group_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (discount_group_id) REFERENCES discount_groups(id) ON DELETE SET NULL
 );
+
+-- Create index for discount_group_id
+CREATE INDEX IF NOT EXISTS idx_accessories_discount_group ON accessories(discount_group_id);
 

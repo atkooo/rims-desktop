@@ -16,6 +16,7 @@ CREATE TABLE rental_transactions (
     deposit DECIMAL(15,2) DEFAULT 0,
     late_fee DECIMAL(15,2) DEFAULT 0,
     discount DECIMAL(15,2) DEFAULT 0,
+    tax DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
     status VARCHAR(20) CHECK (status IN ('pending','active','returned','cancelled','overdue')) DEFAULT 'pending',
     notes TEXT,
@@ -30,7 +31,8 @@ CREATE TABLE rental_transactions (
     CHECK (total_amount >= 0),
     CHECK (deposit >= 0),
     CHECK (late_fee >= 0),
-    CHECK (discount >= 0)
+    CHECK (discount >= 0),
+    CHECK (tax >= 0)
 );
 
 CREATE TABLE rental_transaction_details (

@@ -1,7 +1,7 @@
 -- Migration: Create discount_groups table
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS discount_groups (
+CREATE TABLE discount_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
@@ -17,8 +17,4 @@ CREATE TABLE IF NOT EXISTS discount_groups (
 
 CREATE INDEX IF NOT EXISTS idx_discount_groups_code ON discount_groups(code);
 CREATE INDEX IF NOT EXISTS idx_discount_groups_active ON discount_groups(is_active);
-
-
-
-
 

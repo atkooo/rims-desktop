@@ -1,9 +1,10 @@
 -- Migration: Create roles and users tables
 PRAGMA foreign_keys = ON;
 
+-- Create roles table (without CHECK constraint to allow custom roles)
 CREATE TABLE roles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(20) UNIQUE NOT NULL CHECK (name IN ('admin','manager','staff','kasir')),
+    name VARCHAR(20) UNIQUE NOT NULL,
     description VARCHAR(200)
 );
 
@@ -20,3 +21,4 @@ CREATE TABLE users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
