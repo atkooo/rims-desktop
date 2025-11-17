@@ -51,7 +51,7 @@
                 type="number"
                 v-model.number="item.quantity"
                 min="1"
-                :max="item.available_quantity || 0"
+                :max="restrictStock ? (item.available_quantity || 0) : undefined"
                 class="quantity-input"
                 @input="updateQuantity(index, $event)"
               />
@@ -91,6 +91,7 @@
       v-model="pickerOpen"
       :excluded-ids="selectedItems.map((it) => it.id)"
       :transaction-type="transactionType"
+      :restrict-stock="restrictStock"
       @select="selectItem"
     />
   </div>
@@ -116,6 +117,10 @@ export default {
     transactionType: {
       type: String,
       default: null, // null = tampilkan semua, 'SALE' = hanya SALE dan BOTH, 'RENTAL' = hanya RENTAL dan BOTH
+    },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
     },
   },
 
@@ -157,33 +162,52 @@ export default {
     });
 
     const selectItem = (item) => {
-      if (item.status !== "AVAILABLE") return;
+      // Jika restrictStock aktif, cek status dan stok
+      if (props.restrictStock) {
+        if (item.status !== "AVAILABLE") return;
 
-      // Cek apakah item sudah ada di selected items
-      const existingItem = selectedItems.value.find((i) => i.id === item.id);
-      if (existingItem) {
-        // Jika sudah ada, cek stok sebelum menambah quantity
-        const currentQuantity = existingItem.quantity || 1;
-        const availableStock = item.available_quantity || 0;
-        
-        if (currentQuantity >= availableStock) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          return;
+        // Cek apakah item sudah ada di selected items
+        const existingItem = selectedItems.value.find((i) => i.id === item.id);
+        if (existingItem) {
+          // Jika sudah ada, cek stok sebelum menambah quantity
+          const currentQuantity = existingItem.quantity || 1;
+          const availableStock = item.available_quantity || 0;
+          
+          if (currentQuantity >= availableStock) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          existingItem.quantity = currentQuantity + 1;
+        } else {
+          // Item baru, cek stok tersedia
+          const availableStock = item.available_quantity || 0;
+          if (availableStock < 1) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          selectedItems.value.push({
+            ...item,
+            quantity: 1,
+          });
         }
-        
-        existingItem.quantity = currentQuantity + 1;
       } else {
-        // Item baru, cek stok tersedia
-        const availableStock = item.available_quantity || 0;
-        if (availableStock < 1) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          return;
+        // Jika tidak restrictStock, hanya cek status (bukan stok)
+        if (item.status !== "AVAILABLE") return;
+
+        // Cek apakah item sudah ada di selected items
+        const existingItem = selectedItems.value.find((i) => i.id === item.id);
+        if (existingItem) {
+          // Jika sudah ada, tambah quantity tanpa cek stok
+          existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+          // Item baru, tambah tanpa cek stok
+          selectedItems.value.push({
+            ...item,
+            quantity: 1,
+          });
         }
-        
-        selectedItems.value.push({
-          ...item,
-          quantity: 1,
-        });
       }
       
       pickerOpen.value = false;
@@ -198,13 +222,18 @@ export default {
         selectedItems.value[index].quantity = 1;
       } else {
         const newQuantity = Math.max(1, Math.floor(value));
-        const availableStock = item.available_quantity || 0;
         
-        // Validasi tidak boleh melebihi stok tersedia
-        if (newQuantity > availableStock) {
-          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-          selectedItems.value[index].quantity = Math.min(availableStock, item.quantity || 1);
+        // Jika restrictStock aktif, validasi tidak boleh melebihi stok tersedia
+        if (props.restrictStock) {
+          const availableStock = item.available_quantity || 0;
+          if (newQuantity > availableStock) {
+            alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            selectedItems.value[index].quantity = Math.min(availableStock, item.quantity || 1);
+          } else {
+            selectedItems.value[index].quantity = newQuantity;
+          }
         } else {
+          // Jika tidak restrictStock, tidak ada batasan maksimal
           selectedItems.value[index].quantity = newQuantity;
         }
       }
@@ -234,6 +263,7 @@ export default {
       openPicker,
       pickerOpen,
       transactionType,
+      restrictStock: props.restrictStock,
     };
   },
 };

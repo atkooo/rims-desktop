@@ -63,7 +63,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="!isAvailable(accessory) || (accessory.available_quantity || 0) <= 0"
+              :disabled="!isAvailable(accessory) || (restrictStock && (accessory.available_quantity || 0) <= 0)"
               @click="selectAccessory(accessory)"
             >
               Pilih
@@ -98,6 +98,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
+    },
   },
   emits: ["update:modelValue", "select"],
   setup(props, { emit }) {
@@ -112,11 +116,17 @@ export default {
     const excludedSet = computed(() => new Set(props.excludedIds));
 
     const isAvailable = (accessory) => {
-      return (
-        accessory.is_active &&
-        accessory.is_available_for_sale &&
-        (accessory.available_quantity ?? 0) > 0
-      );
+      // Jika restrictStock aktif, cek semua kondisi termasuk stok
+      if (props.restrictStock) {
+        return (
+          accessory.is_active &&
+          accessory.is_available_for_sale &&
+          (accessory.available_quantity ?? 0) > 0
+        );
+      } else {
+        // Jika tidak restrictStock, hanya cek is_active
+        return accessory.is_active;
+      }
     };
 
     const filteredAccessories = computed(() => {
@@ -166,6 +176,7 @@ export default {
       formatCurrency,
       selectAccessory,
       isAvailable,
+      restrictStock: props.restrictStock,
     };
   },
 };

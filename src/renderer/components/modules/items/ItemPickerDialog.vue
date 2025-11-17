@@ -61,7 +61,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="item.status !== 'AVAILABLE' || (item.available_quantity || 0) <= 0"
+              :disabled="item.status !== 'AVAILABLE' || (restrictStock && (item.available_quantity || 0) <= 0)"
               @click="selectItem(item)"
             >
               Pilih
@@ -100,6 +100,10 @@ export default {
     transactionType: {
       type: String,
       default: null, // null = tampilkan semua, 'SALE' = hanya SALE dan BOTH, 'RENTAL' = hanya RENTAL dan BOTH
+    },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
     },
   },
   emits: ["update:modelValue", "select"],
@@ -180,6 +184,7 @@ export default {
       visible,
       formatCurrency,
       selectItem,
+      restrictStock: props.restrictStock,
     };
   },
 };

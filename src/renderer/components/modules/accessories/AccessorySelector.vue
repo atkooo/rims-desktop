@@ -42,7 +42,7 @@
             type="number"
             v-model.number="accessory.quantity"
             min="1"
-            :max="accessory.available_quantity || 999"
+            :max="restrictStock ? (accessory.available_quantity || 999) : undefined"
             class="quantity-input"
             @input="updateQuantity(index, $event)"
           />
@@ -64,6 +64,7 @@
     <AccessoryPickerDialog
       v-model="pickerOpen"
       :excluded-ids="selectedAccessories.map((acc) => acc.id)"
+      :restrict-stock="restrictStock"
       @select="selectAccessory"
     />
   </div>
@@ -84,6 +85,10 @@ export default {
     modelValue: {
       type: Array,
       default: () => [],
+    },
+    restrictStock: {
+      type: Boolean,
+      default: true, // Default true untuk backward compatibility (transaksi)
     },
   },
 
@@ -115,7 +120,13 @@ export default {
     });
 
     const selectAccessory = (accessory) => {
-      if (!accessory.is_available_for_sale || !accessory.is_active) return;
+      // Jika restrictStock aktif, cek ketersediaan
+      if (props.restrictStock) {
+        if (!accessory.is_available_for_sale || !accessory.is_active) return;
+      } else {
+        // Jika tidak restrictStock, hanya cek is_active
+        if (!accessory.is_active) return;
+      }
 
       selectedAccessories.value.push({
         ...accessory,
@@ -128,13 +139,18 @@ export default {
     const updateQuantity = (index, event) => {
       const value = parseInt(event.target.value, 10);
       const accessory = selectedAccessories.value[index];
-      const maxQty = accessory.available_quantity || 999;
       
       if (Number.isNaN(value) || value < 1) {
         selectedAccessories.value[index].quantity = 1;
       } else {
-        // Ensure quantity is a valid integer and doesn't exceed available quantity
-        selectedAccessories.value[index].quantity = Math.max(1, Math.min(maxQty, Math.floor(value)));
+        // Jika restrictStock aktif, batasi berdasarkan available_quantity
+        if (props.restrictStock) {
+          const maxQty = accessory.available_quantity || 999;
+          selectedAccessories.value[index].quantity = Math.max(1, Math.min(maxQty, Math.floor(value)));
+        } else {
+          // Jika tidak restrictStock, tidak ada batasan maksimal
+          selectedAccessories.value[index].quantity = Math.max(1, Math.floor(value));
+        }
       }
       emit("update:modelValue", selectedAccessories.value);
     };
@@ -158,6 +174,7 @@ export default {
       removeAccessory,
       openPicker,
       pickerOpen,
+      restrictStock: props.restrictStock,
     };
   },
 };

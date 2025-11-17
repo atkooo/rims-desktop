@@ -162,6 +162,7 @@
     <!-- Picker Dialogs -->
     <ItemPickerDialog
       v-model="showItemPicker"
+      :restrict-stock="false"
       @select="handleItemSelect"
     />
     <BundlePickerDialog
@@ -172,6 +173,7 @@
     />
     <AccessoryPickerDialog
       v-model="showAccessoryPicker"
+      :restrict-stock="false"
       @select="handleAccessorySelect"
     />
   </AppDialog>
