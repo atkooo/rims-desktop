@@ -32,7 +32,6 @@ export default {
         const routeLabels = {
           master: "Master Data",
           transactions: "Transaksi",
-          reports: "Laporan",
           settings: "Pengaturan",
         };
 

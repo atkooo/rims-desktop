@@ -16,15 +16,10 @@ import DiscountGroupsView from "./views/master/DiscountGroupsView.vue";
 import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
 import UserRoleManagementView from "./views/master/UserRoleManagementView.vue";
-import ReportsPage from "./views/reports/ReportsPage.vue";
 import SettingsPage from "./views/settings/SettingsPage.vue";
 import ReceiptSettingsPage from "./views/settings/ReceiptSettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
-import ItemsWithStockView from "./views/reports/ItemsWithStockView.vue";
-import DailySalesView from "./views/reports/DailySalesView.vue";
-import StockAlertsView from "./views/reports/StockAlertsView.vue";
-import TopCustomersView from "./views/reports/TopCustomersView.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
@@ -35,6 +30,7 @@ import RentalTransactionCreateView from "./views/transaction/RentalTransactionCr
 import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
 import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
 import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
+import ReportExportView from "./views/reports/ReportExportView.vue";
 import { getCurrentUser } from "./services/auth.js";
 import {
   hasPermissionSync,
@@ -62,15 +58,13 @@ const routePermissions = {
   "/transactions/sales/new": "transactions.sales.create",
   "/transactions/stock-movements": "transactions.stock-movements.view",
   "/transactions/cashier": "transactions.cashier.manage",
-  "/reports": "reports.view",
-  "/reports/items-with-stock": "reports.items-stock.view",
-  "/reports/daily-sales": "reports.daily-sales.view",
-  "/reports/stock-alerts": "reports.stock-alerts.view",
-  "/reports/top-customers": "reports.top-customers.view",
   "/settings/system": "settings.view",
   "/settings/receipt": "settings.view",
   "/settings/backup-history": "settings.backup.view",
   "/settings/activity-logs": "settings.activity-logs.view",
+  "/reports/executive": "reports.transactions.view",
+  "/reports/finance": "reports.transactions.view",
+  "/reports/stock": "reports.stock.view",
 };
 
 const routes = [
@@ -175,32 +169,6 @@ const routes = [
     name: "transactions-cashier",
     component: CashierView,
   },
-  // Reports
-  {
-    path: "/reports",
-    name: "reports",
-    component: ReportsPage,
-  },
-  {
-    path: "/reports/items-with-stock",
-    name: "reports-items-stock",
-    component: ItemsWithStockView,
-  },
-  {
-    path: "/reports/daily-sales",
-    name: "reports-daily-sales",
-    component: DailySalesView,
-  },
-  {
-    path: "/reports/stock-alerts",
-    name: "reports-stock-alerts",
-    component: StockAlertsView,
-  },
-  {
-    path: "/reports/top-customers",
-    name: "reports-top-customers",
-    component: TopCustomersView,
-  },
   {
     path: "/settings/system",
     name: "settings-system",
@@ -220,6 +188,37 @@ const routes = [
     path: "/settings/activity-logs",
     name: "settings-activity",
     component: ActivityLogsView,
+  },
+  // Reports
+  {
+    path: "/reports/executive",
+    name: "reports-executive",
+    component: ReportExportView,
+    props: {
+      reportType: "executive",
+      reportTitle: "Laporan Eksekutif",
+      reportDescription: "Laporan ringkasan eksekutif untuk manajemen",
+    },
+  },
+  {
+    path: "/reports/finance",
+    name: "reports-finance",
+    component: ReportExportView,
+    props: {
+      reportType: "finance",
+      reportTitle: "Laporan Finance",
+      reportDescription: "Laporan keuangan dan pembayaran",
+    },
+  },
+  {
+    path: "/reports/stock",
+    name: "reports-stock",
+    component: ReportExportView,
+    props: {
+      reportType: "stock",
+      reportTitle: "Laporan Stok",
+      reportDescription: "Laporan stok barang dan mutasi",
+    },
   },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

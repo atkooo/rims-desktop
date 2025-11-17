@@ -74,9 +74,10 @@ const {
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
 const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");
-const setupReportHandlers = require("./handlers/reportHandlers");
 const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers");
 const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
+const setupReportViewHandlers = require("./handlers/reportViewHandlers");
+const setupReportExportHandlers = require("./handlers/reportExportHandlers");
 const setupCashierHandlers = require("./handlers/cashierHandlers");
 const setupDiscountGroupHandlers = require("./handlers/discountGroupHandlers");
 const setupReceiptHandlers = require("./handlers/receiptHandlers");
@@ -367,9 +368,10 @@ app.whenReady().then(async () => {
   setupPaymentHandlers();
   setupStockMovementHandlers();
   setupSettingsHandlers();
-  setupReportHandlers();
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();
+  setupReportViewHandlers();
+  setupReportExportHandlers();
   setupCashierHandlers();
   setupDiscountGroupHandlers();
   setupReceiptHandlers();

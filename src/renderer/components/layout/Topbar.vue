@@ -58,7 +58,7 @@
                   type="button"
                   class="notification-refresh-btn"
                   @click="refreshAllNotifications"
-                  :disabled="transactionStore.loading || stockAlertsLoading"
+                  :disabled="transactionStore.loading"
                   aria-label="Refresh"
                 >
                   <Icon name="refresh-cw" :size="16" />
@@ -66,7 +66,7 @@
               </div>
               <div class="notification-menu-content">
                 <div
-                  v-if="transactionStore.loading || stockAlertsLoading"
+                  v-if="transactionStore.loading"
                   class="notification-loading"
                 >
                   Memuat...
@@ -113,14 +113,6 @@
                 </div>
               </div>
               <div v-if="allNotificationsList.length > 0" class="notification-menu-footer">
-                <button
-                  v-if="stockAlertsList.length > 0"
-                  type="button"
-                  class="notification-view-all"
-                  @click="handleViewAllStockAlerts"
-                >
-                  Lihat Semua Peringatan Stok
-                </button>
               </div>
             </div>
           </transition>
@@ -187,8 +179,6 @@ import {
 import { useTransactionStore } from "@/store/transactions";
 import { eventBus } from "@/utils/eventBus";
 import { TRANSACTION_STATUS } from "@shared/constants";
-import { fetchStockAlerts } from "@/services/reports";
-import { fetchItemsWithStock } from "@/services/reports";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -204,7 +194,6 @@ const searchBusy = ref(false);
 const transactionStore = useTransactionStore();
 let storageListener = null;
 let searchTimeout = null;
-let stockAlertInterval = null;
 const profileMenuOpen = ref(false);
 const profileMenuRef = ref(null);
 const profileMenuDropdownRef = ref(null);
@@ -219,8 +208,6 @@ const notificationButtonRef = ref(null);
 const notificationMenuPosition = ref({ top: 0, left: 0 });
 let notificationListenersAttached = false;
 
-const stockAlertsList = ref([]);
-const stockAlertsLoading = ref(false);
 
 const pendingTransactions = computed(() => {
   return (transactionStore.transactions || []).filter(
@@ -264,12 +251,8 @@ const awaitingPaymentsList = computed(() => {
     });
 });
 
-const stockAlertsCount = computed(() => {
-  return stockAlertsList.value.length;
-});
-
 const totalNotifications = computed(() => {
-  return pendingTransactions.value + awaitingPayments.value + stockAlertsCount.value;
+  return pendingTransactions.value + awaitingPayments.value;
 });
 
 const allNotificationsList = computed(() => {
@@ -293,18 +276,9 @@ const allNotificationsList = computed(() => {
     });
   });
   
-  // Add stock alerts
-  stockAlertsList.value.forEach(alert => {
-    list.push({
-      ...alert,
-      notificationType: 'stock',
-      type: 'stock'
-    });
-  });
-  
-  // Sort by priority: stock alerts first, then payments, then transactions
+  // Sort by priority: payments first, then transactions
   list.sort((a, b) => {
-    const priority = { stock: 0, payment: 1, transaction: 2 };
+    const priority = { payment: 0, transaction: 1 };
     return priority[a.type] - priority[b.type];
   });
   
@@ -341,46 +315,6 @@ const refreshTransactions = () => {
 
 const refreshAllNotifications = () => {
   refreshTransactions();
-  refreshStockAlerts();
-};
-
-const refreshStockAlerts = async () => {
-  stockAlertsLoading.value = true;
-  try {
-    // Fetch all items with stock
-    const items = await fetchItemsWithStock();
-    
-    // Filter items that need attention
-    const alerts = items.filter((item) => {
-      // Item dengan stok habis (available_quantity = 0)
-      if (item.available_quantity === 0) return true;
-      
-      // Item dengan stok rendah (available_quantity <= min_stock_alert dan min_stock_alert > 0)
-      if ((item.min_stock_alert || 0) > 0) {
-        if (item.available_quantity <= item.min_stock_alert) return true;
-      }
-      
-      return false;
-    });
-    
-    // Sort: habis dulu, lalu rendah
-    alerts.sort((a, b) => {
-      if (a.available_quantity === 0 && b.available_quantity > 0) return -1;
-      if (a.available_quantity > 0 && b.available_quantity === 0) return 1;
-      return (a.available_quantity || 0) - (b.available_quantity || 0);
-    });
-    
-    // Add type field and limit to 10 items
-    stockAlertsList.value = alerts.slice(0, 10).map(item => ({
-      ...item,
-      type: 'item' // All items from fetchItemsWithStock are items
-    }));
-  } catch (err) {
-    console.error("Error fetching stock alerts:", err);
-    stockAlertsList.value = [];
-  } finally {
-    stockAlertsLoading.value = false;
-  }
 };
 
 const formatDate = (dateString) => {
@@ -493,10 +427,6 @@ const getNotificationMeta = (notification) => {
   }
 };
 
-const handleViewAllStockAlerts = () => {
-  closeNotificationMenu();
-  router.push("/reports/items-with-stock");
-};
 
 
 const updateProfileMenuPosition = () => {
@@ -652,12 +582,6 @@ onMounted(() => {
   if (!transactionStore.transactions.length) {
     transactionStore.fetchTransactions().catch(() => {});
   }
-  // Load stock alerts on mount
-  refreshStockAlerts();
-  // Refresh stock alerts every 5 minutes
-  stockAlertInterval = setInterval(() => {
-    refreshStockAlerts();
-  }, 5 * 60 * 1000);
   
   document.addEventListener("click", handleClickOutside);
 });
@@ -668,9 +592,6 @@ onBeforeUnmount(() => {
   }
   if (searchTimeout) {
     clearTimeout(searchTimeout);
-  }
-  if (stockAlertInterval) {
-    clearInterval(stockAlertInterval);
   }
   document.removeEventListener("click", handleClickOutside);
   detachDropdownListeners();

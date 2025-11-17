@@ -64,12 +64,8 @@ INSERT INTO permissions (name, slug, description, module) VALUES
 ('Manage Cashier Sessions', 'transactions.cashier.manage', 'Akses untuk mengelola sesi kasir', 'transactions'),
 
 -- Reports Permissions
-('View Reports', 'reports.view', 'Akses untuk melihat laporan', 'reports'),
-('View Daily Sales Report', 'reports.daily-sales.view', 'Akses untuk melihat laporan penjualan harian', 'reports'),
-('View Items Stock Report', 'reports.items-stock.view', 'Akses untuk melihat laporan stok item', 'reports'),
-('View Stock Alerts Report', 'reports.stock-alerts.view', 'Akses untuk melihat laporan peringatan stok', 'reports'),
-('View Top Customers Report', 'reports.top-customers.view', 'Akses untuk melihat laporan pelanggan teratas', 'reports'),
-('Export Reports', 'reports.export', 'Akses untuk mengekspor laporan', 'reports'),
+('View Transaction Reports', 'reports.transactions.view', 'Akses untuk melihat laporan transaksi', 'reports'),
+('View Stock Reports', 'reports.stock.view', 'Akses untuk melihat laporan stok', 'reports'),
 
 -- Settings Permissions
 ('View Settings', 'settings.view', 'Akses untuk melihat pengaturan', 'settings'),
@@ -132,8 +128,6 @@ AND p.slug IN (
     'transactions.sales.view', 'transactions.sales.create', 'transactions.sales.update',
     'transactions.sales.payment',
     'transactions.stock-movements.view', 'transactions.cashier.manage',
-    'reports.view', 'reports.daily-sales.view', 'reports.items-stock.view',
-    'reports.stock-alerts.view', 'reports.top-customers.view',
     'settings.view', 'settings.backup.view', 'settings.activity-logs.view'
 );
 

@@ -442,7 +442,6 @@ function getModuleLabel(module) {
     dashboard: "Dashboard",
     master: "Data Master",
     transactions: "Transaksi",
-    reports: "Laporan",
     settings: "Pengaturan",
     users: "Manajemen User",
     roles: "Manajemen Role",

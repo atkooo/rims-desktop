@@ -31,11 +31,28 @@ export const menuGroups = [
         icon: "layers",
         permission: "transactions.stock-movements.view",
       },
+    ],
+  },
+  {
+    title: "Laporan",
+    items: [
       {
-        to: "/reports/items-with-stock",
-        label: "Peringatan Stok",
+        to: "/reports/executive",
+        label: "Laporan Eksekutif",
+        icon: "bar-chart",
+        permission: "reports.transactions.view",
+      },
+      {
+        to: "/reports/finance",
+        label: "Laporan Finance",
+        icon: "dollar-sign",
+        permission: "reports.transactions.view",
+      },
+      {
+        to: "/reports/stock",
+        label: "Laporan Stok",
         icon: "box",
-        permission: "reports.items-stock.view",
+        permission: "reports.stock.view",
       },
     ],
   },
@@ -83,23 +100,6 @@ export const menuGroups = [
         label: "Grup Diskon",
         icon: "tag",
         permission: "master.discount-groups.view",
-      },
-    ],
-  },
-  {
-    title: "Laporan & Insight",
-    items: [
-      {
-        to: "/reports/daily-sales",
-        label: "Ringkasan Penjualan",
-        icon: "chart-bar",
-        permission: "reports.daily-sales.view",
-      },
-      {
-        to: "/reports/top-customers",
-        label: "Pelanggan Teratas",
-        icon: "users",
-        permission: "reports.top-customers.view",
       },
     ],
   },
