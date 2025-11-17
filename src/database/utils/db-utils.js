@@ -22,8 +22,14 @@ function createDatabaseConnection(dbPath = null) {
 function promisifyDb(db) {
   return {
     runAsync(sql, params = []) {
+      // Safety check: never execute empty SQL statements
+      const trimmedSql = sql ? String(sql).trim() : '';
+      if (!trimmedSql || trimmedSql.length === 0) {
+        return Promise.resolve({ lastID: 0, changes: 0 });
+      }
+      
       return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
+        db.run(trimmedSql, params, function (err) {
           if (err) reject(err);
           else resolve(this);
         });
@@ -237,8 +243,18 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
   const statements = parseSqlStatements(sqlContent);
 
   for (const statement of statements) {
-    // Skip empty statements
-    if (skipEmpty && (!statement || !statement.trim())) {
+    // Trim and validate statement - more robust check
+    const trimmed = statement ? statement.trim() : '';
+    
+    // Skip empty statements - check after trimming
+    if (skipEmpty && (!trimmed || trimmed.length === 0)) {
+      continue;
+    }
+
+    // Additional safety check: skip statements that are only whitespace or comments
+    // A valid SQL statement should start with a SQL keyword, not a comment
+    const withoutComments = trimmed.replace(/^--.*$/gm, '').trim();
+    if (!withoutComments || withoutComments.length === 0) {
       continue;
     }
 
@@ -248,7 +264,14 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
 
     while (retries > 0 && !executed) {
       try {
-        await dbOps.runAsync(statement);
+        // Final safety check before executing
+        if (!trimmed || trimmed.length === 0) {
+          executed = true;
+          continue;
+        }
+        
+        // Use trimmed statement to avoid any whitespace issues
+        await dbOps.runAsync(trimmed);
         executed = true;
       } catch (error) {
         const errorMsg = error.message || String(error);
@@ -269,7 +292,7 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
             errorMsg.includes("already exists"))
         ) {
           console.log(
-            `Warning: Column/object already exists. Skipping statement: ${statement.substring(0, 50)}...`,
+            `Warning: Column/object already exists. Skipping statement: ${trimmed.substring(0, 50)}...`,
           );
           executed = true;
           break;
@@ -278,7 +301,7 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
         // Handle missing table errors (acceptable for migrations on existing databases)
         if (allowMissingTable && errorMsg.includes("no such table")) {
           console.log(
-            `Info: Table doesn't exist yet (fresh install). Skipping statement: ${statement.substring(0, 50)}...`,
+            `Info: Table doesn't exist yet (fresh install). Skipping statement: ${trimmed.substring(0, 50)}...`,
           );
           executed = true;
           break;
