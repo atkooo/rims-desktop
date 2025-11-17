@@ -271,13 +271,7 @@ export default {
     const categories = ref([]);
     const discountGroups = ref([]);
     const autoCodeRef = ref("");
-    const slugifyCode = (value) =>
-      `${value ?? ""}`
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .replace(/-+/g, "-")
-        .slice(0, 20);
+    const generatingCode = ref(false);
 
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
@@ -303,13 +297,22 @@ export default {
       (value) => (form.value.deposit = value)
     );
 
-    const syncAutoCode = () => {
-      const base = form.value.name?.trim() || "";
-      if (!base) return;
-      const generated = `ITM-${slugifyCode(base) || Date.now()}`;
-      if (!form.value.code || form.value.code === autoCodeRef.value) {
-        form.value.code = generated;
-        autoCodeRef.value = generated;
+    const syncAutoCode = async () => {
+      if (isEdit.value || generatingCode.value) return;
+      
+      try {
+        generatingCode.value = true;
+        const itemType = form.value.type || "RENTAL";
+        const generated = await ipcRenderer.invoke("items:getNextCode", itemType);
+        
+        if (!form.value.code || form.value.code === autoCodeRef.value) {
+          form.value.code = generated;
+          autoCodeRef.value = generated;
+        }
+      } catch (error) {
+        console.error("Error generating code:", error);
+      } finally {
+        generatingCode.value = false;
       }
     };
 
@@ -349,7 +352,10 @@ export default {
         form.value.category_id = categories.value[0].id;
       }
       errors.value = {};
-      if (!isEdit.value) syncAutoCode();
+      if (!isEdit.value) {
+        // Generate code asynchronously
+        syncAutoCode().catch(console.error);
+      }
     };
 
     const validateForm = () => {
@@ -412,10 +418,15 @@ export default {
     // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
     watch(
       () => form.value.type,
-      (newType) => {
+      async (newType) => {
         const availability = getAvailabilityByType(newType);
         form.value.is_available_for_rent = availability.is_available_for_rent;
         form.value.is_available_for_sale = availability.is_available_for_sale;
+        
+        // Regenerate code when type changes (only for new items)
+        if (!isEdit.value) {
+          await syncAutoCode();
+        }
       },
       { immediate: true }
     );
@@ -429,12 +440,8 @@ export default {
         form.value.category_id = list[0].id;
       }
     });
-    watch(
-      () => form.value.name,
-      () => {
-        if (!isEdit.value) syncAutoCode();
-      },
-    );
+    // Code is now generated based on type, not name
+    // Removed watch for name as it's no longer needed
 
     const loadCategories = async () => {
       try {

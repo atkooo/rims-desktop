@@ -61,9 +61,85 @@ function sanitizeAvailable(stock, available) {
   return Math.min(stockQty, availableQty);
 }
 
+/**
+ * Get prefix for item code based on item type
+ * @param {string} type - Item type ('RENTAL', 'SALE', 'BOTH')
+ * @returns {string} Prefix for code
+ */
+function getItemCodePrefix(type) {
+  const typeMap = {
+    RENTAL: "RENT",
+    SALE: "ITM",
+    BOTH: "BOTH",
+  };
+  return typeMap[type] || "ITM";
+}
+
+/**
+ * Generate sequential code with prefix
+ * @param {Object} db - Database instance
+ * @param {string} tableName - Table name to query
+ * @param {string} prefix - Prefix for code (e.g., 'RENT', 'ITM', 'PAKET')
+ * @returns {Promise<string>} Generated code
+ */
+async function generateSequentialCode(db, tableName, prefix) {
+  // Get all codes with this prefix
+  const codes = await db.query(
+    `SELECT code FROM ${tableName} 
+     WHERE code LIKE ? 
+     ORDER BY id DESC`,
+    [`${prefix}-%`]
+  );
+
+  let nextNumber = 1;
+  
+  if (codes && codes.length > 0) {
+    // Find the highest number
+    let maxNumber = 0;
+    for (const row of codes) {
+      const match = row.code.match(new RegExp(`^${prefix}-(\\d+)$`));
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    nextNumber = maxNumber + 1;
+  }
+
+  // Format with leading zeros (001, 002, etc.)
+  return `${prefix}-${nextNumber.toString().padStart(3, "0")}`;
+}
+
+/**
+ * Generate item code based on type with sequential number
+ * Requires database connection to get next sequence number
+ * @param {Object} db - Database instance
+ * @param {string} type - Item type ('RENTAL', 'SALE', 'BOTH')
+ * @returns {Promise<string>} Generated code
+ */
+async function generateItemCode(db, type) {
+  const prefix = getItemCodePrefix(type);
+  return generateSequentialCode(db, "items", prefix);
+}
+
+/**
+ * Generate bundle code with sequential number
+ * @param {Object} db - Database instance
+ * @returns {Promise<string>} Generated code (PAKET-001, PAKET-002, etc.)
+ */
+async function generateBundleCode(db) {
+  return generateSequentialCode(db, "bundles", "PAKET");
+}
+
 module.exports = {
   normalizeCode,
   generateTransactionCode,
   toInteger,
   sanitizeAvailable,
+  getItemCodePrefix,
+  generateItemCode,
+  generateBundleCode,
+  generateSequentialCode,
 };

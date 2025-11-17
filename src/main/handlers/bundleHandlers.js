@@ -5,6 +5,7 @@ const validator = require("../helpers/validator");
 const {
   toInteger,
   sanitizeAvailable,
+  generateBundleCode,
 } = require("../helpers/codeUtils");
 
 const toNumber = (value) => {
@@ -26,8 +27,14 @@ async function buildPayload(raw, isEdit = false) {
   );
 
   // Auto-generate code if empty
-  const { normalizeCode } = require("../helpers/codeUtils");
-  const code = normalizeCode(raw.code, raw.name, "BND");
+  let code = (raw.code || "").trim();
+  if (!code) {
+    code = await generateBundleCode(database);
+  } else {
+    // Normalize provided code
+    const { normalizeCode } = require("../helpers/codeUtils");
+    code = normalizeCode(code, raw.name);
+  }
 
   const payload = {
     code: code,
@@ -149,6 +156,16 @@ const normalizeDetailPayload = (raw = {}, fallback = {}) => {
 const fetchDetailRow = (id) => database.queryOne(detailSelectSql, [id]);
 
 function setupBundleHandlers() {
+  // Get next bundle code
+  ipcMain.handle("bundles:getNextCode", async () => {
+    try {
+      const code = await generateBundleCode(database);
+      return code;
+    } catch (error) {
+      logger.error("Error generating bundle code:", error);
+      throw error;
+    }
+  });
   ipcMain.handle("bundles:create", async (_event, rawPayload = {}) => {
     try {
       const payload = await buildPayload(rawPayload, false); // Create: force stok = 0

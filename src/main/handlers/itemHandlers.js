@@ -6,6 +6,7 @@ const {
   normalizeCode,
   sanitizeAvailable,
   toInteger,
+  generateItemCode,
 } = require("../helpers/codeUtils");
 
 // Setup item handlers
@@ -35,10 +36,29 @@ function setupItemHandlers() {
     }
   });
 
+  // Get next item code based on type
+  ipcMain.handle("items:getNextCode", async (event, type) => {
+    try {
+      const code = await generateItemCode(database, type || "RENTAL");
+      return code;
+    } catch (error) {
+      logger.error("Error generating item code:", error);
+      throw error;
+    }
+  });
+
   // Add new item
   ipcMain.handle("items:add", async (event, itemData) => {
     try {
-      const code = normalizeCode(itemData.code, itemData.name);
+      // Generate code based on type if not provided
+      let code = (itemData.code || "").trim();
+      if (!code) {
+        const itemType = itemData.type || "RENTAL";
+        code = await generateItemCode(database, itemType);
+      } else {
+        // Normalize provided code
+        code = normalizeCode(code, itemData.name);
+      }
       itemData.code = code;
 
       // Validasi input

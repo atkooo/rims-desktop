@@ -116,6 +116,7 @@ import {
   fetchDiscountGroups,
 } from "@/services/masterData";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { ipcRenderer } from "@/services/ipc";
 
 const defaultForm = () => ({
   code: "",
@@ -173,6 +174,19 @@ export default {
       (value) => (form.value.rental_price_per_day = value)
     );
 
+    const syncAutoCode = async () => {
+      if (isEdit.value) return;
+      
+      try {
+        const generated = await ipcRenderer.invoke("bundles:getNextCode");
+        if (!form.value.code) {
+          form.value.code = generated;
+        }
+      } catch (error) {
+        console.error("Error generating bundle code:", error);
+      }
+    };
+
     const resetForm = () => {
       if (props.editData) {
         form.value = {
@@ -185,6 +199,8 @@ export default {
         };
       } else {
         form.value = defaultForm();
+        // Generate code for new bundle
+        syncAutoCode().catch(console.error);
       }
       errors.value = {};
       submitError.value = "";
