@@ -179,6 +179,7 @@ import {
 import { useTransactionStore } from "@/store/transactions";
 import { eventBus } from "@/utils/eventBus";
 import { TRANSACTION_STATUS } from "@shared/constants";
+import { useStockAlerts } from "@/composables/useStockAlerts";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -192,6 +193,7 @@ const syncing = ref(false);
 const searchQuery = ref("");
 const searchBusy = ref(false);
 const transactionStore = useTransactionStore();
+const stockAlerts = useStockAlerts();
 let storageListener = null;
 let searchTimeout = null;
 const profileMenuOpen = ref(false);
@@ -252,11 +254,31 @@ const awaitingPaymentsList = computed(() => {
 });
 
 const totalNotifications = computed(() => {
-  return pendingTransactions.value + awaitingPayments.value;
+  return (
+    pendingTransactions.value +
+    awaitingPayments.value +
+    stockAlerts.criticalCount.value
+  );
 });
 
 const allNotificationsList = computed(() => {
   const list = [];
+  
+  // Add stock alerts (highest priority)
+  stockAlerts.criticalItems.value.slice(0, 5).forEach(item => {
+    list.push({
+      id: `stock-${item.id}`,
+      notificationType: 'stock',
+      type: 'stock',
+      code: item.code,
+      name: item.name,
+      category_name: item.category_name,
+      stock_quantity: item.stock_quantity,
+      min_stock_alert: item.min_stock_alert,
+      shortage: item.shortage,
+      product_type: item.product_type,
+    });
+  });
   
   // Add pending transactions
   pendingTransactionsList.value.forEach(transaction => {
@@ -276,9 +298,9 @@ const allNotificationsList = computed(() => {
     });
   });
   
-  // Sort by priority: payments first, then transactions
+  // Sort by priority: stock alerts first, then payments, then transactions
   list.sort((a, b) => {
-    const priority = { payment: 0, transaction: 1 };
+    const priority = { stock: 0, payment: 1, transaction: 2 };
     return priority[a.type] - priority[b.type];
   });
   
@@ -313,8 +335,9 @@ const refreshTransactions = () => {
   }
 };
 
-const refreshAllNotifications = () => {
+const refreshAllNotifications = async () => {
   refreshTransactions();
+  await stockAlerts.checkStockAlerts(false);
 };
 
 const formatDate = (dateString) => {
@@ -351,7 +374,7 @@ const handleNotificationItemClick = (notification) => {
   closeNotificationMenu();
   
   if (notification.type === 'stock') {
-    router.push(`/master/items/${notification.id}`);
+    router.push('/stock/alerts');
   } else if (notification.type === 'payment' || notification.type === 'transaction') {
     if (notification.transactionType === "RENTAL") {
       router.push("/transactions/rentals");
@@ -575,7 +598,7 @@ const handleClickOutside = (event) => {
   notificationMenuOpen.value = false;
 };
 
-onMounted(() => {
+onMounted(async () => {
   refreshUser(true);
   storageListener = (event) => handleStorage(event);
   window.addEventListener("storage", storageListener);
@@ -583,10 +606,15 @@ onMounted(() => {
     transactionStore.fetchTransactions().catch(() => {});
   }
   
+  // Initialize stock alerts and start periodic checking
+  await stockAlerts.initialize();
+  stockAlerts.startPeriodicCheck(60000); // Check every minute
+  
   document.addEventListener("click", handleClickOutside);
 });
 
 onBeforeUnmount(() => {
+  stockAlerts.stopPeriodicCheck();
   if (storageListener) {
     window.removeEventListener("storage", storageListener);
   }

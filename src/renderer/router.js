@@ -31,6 +31,7 @@ import SalesTransactionCreateView from "./views/transaction/SalesTransactionCrea
 import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
 import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
 import ReportExportView from "./views/reports/ReportExportView.vue";
+import StockAlertManagementView from "./views/stock/StockAlertManagementView.vue";
 import { getCurrentUser } from "./services/auth.js";
 import {
   hasPermissionSync,
@@ -42,26 +43,32 @@ import { checkActivationStatus } from "./services/activation.js";
 // Route permission mapping
 const routePermissions = {
   "/": "dashboard.view",
+  // Master Data
   "/master/categories": "master.categories.view",
   "/master/accessories": "master.accessories.view",
   "/master/items": "master.items.view",
   "/master/item-sizes": "master.item-sizes.view",
   "/master/bundles": "master.bundles.view",
+  "/master/bundle-details": "master.bundles.view",
   "/master/customers": "master.customers.view",
   "/master/discount-groups": "master.discount-groups.view",
   "/master/roles": "roles.view",
   "/master/users": "users.view",
   "/master/user-role-management": ["users.view", "roles.view"],
+  // Transactions
   "/transactions/rentals": "transactions.rentals.view",
   "/transactions/rentals/new": "transactions.rentals.create",
   "/transactions/sales": "transactions.sales.view",
   "/transactions/sales/new": "transactions.sales.create",
   "/transactions/stock-movements": "transactions.stock-movements.view",
   "/transactions/cashier": "transactions.cashier.manage",
+  "/stock/alerts": "transactions.stock-movements.view",
+  // Settings
   "/settings/system": "settings.view",
   "/settings/receipt": "settings.view",
   "/settings/backup-history": "settings.backup.view",
   "/settings/activity-logs": "settings.activity-logs.view",
+  // Reports
   "/reports/executive": "reports.transactions.view",
   "/reports/finance": "reports.transactions.view",
   "/reports/stock": "reports.stock.view",
@@ -168,6 +175,11 @@ const routes = [
     path: "/transactions/cashier",
     name: "transactions-cashier",
     component: CashierView,
+  },
+  {
+    path: "/stock/alerts",
+    name: "stock-alerts",
+    component: StockAlertManagementView,
   },
   {
     path: "/settings/system",
@@ -307,14 +319,24 @@ router.beforeEach(async (to, from, next) => {
 
     // For dynamic routes, check parent route permission
     // e.g., /transactions/rentals/:code should check transactions.rentals.view
+    // Edit routes require update permission
     if (
       to.path.startsWith("/transactions/rentals/") &&
       to.path !== "/transactions/rentals/new"
     ) {
       try {
-        const hasAccess = hasPermissionSync("transactions.rentals.view");
-        if (!hasAccess) {
-          return next({ path: "/" });
+        // Edit route requires update permission
+        if (to.path.endsWith("/edit")) {
+          const hasAccess = hasPermissionSync("transactions.rentals.update");
+          if (!hasAccess) {
+            return next({ path: "/" });
+          }
+        } else {
+          // Detail/view route requires view permission
+          const hasAccess = hasPermissionSync("transactions.rentals.view");
+          if (!hasAccess) {
+            return next({ path: "/" });
+          }
         }
       } catch (error) {
         console.error("Error checking permission:", error);
@@ -326,9 +348,18 @@ router.beforeEach(async (to, from, next) => {
       to.path !== "/transactions/sales/new"
     ) {
       try {
-        const hasAccess = hasPermissionSync("transactions.sales.view");
-        if (!hasAccess) {
-          return next({ path: "/" });
+        // Edit route requires update permission
+        if (to.path.endsWith("/edit")) {
+          const hasAccess = hasPermissionSync("transactions.sales.update");
+          if (!hasAccess) {
+            return next({ path: "/" });
+          }
+        } else {
+          // Detail/view route requires view permission
+          const hasAccess = hasPermissionSync("transactions.sales.view");
+          if (!hasAccess) {
+            return next({ path: "/" });
+          }
         }
       } catch (error) {
         console.error("Error checking permission:", error);

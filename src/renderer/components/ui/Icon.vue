@@ -640,6 +640,148 @@
     </svg>
 
     <svg
+      v-else-if="name === 'bar-chart'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 20V10" />
+      <path d="M18 20V4" />
+      <path d="M6 20v-6" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'dollar-sign'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 2v20" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'warehouse'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35l10-3.33 10 3.33z" />
+      <path d="M6 18h12" />
+      <path d="M6 14h12" />
+      <path d="M6 10h12" />
+      <path d="M12 6v12" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'ruler'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21.3 8.7l-5.6-5.6a2.93 2.93 0 0 0-4.14 0L2.7 11.3a2.93 2.93 0 0 0 0 4.14l5.6 5.6a2.93 2.93 0 0 0 4.14 0L21.3 12.9a2.93 2.93 0 0 0 0-4.2z" />
+      <path d="M7.5 10.5l2 2" />
+      <path d="M10.5 7.5l2 2" />
+      <path d="M13.5 4.5l2 2" />
+      <path d="M4.5 13.5l2 2" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'gift'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M20 12v10H4V12" />
+      <path d="M22 7H2v5h20V7z" />
+      <path d="M12 22V7" />
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'percent'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M19 5L5 19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'file-text'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'rotate-cw'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
+
+    <svg
       v-else
       :width="size"
       :height="size"

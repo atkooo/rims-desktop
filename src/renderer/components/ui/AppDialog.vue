@@ -17,7 +17,7 @@
           </div>
 
           <div v-if="showFooter" class="dialog-footer">
-            <AppButton v-if="showCancel" variant="secondary" @click="close">
+            <AppButton v-if="showCancel" variant="secondary" @click="handleCancel">
               {{ cancelText }}
             </AppButton>
             <AppButton
@@ -83,9 +83,13 @@ export default {
       default: null,
     },
   },
-  emits: ["update:modelValue", "confirm"],
+  emits: ["update:modelValue", "confirm", "cancel"],
   methods: {
     close() {
+      this.$emit("update:modelValue", false);
+    },
+    handleCancel() {
+      this.$emit("cancel");
       this.$emit("update:modelValue", false);
     },
     confirm() {

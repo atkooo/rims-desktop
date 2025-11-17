@@ -5,7 +5,7 @@ export const menuGroups = [
       {
         to: "/transactions/rentals",
         label: "Sewa & Pengembalian",
-        icon: "key",
+        icon: "rotate-cw",
         permission: "transactions.rentals.view",
       },
       {
@@ -17,7 +17,7 @@ export const menuGroups = [
       {
         to: "/transactions/cashier",
         label: "Buka Kasir",
-        icon: "money",
+        icon: "credit-card",
         permission: "transactions.cashier.manage",
       },
     ],
@@ -28,7 +28,13 @@ export const menuGroups = [
       {
         to: "/transactions/stock-movements",
         label: "Manajemen Stok",
-        icon: "layers",
+        icon: "warehouse",
+        permission: "transactions.stock-movements.view",
+      },
+      {
+        to: "/stock/alerts",
+        label: "Alert Stok Minimal",
+        icon: "bell",
         permission: "transactions.stock-movements.view",
       },
     ],
@@ -51,7 +57,7 @@ export const menuGroups = [
       {
         to: "/reports/stock",
         label: "Laporan Stok",
-        icon: "box",
+        icon: "chart-bar",
         permission: "reports.stock.view",
       },
     ],
@@ -68,25 +74,25 @@ export const menuGroups = [
       {
         to: "/master/items",
         label: "Manajemen Item",
-        icon: "box",
+        icon: "package",
         permission: "master.items.view",
       },
       {
         to: "/master/item-sizes",
         label: "Ukuran Item",
-        icon: "layers",
+        icon: "ruler",
         permission: "master.item-sizes.view",
       },
       {
         to: "/master/accessories",
         label: "Aksesoris & Add-on",
-        icon: "layers",
+        icon: "gift",
         permission: "master.accessories.view",
       },
       {
         to: "/master/bundles",
         label: "Paket & Koleksi",
-        icon: "clipboard",
+        icon: "grid",
         permission: "master.bundles.view",
       },
       {
@@ -98,7 +104,7 @@ export const menuGroups = [
       {
         to: "/master/discount-groups",
         label: "Grup Diskon",
-        icon: "tag",
+        icon: "percent",
         permission: "master.discount-groups.view",
       },
     ],
@@ -121,13 +127,13 @@ export const menuGroups = [
       {
         to: "/settings/activity-logs",
         label: "Log Aktivitas",
-        icon: "clipboard",
+        icon: "file-text",
         permission: "settings.activity-logs.view",
       },
       {
         to: "/master/user-role-management",
         label: "User & Role Management",
-        icon: "users",
+        icon: "shield",
         permission: ["users.view", "roles.view"],
       },
     ],

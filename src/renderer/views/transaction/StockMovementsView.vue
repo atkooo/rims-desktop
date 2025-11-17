@@ -53,7 +53,7 @@
             'notes',
           ]"
           row-key="id"
-          default-page-size="10"
+          :default-page-size="10"
         >
           <template #actions="{ row }">
             <AppButton

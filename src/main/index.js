@@ -78,6 +78,7 @@ const setupMasterDataViewHandlers = require("./handlers/masterDataViewHandlers")
 const setupTransactionViewHandlers = require("./handlers/transactionViewHandlers");
 const setupReportViewHandlers = require("./handlers/reportViewHandlers");
 const setupReportExportHandlers = require("./handlers/reportExportHandlers");
+const setupStockAlertHandlers = require("./handlers/stockAlertHandlers");
 const setupCashierHandlers = require("./handlers/cashierHandlers");
 const setupDiscountGroupHandlers = require("./handlers/discountGroupHandlers");
 const setupReceiptHandlers = require("./handlers/receiptHandlers");
@@ -372,6 +373,7 @@ app.whenReady().then(async () => {
   setupTransactionViewHandlers();
   setupReportViewHandlers();
   setupReportExportHandlers();
+  setupStockAlertHandlers();
   setupCashierHandlers();
   setupDiscountGroupHandlers();
   setupReceiptHandlers();
