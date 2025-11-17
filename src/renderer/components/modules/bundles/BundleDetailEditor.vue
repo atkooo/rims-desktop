@@ -22,16 +22,36 @@
             <label class="form-label">
               {{ form.type === "item" ? "Pilih Item" : "Pilih Aksesoris" }}
             </label>
-            <select v-model="form.referenceId" class="form-select">
-              <option value="">-- Pilih --</option>
-              <option
-                v-for="option in referenceOptions"
-                :key="`${form.type}-${option.id}`"
-                :value="option.id"
+            <div class="picker-selector">
+              <div v-if="selectedReference" class="selected-reference">
+                <span class="reference-name">
+                  {{ selectedReference.name }}
+                  <span v-if="selectedReference.code" class="reference-code">
+                    {{ selectedReference.code }}
+                  </span>
+                </span>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  @click="clearSelection"
+                >
+                  Hapus
+                </AppButton>
+              </div>
+              <AppButton
+                v-else
+                type="button"
+                variant="secondary"
+                @click="openPicker"
               >
-                {{ option.name }}
-              </option>
-            </select>
+                <Icon name="search" :size="16" />
+                <span>{{ form.type === "item" ? "Cari Item" : "Cari Aksesoris" }}</span>
+              </AppButton>
+            </div>
+            <div v-if="errors.referenceId" class="error-message">
+              {{ errors.referenceId }}
+            </div>
           </div>
           <FormInput
             id="quantity"
@@ -72,41 +92,123 @@
         <div v-if="detailsError" class="error-banner">
           {{ detailsError }}
         </div>
-        <table class="detail-table" v-if="details.length">
-          <thead>
-            <tr>
-              <th>Jenis</th>
-              <th>Nama</th>
-              <th>Jumlah</th>
-              <th>Catatan</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="detail in details" :key="detail.id">
-              <td>{{ detail.item_id ? "Item" : "Aksesoris" }}</td>
-              <td>{{ detail.item_name || detail.accessory_name || "-" }}</td>
-              <td>{{ detail.quantity }}</td>
-              <td>{{ detail.notes || "-" }}</td>
-              <td class="actions">
-                <AppButton variant="secondary" @click="startEdit(detail)">
-                  Edit
-                </AppButton>
-                <AppButton
-                  variant="danger"
-                  :loading="deleteLoadingId === detail.id"
-                  @click="removeDetail(detail)"
-                >
-                  Hapus
-                </AppButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="detail-state">Belum ada komposisi untuk paket ini.</p>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+          <div
+            class="tab"
+            :class="{ active: activeTab === 'items' }"
+            @click="activeTab = 'items'"
+          >
+            Item ({{ itemDetails.length }})
+          </div>
+          <div
+            class="tab"
+            :class="{ active: activeTab === 'accessories' }"
+            @click="activeTab = 'accessories'"
+          >
+            Aksesoris ({{ accessoryDetails.length }})
+          </div>
+        </div>
+
+        <!-- Tab Content: Items -->
+        <div v-if="activeTab === 'items'" class="tab-content">
+          <table class="detail-table" v-if="itemDetails.length">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Item</th>
+                <th>Kategori</th>
+                <th>Harga</th>
+                <th>Jumlah</th>
+                <th>Catatan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="detail in itemDetails" :key="detail.id">
+                <td class="code-cell">
+                  <span class="item-code">{{ getItemCode(detail.item_id) || "-" }}</span>
+                </td>
+                <td class="name-cell">{{ detail.item_name || "-" }}</td>
+                <td>{{ getItemCategory(detail.item_id) || "-" }}</td>
+                <td class="price-cell">{{ formatItemPrice(detail.item_id) }}</td>
+                <td class="quantity-cell">{{ detail.quantity }}</td>
+                <td class="notes-cell">{{ detail.notes || "-" }}</td>
+                <td class="actions">
+                  <AppButton variant="secondary" size="small" @click="startEdit(detail)">
+                    Edit
+                  </AppButton>
+                  <AppButton
+                    variant="danger"
+                    size="small"
+                    :loading="deleteLoadingId === detail.id"
+                    @click="removeDetail(detail)"
+                  >
+                    Hapus
+                  </AppButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="detail-state">Belum ada item dalam komposisi paket ini.</p>
+        </div>
+
+        <!-- Tab Content: Accessories -->
+        <div v-if="activeTab === 'accessories'" class="tab-content">
+          <table class="detail-table" v-if="accessoryDetails.length">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Aksesoris</th>
+                <th>Harga</th>
+                <th>Jumlah</th>
+                <th>Catatan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="detail in accessoryDetails" :key="detail.id">
+                <td class="code-cell">
+                  <span class="item-code">{{ getAccessoryCode(detail.accessory_id) || "-" }}</span>
+                </td>
+                <td class="name-cell">{{ detail.accessory_name || "-" }}</td>
+                <td class="price-cell">{{ formatAccessoryPrice(detail.accessory_id) }}</td>
+                <td class="quantity-cell">{{ detail.quantity }}</td>
+                <td class="notes-cell">{{ detail.notes || "-" }}</td>
+                <td class="actions">
+                  <AppButton variant="secondary" size="small" @click="startEdit(detail)">
+                    Edit
+                  </AppButton>
+                  <AppButton
+                    variant="danger"
+                    size="small"
+                    :loading="deleteLoadingId === detail.id"
+                    @click="removeDetail(detail)"
+                  >
+                    Hapus
+                  </AppButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="detail-state">Belum ada aksesoris dalam komposisi paket ini.</p>
+        </div>
       </div>
     </div>
     <p v-else class="detail-state">Pilih paket terlebih dahulu.</p>
+
+    <!-- Picker Dialogs -->
+    <ItemPickerDialog
+      v-model="showItemPicker"
+      :excluded-ids="excludedItemIds"
+      @select="handleItemSelect"
+    />
+    <AccessoryPickerDialog
+      v-model="showAccessoryPicker"
+      :excluded-ids="excludedAccessoryIds"
+      @select="handleAccessorySelect"
+    />
   </AppDialog>
 </template>
 
@@ -115,6 +217,9 @@ import { ref, computed, watch, onMounted } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import Icon from "@/components/ui/Icon.vue";
+import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
+import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
 import {
   fetchBundleDetailsByBundle,
   createBundleDetail,
@@ -123,6 +228,7 @@ import {
   fetchAccessories,
 } from "@/services/masterData";
 import { useItemStore } from "@/store/items";
+import { formatCurrency } from "@/composables/useCurrency";
 
 const defaultForm = () => ({
   type: "item",
@@ -133,7 +239,14 @@ const defaultForm = () => ({
 
 export default {
   name: "BundleDetailEditor",
-  components: { AppDialog, AppButton, FormInput },
+  components: {
+    AppDialog,
+    AppButton,
+    FormInput,
+    Icon,
+    ItemPickerDialog,
+    AccessoryPickerDialog,
+  },
   props: {
     modelValue: {
       type: Boolean,
@@ -162,16 +275,101 @@ export default {
     const formSubmitting = ref(false);
     const editingDetail = ref(null);
     const deleteLoadingId = ref(null);
+    const showItemPicker = ref(false);
+    const showAccessoryPicker = ref(false);
+    const selectedReference = ref(null);
+    const activeTab = ref("items");
 
     const showDialog = computed({
       get: () => props.modelValue,
       set: (value) => emit("update:modelValue", value),
     });
 
-    const referenceOptions = computed(() => {
-      if (form.value.type === "accessory") return accessories.value;
-      return itemStore.items || [];
+    const excludedItemIds = computed(() => {
+      return details.value
+        .filter((d) => d.item_id && d.id !== editingDetail.value?.id)
+        .map((d) => d.item_id);
     });
+
+    const excludedAccessoryIds = computed(() => {
+      return details.value
+        .filter((d) => d.accessory_id && d.id !== editingDetail.value?.id)
+        .map((d) => d.accessory_id);
+    });
+
+    const itemDetails = computed(() => {
+      return details.value.filter((d) => d.item_id);
+    });
+
+    const accessoryDetails = computed(() => {
+      return details.value.filter((d) => d.accessory_id);
+    });
+
+    const getItemCode = (itemId) => {
+      if (!itemId) return null;
+      const item = itemStore.items.find((i) => i.id === itemId);
+      return item?.code || null;
+    };
+
+    const getItemCategory = (itemId) => {
+      if (!itemId) return null;
+      const item = itemStore.items.find((i) => i.id === itemId);
+      return item?.category_name || null;
+    };
+
+    const formatItemPrice = (itemId) => {
+      if (!itemId) return "-";
+      const item = itemStore.items.find((i) => i.id === itemId);
+      if (!item) return "-";
+      return formatCurrency(item.sale_price ?? item.price ?? 0);
+    };
+
+    const getAccessoryCode = (accessoryId) => {
+      if (!accessoryId) return null;
+      const accessory = accessories.value.find((a) => a.id === accessoryId);
+      return accessory?.code || null;
+    };
+
+    const formatAccessoryPrice = (accessoryId) => {
+      if (!accessoryId) return "-";
+      const accessory = accessories.value.find((a) => a.id === accessoryId);
+      if (!accessory) return "-";
+      return formatCurrency(accessory.sale_price ?? accessory.price ?? 0);
+    };
+
+    const openPicker = () => {
+      if (form.value.type === "item") {
+        showItemPicker.value = true;
+      } else {
+        showAccessoryPicker.value = true;
+      }
+    };
+
+    const handleItemSelect = (item) => {
+      form.value.referenceId = item.id;
+      selectedReference.value = {
+        id: item.id,
+        name: item.name,
+        code: item.code,
+      };
+      errors.value.referenceId = "";
+    };
+
+    const handleAccessorySelect = (accessory) => {
+      form.value.referenceId = accessory.id;
+      selectedReference.value = {
+        id: accessory.id,
+        name: accessory.name,
+        code: accessory.code,
+      };
+      errors.value.referenceId = "";
+    };
+
+    const clearSelection = () => {
+      form.value.referenceId = "";
+      selectedReference.value = null;
+      errors.value.referenceId = "";
+    };
 
     const loadAccessories = async () => {
       accessoriesLoading.value = true;
@@ -215,6 +413,7 @@ export default {
       errors.value = {};
       formError.value = "";
       editingDetail.value = null;
+      selectedReference.value = null;
     };
 
     const validateForm = () => {
@@ -268,7 +467,7 @@ export default {
       }
     };
 
-    const startEdit = (detail) => {
+    const startEdit = async (detail) => {
       editingDetail.value = detail;
       form.value = {
         type: detail.item_id ? "item" : "accessory",
@@ -276,12 +475,61 @@ export default {
         quantity: detail.quantity,
         notes: detail.notes || "",
       };
+      
+      // Set active tab sesuai jenis detail
+      activeTab.value = detail.item_id ? "items" : "accessories";
+      
+      // Load selected reference untuk ditampilkan
+      if (detail.item_id) {
+        const item = itemStore.items.find((i) => i.id === detail.item_id);
+        if (item) {
+          selectedReference.value = {
+            id: item.id,
+            name: item.name,
+            code: item.code,
+          };
+        } else {
+          // Jika item tidak ada di store, fetch dulu
+          await itemStore.fetchItems();
+          const foundItem = itemStore.items.find((i) => i.id === detail.item_id);
+          if (foundItem) {
+            selectedReference.value = {
+              id: foundItem.id,
+              name: foundItem.name,
+              code: foundItem.code,
+            };
+          }
+        }
+      } else if (detail.accessory_id) {
+        const accessory = accessories.value.find((a) => a.id === detail.accessory_id);
+        if (accessory) {
+          selectedReference.value = {
+            id: accessory.id,
+            name: accessory.name,
+            code: accessory.code,
+          };
+        } else {
+          // Jika accessory tidak ada, load dulu
+          await loadAccessories();
+          const foundAccessory = accessories.value.find((a) => a.id === detail.accessory_id);
+          if (foundAccessory) {
+            selectedReference.value = {
+              id: foundAccessory.id,
+              name: foundAccessory.name,
+              code: foundAccessory.code,
+            };
+          }
+        }
+      }
+      
       errors.value = {};
       formError.value = "";
     };
 
     const handleTypeChange = () => {
       form.value.referenceId = "";
+      selectedReference.value = null;
+      errors.value.referenceId = "";
     };
 
     const removeDetail = async (detail) => {
@@ -308,9 +556,30 @@ export default {
           await ensureDependencies();
           await loadDetails();
           resetForm();
+          // Set tab default ke items jika ada, jika tidak ke accessories
+          if (itemDetails.value.length > 0) {
+            activeTab.value = "items";
+          } else if (accessoryDetails.value.length > 0) {
+            activeTab.value = "accessories";
+          } else {
+            activeTab.value = "items";
+          }
         } else if (!visible) {
           details.value = [];
           resetForm();
+          activeTab.value = "items";
+        }
+      },
+    );
+
+    // Watch untuk auto-switch tab jika tab aktif kosong
+    watch(
+      () => [itemDetails.value.length, accessoryDetails.value.length],
+      ([itemCount, accessoryCount]) => {
+        if (activeTab.value === "items" && itemCount === 0 && accessoryCount > 0) {
+          activeTab.value = "accessories";
+        } else if (activeTab.value === "accessories" && accessoryCount === 0 && itemCount > 0) {
+          activeTab.value = "items";
         }
       },
     );
@@ -340,7 +609,23 @@ export default {
       formSubmitting,
       editingDetail,
       deleteLoadingId,
-      referenceOptions,
+      showItemPicker,
+      showAccessoryPicker,
+      selectedReference,
+      excludedItemIds,
+      excludedAccessoryIds,
+      activeTab,
+      itemDetails,
+      accessoryDetails,
+      getItemCode,
+      getItemCategory,
+      formatItemPrice,
+      getAccessoryCode,
+      formatAccessoryPrice,
+      openPicker,
+      handleItemSelect,
+      handleAccessorySelect,
+      clearSelection,
       handleSubmit,
       startEdit,
       removeDetail,
@@ -450,5 +735,156 @@ export default {
   color: #b91c1c;
   font-size: 0.9rem;
   margin: 0;
+}
+
+.picker-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selected-reference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  gap: 0.75rem;
+}
+
+.reference-name {
+  flex: 1;
+  font-weight: 500;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reference-code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  background-color: #e5e7eb;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.error-message {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.tab.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+  background: white;
+}
+
+.tab-content {
+  padding: 1rem;
+  background: white;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.detail-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+  color: #374151;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+}
+
+.detail-table tr:last-child td {
+  border-bottom: none;
+}
+
+.detail-table tr:hover {
+  background: #f9fafb;
+}
+
+.code-cell {
+  font-family: monospace;
+}
+
+.item-code {
+  font-size: 0.8rem;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.name-cell {
+  font-weight: 500;
+  color: #111827;
+}
+
+.price-cell {
+  font-weight: 500;
+  color: #059669;
+}
+
+.quantity-cell {
+  text-align: center;
+  font-weight: 600;
+  color: #111827;
+}
+
+.notes-cell {
+  color: #6b7280;
+  font-size: 0.85rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 </style>

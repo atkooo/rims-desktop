@@ -129,14 +129,21 @@ export default {
 
     // Calculate price after item discount
     const calculateItemPrice = (item) => {
-      // Use sale_price for sale transactions, fallback to price
-      const basePrice = item.sale_price ?? item.price ?? 0;
+      // Use rental_price_per_day for rental transactions, sale_price for sale transactions
+      let basePrice;
+      if (transactionType.value === 'RENTAL') {
+        basePrice = item.rental_price_per_day ?? item.price ?? 0;
+      } else {
+        basePrice = item.sale_price ?? item.price ?? 0;
+      }
 
-      // Apply item discount if item has discount_group
-      if (item.discount_percentage > 0) {
-        return Math.round(basePrice * (1 - item.discount_percentage / 100));
-      } else if (item.discount_amount > 0) {
-        return Math.max(0, basePrice - item.discount_amount);
+      // Apply item discount if item has discount_group (only for sale transactions)
+      if (transactionType.value !== 'RENTAL') {
+        if (item.discount_percentage > 0) {
+          return Math.round(basePrice * (1 - item.discount_percentage / 100));
+        } else if (item.discount_amount > 0) {
+          return Math.max(0, basePrice - item.discount_amount);
+        }
       }
 
       return basePrice;

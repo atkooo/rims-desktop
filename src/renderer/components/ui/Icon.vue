@@ -436,7 +436,7 @@
     </svg>
 
     <svg
-      v-else-if="name === 'edit'"
+      v-else-if="name === 'edit' || name === 'pencil'"
       :width="size"
       :height="size"
       viewBox="0 0 24 24"

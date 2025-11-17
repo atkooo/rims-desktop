@@ -24,190 +24,152 @@
     </div>
 
     <div v-else-if="item" class="detail-container">
-      <!-- Informasi Utama -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Utama</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Kode</label>
-            <div class="detail-value">{{ item.code }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Nama Item</label>
-            <div class="detail-value">{{ item.name }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Kategori</label>
-            <div class="detail-value">{{ item.category_name || "-" }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Ukuran</label>
-            <div class="detail-value">{{ item.size_name || "-" }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Tipe</label>
-            <div class="detail-value">
-              <span class="status-badge" :class="getTypeClass(item.type)">
-                {{ item.type }}
-              </span>
+      <!-- Baris 1: Informasi Utama & Harga & Stok (2 card) -->
+      <div class="cards-row">
+        <!-- Card 1: Informasi Utama -->
+        <section class="card-section">
+          <h3 class="column-title">Informasi Utama</h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <label>Kode</label>
+              <div class="detail-value">{{ item.code }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Nama Item</label>
+              <div class="detail-value">{{ item.name }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Kategori</label>
+              <div class="detail-value">{{ item.category_name || "-" }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Ukuran</label>
+              <div class="detail-value">{{ item.size_name || "-" }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Tipe</label>
+              <div class="detail-value">
+                <span class="status-badge" :class="getTypeClass(item.type)">
+                  {{ item.type }}
+                </span>
+              </div>
+            </div>
+            <div class="detail-row">
+              <label>Status</label>
+              <div class="detail-value">
+                <span class="status-badge" :class="getStatusClass(item.status)">
+                  {{ item.status }}
+                </span>
+              </div>
+            </div>
+            <div class="detail-row full-row">
+              <label>Deskripsi</label>
+              <div class="detail-value">{{ item.description || "-" }}</div>
             </div>
           </div>
-          <div class="detail-item">
-            <label>Status</label>
-            <div class="detail-value">
-              <span class="status-badge" :class="getStatusClass(item.status)">
-                {{ item.status }}
-              </span>
-            </div>
-          </div>
-          <div class="detail-item full-width">
-            <label>Deskripsi</label>
-            <div class="detail-value">
-              {{ item.description || "-" }}
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Informasi Harga -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Harga</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Harga Beli</label>
-            <div class="detail-value">
-              {{ formatCurrency(item.purchase_price) }}
+        <!-- Card 2: Harga & Stok -->
+        <section class="card-section">
+          <h3 class="column-title">Harga & Stok</h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <label>Harga Beli</label>
+              <div class="detail-value">{{ formatCurrency(item.purchase_price) }}</div>
             </div>
-          </div>
-          <div class="detail-item">
-            <label>Harga Dasar</label>
-            <div class="detail-value">
-              {{ formatCurrency(item.price) }}
+            <div class="detail-row">
+              <label>Harga Dasar</label>
+              <div class="detail-value">{{ formatCurrency(item.price) }}</div>
             </div>
-          </div>
-          <!-- Harga Jual: tampilkan jika SALE atau BOTH -->
-          <div v-if="showSalePrice" class="detail-item">
-            <label>Harga Jual</label>
-            <div class="detail-value">
-              {{ formatCurrency(item.sale_price) }}
+            <div v-if="showSalePrice" class="detail-row">
+              <label>Harga Jual</label>
+              <div class="detail-value">{{ formatCurrency(item.sale_price) }}</div>
             </div>
-          </div>
-          <!-- Harga Sewa: tampilkan jika RENTAL atau BOTH -->
-          <div v-if="showRentalPrice" class="detail-item">
-            <label>Harga Sewa / Hari</label>
-            <div class="detail-value">
-              {{ formatCurrency(item.rental_price_per_day) }}
+            <div v-if="showRentalPrice" class="detail-row">
+              <label>Harga Sewa/Hari</label>
+              <div class="detail-value">{{ formatCurrency(item.rental_price_per_day) }}</div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Informasi Stok -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Stok</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Total Stok</label>
-            <div class="detail-value">{{ item.stock_quantity || 0 }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Stok Tersedia</label>
-            <div
-              class="detail-value"
-              :class="{
-                'text-warning':
-                  item.available_quantity <= (item.min_stock_alert || 0),
-                'text-danger': item.available_quantity === 0,
-              }"
-            >
-              {{ item.available_quantity || 0 }}
+            <div v-if="showRentalPrice" class="detail-row">
+              <label>Deposit</label>
+              <div class="detail-value">{{ formatCurrency(item.deposit || 0) }}</div>
             </div>
-          </div>
-          <div class="detail-item">
-            <label>Minimal Stok Alert</label>
-            <div class="detail-value">{{ item.min_stock_alert || 0 }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Stok Terpakai</label>
-            <div 
-              class="detail-value"
-              :class="{
-                'text-danger': (item.stock_quantity || 0) < (item.available_quantity || 0)
-              }"
-            >
-              {{ Math.max(0, (item.stock_quantity || 0) - (item.available_quantity || 0)) }}
-              <span 
-                v-if="(item.stock_quantity || 0) < (item.available_quantity || 0)"
-                class="text-danger"
-                style="font-size: 0.85rem; display: block; margin-top: 0.25rem;"
+            <div class="detail-row">
+              <label>Total Stok</label>
+              <div class="detail-value">{{ item.stock_quantity || 0 }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Stok Tersedia</label>
+              <div
+                class="detail-value"
+                :class="{
+                  'text-warning': item.available_quantity <= (item.min_stock_alert || 0),
+                  'text-danger': item.available_quantity === 0,
+                }"
               >
-                ⚠️ Data tidak konsisten
-              </span>
+                {{ item.available_quantity || 0 }}
+              </div>
+            </div>
+            <div class="detail-row">
+              <label>Stok Terpakai</label>
+              <div 
+                class="detail-value"
+                :class="{
+                  'text-danger': (item.stock_quantity || 0) < (item.available_quantity || 0)
+                }"
+              >
+                {{ Math.max(0, (item.stock_quantity || 0) - (item.available_quantity || 0)) }}
+              </div>
+            </div>
+            <div class="detail-row">
+              <label>Min. Stok Alert</label>
+              <div class="detail-value">{{ item.min_stock_alert || 0 }}</div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <!-- Status & Ketersediaan -->
-      <section class="card-section">
-        <h2 class="section-title">Status & Ketersediaan</h2>
-        <div class="detail-grid">
-          <!-- Bisa Disewa: hanya tampilkan jika RENTAL atau BOTH -->
-          <div v-if="showCanBeRented" class="detail-item">
-            <label>Bisa Disewa</label>
-            <div class="detail-value">
-              <span
-                class="status-badge"
-                :class="item.is_available_for_rent ? 'active' : 'inactive'"
-              >
+      <!-- Baris 2: Ketersediaan & Informasi Sistem (2 card) -->
+      <div class="cards-row">
+        <!-- Card 3: Ketersediaan -->
+        <section class="card-section compact">
+          <h3 class="group-title">Ketersediaan</h3>
+          <div class="detail-list-inline">
+            <div v-if="showCanBeRented" class="detail-inline">
+              <label>Bisa Disewa</label>
+              <span class="status-badge" :class="item.is_available_for_rent ? 'active' : 'inactive'">
                 {{ item.is_available_for_rent ? "Ya" : "Tidak" }}
               </span>
             </div>
-          </div>
-          <!-- Bisa Dijual: hanya tampilkan jika SALE atau BOTH -->
-          <div v-if="showCanBeSold" class="detail-item">
-            <label>Bisa Dijual</label>
-            <div class="detail-value">
-              <span
-                class="status-badge"
-                :class="item.is_available_for_sale ? 'active' : 'inactive'"
-              >
+            <div v-if="showCanBeSold" class="detail-inline">
+              <label>Bisa Dijual</label>
+              <span class="status-badge" :class="item.is_available_for_sale ? 'active' : 'inactive'">
                 {{ item.is_available_for_sale ? "Ya" : "Tidak" }}
               </span>
             </div>
-          </div>
-          <div class="detail-item">
-            <label>Aktif</label>
-            <div class="detail-value">
-              <span
-                class="status-badge"
-                :class="item.is_active ? 'active' : 'inactive'"
-              >
+            <div class="detail-inline">
+              <label>Aktif</label>
+              <span class="status-badge" :class="item.is_active ? 'active' : 'inactive'">
                 {{ item.is_active ? "Ya" : "Tidak" }}
               </span>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Informasi Sistem -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Sistem</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Dibuat Pada</label>
-            <div class="detail-value">
-              {{ formatDateTime(item.created_at) }}
+        <!-- Card 4: Informasi Sistem -->
+        <section class="card-section compact">
+          <h3 class="group-title">Informasi Sistem</h3>
+          <div class="detail-list-inline">
+            <div class="detail-inline">
+              <label>Dibuat</label>
+              <span class="detail-value-small">{{ formatDateTime(item.created_at) }}</span>
+            </div>
+            <div class="detail-inline">
+              <label>Diperbarui</label>
+              <span class="detail-value-small">{{ formatDateTime(item.updated_at) }}</span>
             </div>
           </div>
-          <div class="detail-item">
-            <label>Diperbarui Pada</label>
-            <div class="detail-value">
-              {{ formatDateTime(item.updated_at) }}
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
 
     <ItemForm
@@ -373,51 +335,110 @@ export default {
 .detail-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.75rem;
+}
+
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
 }
 
 .card-section {
   background: white;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.section-title {
-  font-size: 1.1rem;
+.card-section.compact {
+  padding: 0.75rem 1rem;
+}
+
+.column-title {
+  font-size: 0.95rem;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.detail-item {
+.detail-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.detail-item.full-width {
-  grid-column: 1 / -1;
+.detail-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.detail-item label {
-  font-size: 0.85rem;
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row.full-row {
+  grid-template-columns: 1fr;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-row label {
+  font-size: 0.8rem;
   font-weight: 500;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
 }
 
 .detail-value {
-  font-size: 1rem;
+  font-size: 0.9rem;
+  color: #111827;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+
+.group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-list-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.detail-inline label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-value-small {
+  font-size: 0.85rem;
   color: #111827;
   font-weight: 500;
 }
@@ -476,5 +497,34 @@ export default {
 .status-badge.maintenance {
   background-color: #fef3c7;
   color: #92400e;
+}
+
+/* Responsive untuk layar kecil */
+@media (max-width: 1024px) {
+  .cards-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-row {
+    grid-template-columns: 100px 1fr;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .detail-row label {
+    font-size: 0.75rem;
+  }
+
+  .detail-value {
+    font-size: 0.85rem;
+  }
+
+  .column-title,
+  .group-title {
+    font-size: 0.85rem;
+  }
 }
 </style>

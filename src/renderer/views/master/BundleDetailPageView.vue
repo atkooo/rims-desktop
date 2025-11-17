@@ -26,101 +26,92 @@
     </div>
 
     <div v-else-if="bundle" class="detail-container">
-      <!-- Informasi Utama -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Utama</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Kode</label>
-            <div class="detail-value">{{ bundle.code }}</div>
+      <!-- Baris 1: Informasi Utama & Harga & Stok (2 card) -->
+      <div class="cards-row">
+        <!-- Card 1: Informasi Utama -->
+        <section class="card-section">
+          <h3 class="column-title">Informasi Utama</h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <label>Kode</label>
+              <div class="detail-value">{{ bundle.code }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Nama Paket</label>
+              <div class="detail-value">{{ bundle.name }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Tipe Paket</label>
+              <div class="detail-value">
+                <span
+                  class="status-badge"
+                  :class="bundle.bundle_type === 'rental' ? 'rental' : 'sale'"
+                >
+                  {{ bundle.bundle_type === "rental" ? "Rental" : "Penjualan" }}
+                </span>
+              </div>
+            </div>
+            <div class="detail-row">
+              <label>Status</label>
+              <div class="detail-value">
+                <span
+                  class="status-badge"
+                  :class="bundle.is_active ? 'active' : 'inactive'"
+                >
+                  {{ bundle.is_active ? "Aktif" : "Nonaktif" }}
+                </span>
+              </div>
+            </div>
+            <div class="detail-row full-row">
+              <label>Deskripsi</label>
+              <div class="detail-value">{{ bundle.description || "-" }}</div>
+            </div>
           </div>
-          <div class="detail-item">
-            <label>Nama Paket</label>
-            <div class="detail-value">{{ bundle.name }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Tipe Paket</label>
-            <div class="detail-value">
-              <span
-                class="status-badge"
-                :class="bundle.bundle_type === 'rental' ? 'rental' : 'sale'"
+        </section>
+
+        <!-- Card 2: Harga & Stok -->
+        <section class="card-section">
+          <h3 class="column-title">Harga & Stok</h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <label>Harga Paket</label>
+              <div class="detail-value">{{ formatCurrency(bundle.price) }}</div>
+            </div>
+            <div v-if="bundle.bundle_type === 'rental'" class="detail-row">
+              <label>Harga Sewa/Hari</label>
+              <div class="detail-value">{{ formatCurrency(bundle.rental_price_per_day) }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Total Stok</label>
+              <div class="detail-value">{{ bundle.stock_quantity || 0 }}</div>
+            </div>
+            <div class="detail-row">
+              <label>Stok Tersedia</label>
+              <div
+                class="detail-value"
+                :class="{
+                  'text-warning': bundle.available_quantity <= 0,
+                  'text-danger': bundle.available_quantity === 0,
+                }"
               >
-                {{ bundle.bundle_type === "rental" ? "Rental" : "Penjualan" }}
-              </span>
+                {{ bundle.available_quantity || 0 }}
+              </div>
+            </div>
+            <div class="detail-row">
+              <label>Stok Terpakai</label>
+              <div class="detail-value">
+                {{ Math.max(0, (bundle.stock_quantity || 0) - (bundle.available_quantity || 0)) }}
+              </div>
             </div>
           </div>
-          <div class="detail-item">
-            <label>Status</label>
-            <div class="detail-value">
-              <span
-                class="status-badge"
-                :class="bundle.is_active ? 'active' : 'inactive'"
-              >
-                {{ bundle.is_active ? "Aktif" : "Nonaktif" }}
-              </span>
-            </div>
-          </div>
-          <div class="detail-item full-width">
-            <label>Deskripsi</label>
-            <div class="detail-value">
-              {{ bundle.description || "-" }}
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <!-- Informasi Harga -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Harga</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Harga Paket</label>
-            <div class="detail-value">
-              {{ formatCurrency(bundle.price) }}
-            </div>
-          </div>
-          <div class="detail-item">
-            <label>Harga Sewa / Hari</label>
-            <div class="detail-value">
-              {{ formatCurrency(bundle.rental_price_per_day) }}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Informasi Stok -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Stok</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Total Stok</label>
-            <div class="detail-value">{{ bundle.stock_quantity }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Stok Tersedia</label>
-            <div
-              class="detail-value"
-              :class="{
-                'text-warning': bundle.available_quantity === 0,
-              }"
-            >
-              {{ bundle.available_quantity }}
-            </div>
-          </div>
-          <div class="detail-item">
-            <label>Stok Terpakai</label>
-            <div class="detail-value">
-              {{ bundle.stock_quantity - bundle.available_quantity }}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Komposisi Paket -->
+      <!-- Baris 2: Komposisi Paket -->
       <section class="card-section">
         <div class="section-header">
-          <h2 class="section-title">Komposisi Paket</h2>
-          <AppButton variant="primary" @click="openDetailEditor">
+          <h3 class="column-title">Komposisi Paket</h3>
+          <AppButton variant="primary" size="small" @click="openDetailEditor">
             Kelola Komposisi
           </AppButton>
         </div>
@@ -132,6 +123,7 @@
           <AppButton
             class="retry-button"
             variant="secondary"
+            size="small"
             @click="loadBundleDetails"
           >
             Coba Lagi
@@ -148,21 +140,17 @@
         />
       </section>
 
-      <!-- Informasi Sistem -->
-      <section class="card-section">
-        <h2 class="section-title">Informasi Sistem</h2>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Dibuat Pada</label>
-            <div class="detail-value">
-              {{ formatDateTime(bundle.created_at) }}
-            </div>
+      <!-- Baris 3: Informasi Sistem -->
+      <section class="card-section compact">
+        <h3 class="group-title">Informasi Sistem</h3>
+        <div class="detail-list-inline">
+          <div class="detail-inline">
+            <label>Dibuat</label>
+            <span class="detail-value-small">{{ formatDateTime(bundle.created_at) }}</span>
           </div>
-          <div class="detail-item">
-            <label>Diperbarui Pada</label>
-            <div class="detail-value">
-              {{ formatDateTime(bundle.updated_at) }}
-            </div>
+          <div class="detail-inline">
+            <label>Diperbarui</label>
+            <span class="detail-value-small">{{ formatDateTime(bundle.updated_at) }}</span>
           </div>
         </div>
       </section>
@@ -364,64 +352,122 @@ export default {
 .detail-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.75rem;
+}
+
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
 }
 
 .card-section {
   background: white;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-section.compact {
+  padding: 0.75rem 1rem;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.section-title {
-  font-size: 1.1rem;
+.column-title {
+  font-size: 0.95rem;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.section-header .section-title {
+.section-header .column-title {
   margin-bottom: 0;
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+.group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.detail-item {
+.detail-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.detail-item.full-width {
-  grid-column: 1 / -1;
+.detail-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.detail-item label {
-  font-size: 0.85rem;
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row.full-row {
+  grid-template-columns: 1fr;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-row label {
+  font-size: 0.8rem;
   font-weight: 500;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
 }
 
 .detail-value {
-  font-size: 1rem;
+  font-size: 0.9rem;
+  color: #111827;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.detail-list-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.detail-inline label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-value-small {
+  font-size: 0.85rem;
   color: #111827;
   font-weight: 500;
 }
@@ -466,5 +512,42 @@ export default {
 
 .retry-button {
   margin-left: 0.75rem;
+}
+
+.detail-value.text-warning {
+  color: #d97706;
+}
+
+.detail-value.text-danger {
+  color: #dc2626;
+}
+
+/* Responsive untuk layar kecil */
+@media (max-width: 1024px) {
+  .cards-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-row {
+    grid-template-columns: 100px 1fr;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .detail-row label {
+    font-size: 0.75rem;
+  }
+
+  .detail-value {
+    font-size: 0.85rem;
+  }
+
+  .column-title,
+  .group-title {
+    font-size: 0.85rem;
+  }
 }
 </style>

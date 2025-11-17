@@ -1184,19 +1184,66 @@ function setupStockMovementHandlers() {
         throw new Error("Data tidak valid");
       }
 
-      // Get current stock
-      const item = await database.queryOne(
-        "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
-        [movementData.itemId],
-      );
-
-      if (!item) {
-        throw new Error("Item tidak ditemukan");
+      // Validate that exactly one of itemId, bundleId, or accessoryId is provided
+      const hasItemId = !!movementData.itemId;
+      const hasBundleId = !!movementData.bundleId;
+      const hasAccessoryId = !!movementData.accessoryId;
+      const count = (hasItemId ? 1 : 0) + (hasBundleId ? 1 : 0) + (hasAccessoryId ? 1 : 0);
+      
+      if (count !== 1) {
+        throw new Error("Pilih salah satu: Item, Bundle, atau Accessory");
       }
 
-      const stockBefore = item.available_quantity || 0;
-      const totalStockBefore = item.stock_quantity || 0;
-      const stockAfter =
+      let stockBefore = 0;
+      let stockAfter = 0;
+      let tableName = "";
+      let idField = "";
+      let idValue = null;
+      let nameField = "";
+
+      // Get current stock based on type
+      if (hasItemId) {
+        const item = await database.queryOne(
+          "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+          [movementData.itemId],
+        );
+        if (!item) {
+          throw new Error("Item tidak ditemukan");
+        }
+        stockBefore = item.available_quantity || 0;
+        tableName = "items";
+        idField = "item_id";
+        idValue = movementData.itemId;
+        nameField = "item_name";
+      } else if (hasBundleId) {
+        const bundle = await database.queryOne(
+          "SELECT available_quantity, stock_quantity FROM bundles WHERE id = ?",
+          [movementData.bundleId],
+        );
+        if (!bundle) {
+          throw new Error("Bundle tidak ditemukan");
+        }
+        stockBefore = bundle.available_quantity || 0;
+        tableName = "bundles";
+        idField = "bundle_id";
+        idValue = movementData.bundleId;
+        nameField = "bundle_name";
+      } else if (hasAccessoryId) {
+        const accessory = await database.queryOne(
+          "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+          [movementData.accessoryId],
+        );
+        if (!accessory) {
+          throw new Error("Accessory tidak ditemukan");
+        }
+        stockBefore = accessory.available_quantity || 0;
+        tableName = "accessories";
+        idField = "accessory_id";
+        idValue = movementData.accessoryId;
+        nameField = "accessory_name";
+      }
+
+      stockAfter =
         movementData.movementType === "IN"
           ? stockBefore + movementData.quantity
           : stockBefore - movementData.quantity;
@@ -1211,34 +1258,36 @@ function setupStockMovementHandlers() {
         // Insert stock movement
         const result = await database.execute(
           `INSERT INTO stock_movements (
-            item_id, movement_type, reference_type, reference_id,
+            item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
             quantity, stock_before, stock_after, user_id, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            movementData.itemId,
+            movementData.itemId || null,
+            movementData.bundleId || null,
+            movementData.accessoryId || null,
             movementData.movementType,
             movementData.referenceType || null,
             movementData.referenceId || null,
             movementData.quantity,
             stockBefore,
             stockAfter,
-            movementData.userId,
+            movementData.userId || null,
             movementData.notes || null,
           ],
         );
 
-        // Update item stock
+        // Update stock based on type
         // For IN: increase both stock_quantity and available_quantity
         // For OUT: only decrease available_quantity (stock_quantity stays the same as it represents total stock ever had)
         if (movementData.movementType === "IN") {
           await database.execute(
-            "UPDATE items SET available_quantity = ?, stock_quantity = stock_quantity + ? WHERE id = ?",
-            [stockAfter, movementData.quantity, movementData.itemId],
+            `UPDATE ${tableName} SET available_quantity = ?, stock_quantity = stock_quantity + ? WHERE id = ?`,
+            [stockAfter, movementData.quantity, idValue],
           );
         } else {
           await database.execute(
-            "UPDATE items SET available_quantity = ? WHERE id = ?",
-            [stockAfter, movementData.itemId],
+            `UPDATE ${tableName} SET available_quantity = ? WHERE id = ?`,
+            [stockAfter, idValue],
           );
         }
 
@@ -1246,9 +1295,15 @@ function setupStockMovementHandlers() {
 
         // Get the created movement with joins
         const newMovement = await database.queryOne(
-          `SELECT sm.*, i.name AS item_name, u.full_name AS user_name
+          `SELECT sm.*, 
+           i.name AS item_name, 
+           b.name AS bundle_name,
+           a.name AS accessory_name,
+           u.full_name AS user_name
            FROM stock_movements sm
            LEFT JOIN items i ON sm.item_id = i.id
+           LEFT JOIN bundles b ON sm.bundle_id = b.id
+           LEFT JOIN accessories a ON sm.accessory_id = a.id
            LEFT JOIN users u ON sm.user_id = u.id
            WHERE sm.id = ?`,
           [result.id],
@@ -1281,30 +1336,51 @@ function setupStockMovementHandlers() {
           throw new Error("Data tidak ditemukan");
         }
 
+        // Determine which table to update
+        let tableName = "";
+        let idValue = null;
+
+        if (movement.item_id) {
+          tableName = "items";
+          idValue = movement.item_id;
+        } else if (movement.bundle_id) {
+          tableName = "bundles";
+          idValue = movement.bundle_id;
+        } else if (movement.accessory_id) {
+          tableName = "accessories";
+          idValue = movement.accessory_id;
+        } else {
+          throw new Error("Data pergerakan stok tidak valid");
+        }
+
         // Reverse stock change
-        const item = await database.queryOne(
-          "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
-          [movement.item_id],
+        const record = await database.queryOne(
+          `SELECT available_quantity, stock_quantity FROM ${tableName} WHERE id = ?`,
+          [idValue],
         );
 
-        const currentStock = item.available_quantity || 0;
+        if (!record) {
+          throw new Error(`${tableName} tidak ditemukan`);
+        }
+
+        const currentStock = record.available_quantity || 0;
         const reversedStock =
           movement.movement_type === "IN"
             ? currentStock - movement.quantity
             : currentStock + movement.quantity;
 
-        // Update item stock
+        // Update stock
         // For IN reversal: decrease both stock_quantity and available_quantity
         // For OUT reversal: only increase available_quantity
         if (movement.movement_type === "IN") {
           await database.execute(
-            "UPDATE items SET available_quantity = ?, stock_quantity = stock_quantity - ? WHERE id = ?",
-            [reversedStock, movement.quantity, movement.item_id],
+            `UPDATE ${tableName} SET available_quantity = ?, stock_quantity = stock_quantity - ? WHERE id = ?`,
+            [reversedStock, movement.quantity, idValue],
           );
         } else {
           await database.execute(
-            "UPDATE items SET available_quantity = ? WHERE id = ?",
-            [reversedStock, movement.item_id],
+            `UPDATE ${tableName} SET available_quantity = ? WHERE id = ?`,
+            [reversedStock, idValue],
           );
         }
 

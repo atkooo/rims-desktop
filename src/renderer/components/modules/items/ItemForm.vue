@@ -327,6 +327,7 @@ export default {
               props.editData.rental_price_per_day ??
               0,
             weeklyRate: props.editData.weeklyRate ?? 0,
+            deposit: props.editData.deposit ?? 0,
             // Stok tidak bisa diubah dari form, tetap tampilkan nilai saat ini untuk info saja
             // Tapi saat submit, akan di-ignore dan tidak di-update
             stock_quantity: props.editData.stock_quantity ?? 0,

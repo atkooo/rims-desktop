@@ -12,25 +12,20 @@
       </div>
 
       <section class="form-section">
-        <h3>Item & Jenis Pergerakan</h3>
+        <h3>Tipe & Pilihan</h3>
         <div class="form-grid">
           <div class="field-group">
-            <label for="itemId">Item</label>
+            <label for="type">Tipe</label>
             <select
-              id="itemId"
-              v-model="form.itemId"
+              id="type"
+              v-model="form.type"
               class="form-select"
-              :class="{ error: errors.itemId }"
-              required
+              @change="handleTypeChange"
             >
-              <option value="">Pilih Item</option>
-              <option v-for="item in items" :key="item.id" :value="item.id">
-                {{ item.name }} - Stok: {{ item.available_quantity || 0 }}
-              </option>
+              <option value="item">Item</option>
+              <option value="bundle">Bundle/Paket</option>
+              <option value="accessory">Aksesoris</option>
             </select>
-            <div v-if="errors.itemId" class="error-message">
-              {{ errors.itemId }}
-            </div>
           </div>
           <div class="field-group">
             <label for="movementType">Jenis Pergerakan</label>
@@ -50,6 +45,41 @@
             </div>
           </div>
         </div>
+        <div class="form-grid">
+          <div class="field-group full-width">
+            <label>{{ getTypeLabel() }}</label>
+            <div class="picker-selector">
+              <div v-if="selectedReference" class="selected-reference">
+                <span class="reference-name">
+                  {{ selectedReference.name }}
+                  <span v-if="selectedReference.code" class="reference-code">
+                    {{ selectedReference.code }}
+                  </span>
+                </span>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  @click="clearSelection"
+                >
+                  Hapus
+                </AppButton>
+              </div>
+              <AppButton
+                v-else
+                type="button"
+                variant="secondary"
+                @click="openPicker"
+              >
+                <Icon name="search" :size="16" />
+                <span>{{ getPickerButtonLabel() }}</span>
+              </AppButton>
+            </div>
+            <div v-if="errors.referenceId" class="error-message">
+              {{ errors.referenceId }}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="form-section">
@@ -66,13 +96,13 @@
               min="1"
             />
             <div
-              v-if="selectedItem && form.movementType === 'OUT'"
+              v-if="selectedReference && form.movementType === 'OUT'"
               class="stock-info"
             >
               <small>
-                Stok tersedia: {{ selectedItem.available_quantity || 0 }}
+                Stok tersedia: {{ selectedReference.available_quantity || 0 }}
                 <span
-                  v-if="form.quantity > (selectedItem.available_quantity || 0)"
+                  v-if="form.quantity > (selectedReference.available_quantity || 0)"
                 >
                   ⚠️ Stok tidak mencukupi
                 </span>
@@ -86,21 +116,20 @@
         <h3>Referensi & Catatan</h3>
         <div class="form-grid">
           <div class="field-group">
-            <FormInput
+            <label for="referenceType">Tipe Referensi</label>
+            <select
               id="referenceType"
-              label="Tipe Referensi"
               v-model="form.referenceType"
-              placeholder="Contoh: purchase, adjustment, return"
-            />
-          </div>
-          <div class="field-group">
-            <FormInput
-              id="referenceId"
-              label="ID Referensi"
-              type="number"
-              v-model.number="form.referenceId"
-              placeholder="ID transaksi terkait (opsional)"
-            />
+              class="form-select"
+            >
+              <option value="">Pilih Tipe Referensi</option>
+              <option value="purchase">Pembelian (Purchase)</option>
+              <option value="adjustment">Penyesuaian (Adjustment)</option>
+              <option value="return">Pengembalian (Return)</option>
+              <option value="transfer">Transfer</option>
+              <option value="damage">Kerusakan (Damage)</option>
+              <option value="other">Lainnya (Other)</option>
+            </select>
           </div>
         </div>
         <div class="form-grid">
@@ -116,6 +145,20 @@
         </div>
       </section>
     </form>
+
+    <!-- Picker Dialogs -->
+    <ItemPickerDialog
+      v-model="showItemPicker"
+      @select="handleItemSelect"
+    />
+    <BundlePickerDialog
+      v-model="showBundlePicker"
+      @select="handleBundleSelect"
+    />
+    <AccessoryPickerDialog
+      v-model="showAccessoryPicker"
+      @select="handleAccessorySelect"
+    />
   </AppDialog>
 </template>
 
@@ -123,15 +166,27 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { getStoredUser } from "@/services/auth";
 import { useItemStore } from "@/store/items";
+import { useBundleStore } from "@/store/bundles";
 import { createStockMovement } from "@/services/transactions";
+import { fetchAccessories } from "@/services/masterData";
 import AppDialog from "@/components/ui/AppDialog.vue";
+import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import Icon from "@/components/ui/Icon.vue";
+import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
+import BundlePickerDialog from "@/components/modules/bundles/BundlePickerDialog.vue";
+import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
 
 export default {
   name: "StockMovementForm",
   components: {
     AppDialog,
+    AppButton,
     FormInput,
+    Icon,
+    ItemPickerDialog,
+    BundlePickerDialog,
+    AccessoryPickerDialog,
   },
 
   props: {
@@ -142,18 +197,28 @@ export default {
 
   setup(props, { emit }) {
     const itemStore = useItemStore();
+    const bundleStore = useBundleStore();
     const loading = ref(false);
     const errors = ref({});
+    const accessories = ref([]);
 
     // Form state
     const form = ref({
+      type: "item", // "item", "bundle", "accessory"
       itemId: "",
+      bundleId: "",
+      accessoryId: "",
       movementType: "",
       quantity: 1,
       referenceType: "",
-      referenceId: "",
       notes: "",
     });
+
+    // Picker dialogs
+    const showItemPicker = ref(false);
+    const showBundlePicker = ref(false);
+    const showAccessoryPicker = ref(false);
+    const selectedReference = ref(null);
 
     // Computed
     const showDialog = computed({
@@ -161,17 +226,82 @@ export default {
       set: (value) => emit("update:modelValue", value),
     });
 
-    const items = computed(() => itemStore.items);
-    const selectedItem = computed(() =>
-      itemStore.items.find((item) => item.id === form.value.itemId),
-    );
-
     // Methods
+    const getTypeLabel = () => {
+      if (form.value.type === "item") return "Pilih Item";
+      if (form.value.type === "bundle") return "Pilih Bundle/Paket";
+      if (form.value.type === "accessory") return "Pilih Aksesoris";
+      return "Pilih";
+    };
+
+    const getPickerButtonLabel = () => {
+      if (form.value.type === "item") return "Cari Item";
+      if (form.value.type === "bundle") return "Cari Bundle";
+      if (form.value.type === "accessory") return "Cari Aksesoris";
+      return "Cari";
+    };
+
+    const handleTypeChange = () => {
+      // Clear selection when type changes
+      selectedReference.value = null;
+      form.value.itemId = "";
+      form.value.bundleId = "";
+      form.value.accessoryId = "";
+      errors.value.referenceId = "";
+    };
+
+    const openPicker = () => {
+      if (form.value.type === "item") {
+        showItemPicker.value = true;
+      } else if (form.value.type === "bundle") {
+        showBundlePicker.value = true;
+      } else if (form.value.type === "accessory") {
+        showAccessoryPicker.value = true;
+      }
+    };
+
+    const handleItemSelect = (item) => {
+      selectedReference.value = item;
+      form.value.itemId = item.id;
+      form.value.bundleId = "";
+      form.value.accessoryId = "";
+      errors.value.referenceId = "";
+    };
+
+    const handleBundleSelect = (bundle) => {
+      selectedReference.value = bundle;
+      form.value.bundleId = bundle.id;
+      form.value.itemId = "";
+      form.value.accessoryId = "";
+      errors.value.referenceId = "";
+    };
+
+    const handleAccessorySelect = (accessory) => {
+      selectedReference.value = accessory;
+      form.value.accessoryId = accessory.id;
+      form.value.itemId = "";
+      form.value.bundleId = "";
+      errors.value.referenceId = "";
+    };
+
+    const clearSelection = () => {
+      selectedReference.value = null;
+      form.value.itemId = "";
+      form.value.bundleId = "";
+      form.value.accessoryId = "";
+      errors.value.referenceId = "";
+    };
+
     const validateForm = () => {
       const newErrors = {};
 
-      if (!form.value.itemId) {
-        newErrors.itemId = "Item harus dipilih";
+      // Validate reference selection
+      if (form.value.type === "item" && !form.value.itemId) {
+        newErrors.referenceId = "Item harus dipilih";
+      } else if (form.value.type === "bundle" && !form.value.bundleId) {
+        newErrors.referenceId = "Bundle harus dipilih";
+      } else if (form.value.type === "accessory" && !form.value.accessoryId) {
+        newErrors.referenceId = "Aksesoris harus dipilih";
       }
 
       if (!form.value.movementType) {
@@ -185,8 +315,8 @@ export default {
       // Validate stock for OUT movement
       if (
         form.value.movementType === "OUT" &&
-        selectedItem.value &&
-        form.value.quantity > (selectedItem.value.available_quantity || 0)
+        selectedReference.value &&
+        form.value.quantity > (selectedReference.value.available_quantity || 0)
       ) {
         newErrors.quantity = "Stok tidak mencukupi";
       }
@@ -206,11 +336,12 @@ export default {
       try {
         const user = getStoredUser();
         const movementData = {
-          itemId: form.value.itemId,
+          itemId: form.value.itemId || null,
+          bundleId: form.value.bundleId || null,
+          accessoryId: form.value.accessoryId || null,
           movementType: form.value.movementType,
           quantity: form.value.quantity,
           referenceType: form.value.referenceType || null,
-          referenceId: form.value.referenceId || null,
           userId: user?.id || null,
           notes: form.value.notes || null,
         };
@@ -231,13 +362,16 @@ export default {
     // Reset form when dialog opens
     const resetForm = () => {
       form.value = {
+        type: "item",
         itemId: "",
+        bundleId: "",
+        accessoryId: "",
         movementType: "",
         quantity: 1,
         referenceType: "",
-        referenceId: "",
         notes: "",
       };
+      selectedReference.value = null;
       errors.value = {};
     };
 
@@ -250,6 +384,14 @@ export default {
           if (!itemStore.items.length) {
             itemStore.fetchItems();
           }
+          if (!bundleStore.bundles.length) {
+            bundleStore.fetchBundles();
+          }
+          if (!accessories.value.length) {
+            fetchAccessories().then((data) => {
+              accessories.value = data;
+            });
+          }
         }
       },
     );
@@ -258,6 +400,12 @@ export default {
       if (!itemStore.items.length) {
         itemStore.fetchItems();
       }
+      if (!bundleStore.bundles.length) {
+        bundleStore.fetchBundles();
+      }
+      fetchAccessories().then((data) => {
+        accessories.value = data;
+      });
     });
 
     return {
@@ -265,8 +413,18 @@ export default {
       errors,
       loading,
       showDialog,
-      items,
-      selectedItem,
+      selectedReference,
+      showItemPicker,
+      showBundlePicker,
+      showAccessoryPicker,
+      getTypeLabel,
+      getPickerButtonLabel,
+      handleTypeChange,
+      openPicker,
+      handleItemSelect,
+      handleBundleSelect,
+      handleAccessorySelect,
+      clearSelection,
       handleSubmit,
     };
   },
@@ -348,5 +506,39 @@ export default {
   margin-top: 0.5rem;
   color: #6b7280;
   font-size: 0.875rem;
+}
+
+.picker-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selected-reference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  gap: 0.75rem;
+}
+
+.reference-name {
+  flex: 1;
+  font-weight: 500;
+  color: #111827;
+}
+
+.reference-code {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #6b7280;
 }
 </style>

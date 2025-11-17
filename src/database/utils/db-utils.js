@@ -270,6 +270,33 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
           continue;
         }
         
+        // Check if this is an ALTER TABLE ADD COLUMN statement
+        // If so, check if the column already exists before executing
+        const alterTableMatch = trimmed.match(/ALTER\s+TABLE\s+([`"\[\]?\w]+)\s+ADD\s+COLUMN\s+([`"\[\]?\w]+)/i);
+        if (alterTableMatch && allowDuplicateColumn) {
+          let tableName = alterTableMatch[1].replace(/[`"\[\]]/g, '');
+          let columnName = alterTableMatch[2].replace(/[`"\[\]]/g, '');
+          
+          // Check if column already exists using PRAGMA table_info
+          try {
+            // Use parameterized query for table name to prevent SQL injection
+            // Note: PRAGMA doesn't support parameters, but table name should be safe from migration files
+            const columns = await dbOps.allAsync(`PRAGMA table_info("${tableName}")`);
+            const columnExists = columns.some(col => col.name.toLowerCase() === columnName.toLowerCase());
+            
+            if (columnExists) {
+              console.log(
+                `Info: Column '${columnName}' already exists in table '${tableName}'. Skipping ALTER TABLE statement.`,
+              );
+              executed = true;
+              break;
+            }
+          } catch (pragmaError) {
+            // If PRAGMA fails (e.g., table doesn't exist), continue with original statement
+            // The original error handling will catch it
+          }
+        }
+        
         // Use trimmed statement to avoid any whitespace issues
         await dbOps.runAsync(trimmed);
         executed = true;

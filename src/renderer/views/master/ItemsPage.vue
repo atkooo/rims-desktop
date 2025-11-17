@@ -8,7 +8,7 @@
             Kelola katalog barang dan pantau status stok secara terpusat.
           </p>
         </div>
-        <AppButton variant="primary" @click="showForm = true">
+        <AppButton variant="primary" @click="handleAddNew">
           Tambah Item
         </AppButton>
       </div>
@@ -134,6 +134,14 @@
                     </button>
                     <button
                       type="button"
+                      class="action-menu-item"
+                      @click="handleEdit(row)"
+                    >
+                      <Icon name="pencil" :size="16" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
                       class="action-menu-item danger"
                       @click="promptDelete(row)"
                     >
@@ -167,7 +175,7 @@
       </p>
     </AppDialog>
 
-    <ItemForm v-model="showForm" @saved="handleFormSaved" />
+    <ItemForm v-model="showForm" :edit-data="itemToEdit" @saved="handleFormSaved" />
   </div>
 </template>
 
@@ -203,6 +211,7 @@ export default {
     const deleteLoading = ref(false);
     const itemToDelete = ref(null);
     const showForm = ref(false);
+    const itemToEdit = ref(null);
 
     // Filter state
     const filters = ref({
@@ -352,8 +361,20 @@ export default {
       }
     };
 
+    const handleAddNew = () => {
+      itemToEdit.value = null;
+      showForm.value = true;
+    };
+
+    const handleEdit = (item) => {
+      openMenuId.value = null;
+      itemToEdit.value = item;
+      showForm.value = true;
+    };
+
     const handleFormSaved = async () => {
       showForm.value = false;
+      itemToEdit.value = null;
       await itemStore.fetchItems();
     };
 
@@ -409,8 +430,11 @@ export default {
       deleteLoading,
       itemToDelete,
       showForm,
+      itemToEdit,
       formatCurrency,
+      handleAddNew,
       handleViewDetail,
+      handleEdit,
       toggleActionMenu,
       getMenuPosition,
       promptDelete,

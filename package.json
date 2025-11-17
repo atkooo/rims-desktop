@@ -16,8 +16,7 @@
     "rebuild": "npm rebuild sqlite3 --build-from-source",
     "lint": "eslint . --ext .js,.vue",
     "format": "prettier --write \"src/**/*.{js,vue}\"",
-    "db:migrate": "node src/database/migrate.js",
-    "db:fresh": "node scripts/fresh-db.js"
+    "db:migrate": "node src/database/migrate.js"
   },
   "keywords": [],
   "author": "",

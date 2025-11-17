@@ -89,6 +89,9 @@ function setupItemHandlers() {
       // Get min_stock_alert from itemData, default to 0
       const minStockAlert = Math.max(0, toInteger(itemData.min_stock_alert ?? 0));
 
+      // Get deposit from itemData, default to 0
+      const deposit = Math.max(0, Number(itemData.deposit ?? 0));
+
       const result = await database.execute(
         `INSERT INTO items (
             code,
@@ -101,6 +104,7 @@ function setupItemHandlers() {
             size_id,
             category_id,
             rental_price_per_day,
+            deposit,
             discount_group_id,
             stock_quantity,
             available_quantity,
@@ -108,7 +112,7 @@ function setupItemHandlers() {
             is_available_for_rent,
             is_available_for_sale,
             is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
@@ -120,6 +124,7 @@ function setupItemHandlers() {
           itemData.size_id ?? null,
           itemData.category_id,
           rentalPricePerDay,
+          deposit,
           discountGroupId,
           stockQuantity,
           availableQuantity,
@@ -223,6 +228,7 @@ function setupItemHandlers() {
         "purchase_price",
         "rental_price_per_day",
         "sale_price",
+        "deposit",
         "stock_quantity",
         "available_quantity",
         "min_stock_alert",
@@ -276,6 +282,11 @@ function setupItemHandlers() {
         );
       }
 
+      // Handle deposit if provided
+      if (updates.deposit !== undefined) {
+        normalizedUpdates.deposit = Math.max(0, Number(updates.deposit ?? 0));
+      }
+
       // Stok tidak bisa diubah dari form edit
       // Hapus stock_quantity dan available_quantity jika ada di updates
       // Stok hanya bisa diubah melalui manajemen stok
@@ -292,9 +303,9 @@ function setupItemHandlers() {
         if (
           key === "dailyRate" ||
           key === "weeklyRate" ||
-          key === "deposit" ||
           key === "discount_group_id" ||
           key === "min_stock_alert" ||
+          key === "deposit" ||
           key === "stock_quantity" ||
           key === "available_quantity"
         ) {

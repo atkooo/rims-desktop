@@ -842,6 +842,24 @@ export default {
       },
     );
 
+    // Auto-calculate deposit from selected items for rental transactions
+    watch(
+      () => [form.value.items, isRental.value],
+      ([items, isRentalValue]) => {
+        if (isRentalValue && !isEdit.value) {
+          // Calculate total deposit from all selected items
+          // Deposit = sum of (item.deposit * item.quantity) for each item
+          const totalDeposit = items.reduce((sum, item) => {
+            const itemDeposit = Number(item.deposit ?? 0);
+            const quantity = Number(item.quantity ?? 1);
+            return sum + (itemDeposit * quantity);
+          }, 0);
+          form.value.deposit = totalDeposit;
+        }
+      },
+      { deep: true },
+    );
+
     const validateForm = () => {
       const newErrors = {};
       // Customer is required for rental transactions, optional for sales

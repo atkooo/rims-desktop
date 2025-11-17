@@ -28,19 +28,30 @@
           <div class="picker-meta">
             <Icon name="box" :size="20" class="picker-icon" />
             <div>
-              <div class="picker-name">{{ accessory.name }}</div>
+              <div class="picker-name">
+                {{ accessory.name }}
+                <span v-if="accessory.code" class="picker-code">{{ accessory.code }}</span>
+              </div>
               <div class="picker-detail">
-                {{ formatCurrency(accessory.sale_price ?? 0) }}
+                {{ formatCurrency(accessory.sale_price ?? accessory.price ?? 0) }}
+                <span
+                  v-if="accessory.sale_price && accessory.sale_price !== accessory.price"
+                  class="price-note"
+                >
+                  (Harga: {{ formatCurrency(accessory.price) }})
+                </span>
+                ·
+                Stok: {{ accessory.available_quantity || 0 }}
                 <span
                   v-if="accessory.discount_percentage > 0 || accessory.discount_amount > 0"
                   class="discount-badge"
                 >
-                  (Diskon:
+                  · Diskon:
                   {{
                     accessory.discount_percentage > 0
                       ? accessory.discount_percentage + "%"
                       : formatCurrency(accessory.discount_amount)
-                  }})
+                  }}
                 </span>
               </div>
             </div>
@@ -52,7 +63,7 @@
             <AppButton
               variant="primary"
               size="small"
-              :disabled="!isAvailable(accessory)"
+              :disabled="!isAvailable(accessory) || (accessory.available_quantity || 0) <= 0"
               @click="selectAccessory(accessory)"
             >
               Pilih
@@ -218,6 +229,20 @@ export default {
 .picker-name {
   font-weight: 600;
   color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.picker-code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .picker-detail {
@@ -257,6 +282,12 @@ export default {
 .discount-badge {
   font-size: 0.75rem;
   color: #16a34a;
+  margin-left: 0.25rem;
+}
+
+.price-note {
+  font-size: 0.75rem;
+  color: #9ca3af;
   margin-left: 0.25rem;
 }
 </style>

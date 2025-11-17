@@ -2,7 +2,7 @@
   "printer": "Microsoft Print to PDF",
   "paperWidth": 80,
   "autoPrint": true,
-  "taxPercentage": 0,
+  "taxPercentage": 11,
   "activation": {
     "machine_id": "2c44beee6d9cbc5f69edb9afa4d358a3",
     "supabase_url": null,
