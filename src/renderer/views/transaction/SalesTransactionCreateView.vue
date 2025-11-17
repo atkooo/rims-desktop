@@ -112,6 +112,14 @@
           <ItemSelector v-model="form.items" transaction-type="SALE" />
         </div>
 
+        <!-- Bundles Table - Full Width -->
+        <div class="cashier-items-wrapper cashier-items-wrapper-spaced">
+          <div class="cashier-section-header-minimal">
+            <span class="cashier-section-title-minimal">Paket Penjualan</span>
+          </div>
+          <BundleSelector v-model="form.bundles" bundle-type="sale" />
+        </div>
+
         <!-- Bottom Section: Summary + Payment + Actions -->
         <div class="cashier-bottom-section">
           <!-- Summary - Compact -->
@@ -176,12 +184,8 @@
             
             <!-- Optional Sections - Collapsible -->
             <details class="cashier-details-minimal">
-              <summary class="cashier-summary-minimal">Paket, Aksesoris & Catatan</summary>
+              <summary class="cashier-summary-minimal">Aksesoris & Catatan</summary>
               <div class="cashier-details-content-minimal">
-                <div class="cashier-optional-item">
-                  <label class="cashier-label-minimal">Paket</label>
-                  <BundleSelector v-model="form.bundles" />
-                </div>
                 <div class="cashier-optional-item">
                   <label class="cashier-label-minimal">Aksesoris</label>
                   <AccessorySelector v-model="form.accessories" />
@@ -954,6 +958,10 @@ export default {
 .cashier-items-wrapper {
   width: 100%;
   min-width: 0;
+}
+
+.cashier-items-wrapper-spaced {
+  margin-top: 1.5rem;
 }
 
 .cashier-section-header-minimal {

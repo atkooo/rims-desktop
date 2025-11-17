@@ -27,6 +27,19 @@
               <option value="accessory">Aksesoris</option>
             </select>
           </div>
+          <div class="field-group" v-if="form.type === 'bundle'">
+            <label for="bundleType">Tipe Bundle</label>
+            <select
+              id="bundleType"
+              v-model="form.bundleType"
+              class="form-select"
+              @change="handleBundleTypeChange"
+            >
+              <option value="both">Both</option>
+              <option value="sale">Sale</option>
+              <option value="rental">Rental</option>
+            </select>
+          </div>
           <div class="field-group">
             <label for="movementType">Jenis Pergerakan</label>
             <select
@@ -153,6 +166,7 @@
     />
     <BundlePickerDialog
       v-model="showBundlePicker"
+      :bundle-type="form.bundleType || 'both'"
       :allow-zero-stock="true"
       @select="handleBundleSelect"
     />
@@ -206,6 +220,7 @@ export default {
     // Form state
     const form = ref({
       type: "item", // "item", "bundle", "accessory"
+      bundleType: "both", // "sale", "rental", "both"
       itemId: "",
       bundleId: "",
       accessoryId: "",
@@ -249,6 +264,19 @@ export default {
       form.value.bundleId = "";
       form.value.accessoryId = "";
       errors.value.referenceId = "";
+      // Reset bundle type to default when switching away from bundle
+      if (form.value.type !== "bundle") {
+        form.value.bundleType = "both";
+      }
+    };
+
+    const handleBundleTypeChange = () => {
+      // Clear bundle selection when bundle type changes
+      if (form.value.type === "bundle") {
+        selectedReference.value = null;
+        form.value.bundleId = "";
+        errors.value.referenceId = "";
+      }
     };
 
     const openPicker = () => {
@@ -364,6 +392,7 @@ export default {
     const resetForm = () => {
       form.value = {
         type: "item",
+        bundleType: "both",
         itemId: "",
         bundleId: "",
         accessoryId: "",

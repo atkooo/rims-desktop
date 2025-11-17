@@ -1,7 +1,7 @@
 <template>
   <AppDialog
     v-model="visible"
-    :title="bundleType === 'rental' ? 'Cari Paket Sewa' : 'Cari Paket Penjualan'"
+    :title="getDialogTitle()"
     :show-footer="false"
     :max-width="600"
   >
@@ -45,9 +45,7 @@
               <div class="picker-name">{{ bundle.name }}</div>
               <div class="picker-detail">
                 {{ bundle.code }} · 
-                {{ bundleType === "rental" 
-                  ? formatCurrency(bundle.rental_price_per_day || 0) + "/hari"
-                  : formatCurrency(bundle.price || 0) }}
+                {{ getBundlePriceDisplay(bundle) }}
               </div>
             </div>
           </div>
@@ -98,7 +96,7 @@ export default {
     },
     bundleType: {
       type: String,
-      default: "sale", // "sale" or "rental"
+      default: "sale", // "sale", "rental", or "both"
     },
     allowZeroStock: {
       type: Boolean,
@@ -118,11 +116,28 @@ export default {
 
     const excludedSet = computed(() => new Set(props.excludedIds));
 
+    const getDialogTitle = () => {
+      if (props.bundleType === "rental") return "Cari Paket Sewa";
+      if (props.bundleType === "both") return "Cari Paket (Sale & Rental)";
+      return "Cari Paket Penjualan";
+    };
+
     const filteredBundles = computed(() => {
       const term = search.value.toLowerCase();
-      const bundles = props.bundleType === "rental" 
-        ? bundleStore.rentalBundles 
-        : bundleStore.saleBundles;
+      let bundles;
+      
+      if (props.bundleType === "both") {
+        // For "both", combine sale and rental bundles, removing duplicates
+        const saleIds = new Set(bundleStore.saleBundles.map(b => b.id));
+        bundles = [
+          ...bundleStore.saleBundles,
+          ...bundleStore.rentalBundles.filter(b => !saleIds.has(b.id))
+        ];
+      } else if (props.bundleType === "rental") {
+        bundles = bundleStore.rentalBundles;
+      } else {
+        bundles = bundleStore.saleBundles;
+      }
       
       return bundles
         .filter((bundle) => !excludedSet.value.has(bundle.id))
@@ -160,6 +175,24 @@ export default {
       },
     );
 
+    const getBundlePriceDisplay = (bundle) => {
+      if (props.bundleType === "both") {
+        // For "both", show both prices if available
+        const parts = [];
+        if (bundle.price) {
+          parts.push(formatCurrency(bundle.price));
+        }
+        if (bundle.rental_price_per_day) {
+          parts.push(formatCurrency(bundle.rental_price_per_day) + "/hari");
+        }
+        return parts.length > 0 ? parts.join(" / ") : "-";
+      } else if (props.bundleType === "rental") {
+        return formatCurrency(bundle.rental_price_per_day || 0) + "/hari";
+      } else {
+        return formatCurrency(bundle.price || 0);
+      }
+    };
+
     return {
       search,
       statusFilter,
@@ -167,6 +200,8 @@ export default {
       filteredBundles,
       formatCurrency,
       selectBundle,
+      getDialogTitle,
+      getBundlePriceDisplay,
       bundleType: toRef(props, "bundleType"),
       allowZeroStock: toRef(props, "allowZeroStock"),
     };

@@ -14,54 +14,80 @@
     </div>
 
     <div class="selected-items" v-if="selectedBundles.length">
-      <div
-        v-for="(bundle, index) in selectedBundles"
-        :key="bundle.id"
-        class="selected-item"
-      >
-        <div class="item-info">
-          <span class="item-name">{{ bundle.name }}</span>
-          <span class="item-price">
-            {{ formatCurrency(calculateBundlePrice(bundle)) }}
-            <span
-              v-if="
-                bundle.discount_percentage > 0 || bundle.discount_amount > 0
-              "
-              class="discount-badge"
-            >
-              (Diskon:
-              {{
-                bundle.discount_percentage > 0
-                  ? bundle.discount_percentage + "%"
-                  : formatCurrency(bundle.discount_amount)
-              }})
-            </span>
-          </span>
-        </div>
-        <div class="item-actions">
-          <input
-            type="number"
-            v-model.number="bundle.quantity"
-            min="1"
-            class="quantity-input"
-            @input="updateQuantity(index, $event)"
-          />
-          <AppButton
-            variant="danger"
-            class="remove-button"
-            @click="removeBundle(index)"
-          >
-            &times;
-          </AppButton>
-        </div>
-      </div>
-      <div class="total-section">
-        <span>Total Paket</span>
-        <span class="total-amount">{{ formatCurrency(total) }}</span>
-      </div>
+      <table class="bundles-table">
+        <thead>
+          <tr>
+            <th>Nama Paket</th>
+            <th>Harga Satuan</th>
+            <th>Qty</th>
+            <th>Stok</th>
+            <th>Subtotal</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(bundle, index) in selectedBundles" :key="bundle.id">
+            <td class="name-cell">
+              <div class="item-name">{{ bundle.name }}</div>
+              <div
+                v-if="
+                  bundle.discount_percentage > 0 || bundle.discount_amount > 0
+                "
+                class="discount-badge"
+              >
+                Diskon:
+                {{
+                  bundle.discount_percentage > 0
+                    ? bundle.discount_percentage + "%"
+                    : formatCurrency(bundle.discount_amount)
+                }}
+              </div>
+            </td>
+            <td class="price-cell">
+              {{ formatCurrency(calculateBundlePrice(bundle)) }}
+            </td>
+            <td class="quantity-cell">
+              <input
+                type="number"
+                v-model.number="bundle.quantity"
+                min="1"
+                :max="bundle.available_quantity || 0"
+                class="quantity-input"
+                @input="updateQuantity(index, $event)"
+              />
+            </td>
+            <td class="stock-cell">
+              <span :class="{ 'low-stock': (bundle.available_quantity || 0) <= 1 }">
+                {{ bundle.available_quantity || 0 }}
+              </span>
+            </td>
+            <td class="subtotal-cell">
+              {{ formatCurrency(calculateBundlePrice(bundle) * (bundle.quantity || 1)) }}
+            </td>
+            <td class="action-cell">
+              <AppButton
+                variant="danger"
+                size="small"
+                class="remove-button"
+                @click="removeBundle(index)"
+              >
+                Hapus
+              </AppButton>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" class="total-label">Total:</td>
+            <td class="total-amount" colspan="2">{{ formatCurrency(total) }}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
 
-    <div v-else class="empty-state">Belum ada paket yang dipilih.</div>
+    <div v-else class="empty-items">
+      <p>Belum ada paket yang dipilih. Klik "Cari Paket" untuk menambahkan.</p>
+    </div>
 
     <BundlePickerDialog
       v-model="pickerOpen"
@@ -132,21 +158,54 @@ export default {
     );
 
     const selectBundle = (bundle) => {
-      selectedBundles.value.push({
-        ...bundle,
-        quantity: 1,
-      });
+      // Cek apakah bundle sudah ada di selected bundles
+      const existingBundle = selectedBundles.value.find((b) => b.id === bundle.id);
+      if (existingBundle) {
+        // Jika sudah ada, cek stok sebelum menambah quantity
+        const currentQuantity = existingBundle.quantity || 1;
+        const availableStock = bundle.available_quantity || 0;
+        
+        if (currentQuantity >= availableStock) {
+          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+          return;
+        }
+        
+        existingBundle.quantity = currentQuantity + 1;
+      } else {
+        // Bundle baru, cek stok tersedia
+        const availableStock = bundle.available_quantity || 0;
+        if (availableStock < 1) {
+          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+          return;
+        }
+        
+        selectedBundles.value.push({
+          ...bundle,
+          quantity: 1,
+        });
+      }
+      
       pickerOpen.value = false;
       emit("update:modelValue", selectedBundles.value);
     };
 
     const updateQuantity = (index, event) => {
       const value = parseInt(event.target.value, 10);
+      const bundle = selectedBundles.value[index];
+      
       if (Number.isNaN(value) || value < 1) {
         selectedBundles.value[index].quantity = 1;
       } else {
-        // Ensure quantity is a valid integer
-        selectedBundles.value[index].quantity = Math.max(1, Math.floor(value));
+        const newQuantity = Math.max(1, Math.floor(value));
+        const availableStock = bundle.available_quantity || 0;
+        
+        // Validasi tidak boleh melebihi stok tersedia
+        if (newQuantity > availableStock) {
+          alert(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+          selectedBundles.value[index].quantity = Math.min(availableStock, bundle.quantity || 1);
+        } else {
+          selectedBundles.value[index].quantity = newQuantity;
+        }
       }
       emit("update:modelValue", selectedBundles.value);
     };
@@ -208,78 +267,152 @@ export default {
 .selected-items {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
 }
 
-.selected-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
+.bundles-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: auto;
+}
+
+.bundles-table thead {
+  background-color: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.bundles-table th {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bundles-table td {
+  padding: 0.75rem 0.5rem;
   border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
 }
 
-.selected-item:last-child {
+.bundles-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.bundles-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.item-info {
-  display: flex;
-  flex-direction: column;
+.name-cell {
+  min-width: 200px;
 }
 
 .item-name {
-  font-weight: 600;
+  font-weight: 500;
   color: #111827;
+  margin-bottom: 0.25rem;
 }
 
-.item-price {
-  font-size: 0.85rem;
-  color: #6b7280;
+.discount-badge {
+  font-size: 0.75rem;
+  color: #16a34a;
+  background-color: #dcfce7;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  display: inline-block;
 }
 
-.item-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.price-cell {
+  text-align: right;
+  font-weight: 500;
+  color: #111827;
+  width: 120px;
+}
+
+.quantity-cell {
+  width: 80px;
 }
 
 .quantity-input {
-  width: 60px;
-  padding: 0.25rem;
-  border: 1px solid #e5e7eb;
+  width: 100%;
+  padding: 0.375rem;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.quantity-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.stock-cell {
+  text-align: center;
+  width: 80px;
+  font-size: 0.85rem;
+}
+
+.stock-cell .low-stock {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.subtotal-cell {
+  text-align: right;
+  font-weight: 600;
+  color: #111827;
+  width: 120px;
+}
+
+.action-cell {
+  width: 100px;
+  text-align: center;
 }
 
 .remove-button {
-  padding: 0.25rem 0.5rem !important;
-  font-size: 1rem !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.85rem !important;
 }
 
-.total-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e5e7eb;
-  font-weight: 500;
-  gap: 0.5rem;
+.bundles-table tfoot {
+  background-color: #f9fafb;
+  border-top: 2px solid #e5e7eb;
+}
+
+.bundles-table tfoot td {
+  padding: 1rem 0.5rem;
+  font-weight: 600;
+}
+
+.total-label {
+  text-align: right;
+  font-size: 1rem;
+  color: #374151;
 }
 
 .total-amount {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   color: #111827;
+  text-align: right;
 }
 
-.empty-state {
-  padding: 1rem;
-  border: 1px dashed #e5e7eb;
-  border-radius: 4px;
+.empty-items {
+  padding: 2rem;
   text-align: center;
   color: #6b7280;
+}
+
+.empty-items p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .discount-badge {

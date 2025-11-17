@@ -123,6 +123,14 @@
           <ItemSelector v-model="form.items" transaction-type="RENTAL" />
         </div>
 
+        <!-- Bundles Table - Full Width -->
+        <div class="cashier-items-wrapper cashier-items-wrapper-spaced">
+          <div class="cashier-section-header-minimal">
+            <span class="cashier-section-title-minimal">Paket Sewa</span>
+          </div>
+          <BundleSelector v-model="form.bundles" bundle-type="rental" />
+        </div>
+
         <!-- Bottom Section: Summary + Payment + Actions -->
         <div class="cashier-bottom-section">
           <!-- Summary - Compact -->
@@ -182,12 +190,8 @@
             
             <!-- Optional Sections - Collapsible -->
             <details class="cashier-details-minimal">
-              <summary class="cashier-summary-minimal">Paket & Catatan</summary>
+              <summary class="cashier-summary-minimal">Catatan</summary>
               <div class="cashier-details-content-minimal">
-                <div class="cashier-optional-item">
-                  <label class="cashier-label-minimal">Paket</label>
-                  <BundleSelector v-model="form.bundles" bundle-type="rental" />
-                </div>
                 <div class="cashier-optional-item">
                   <label for="notes" class="cashier-label-minimal">Catatan</label>
                   <textarea
@@ -804,6 +808,10 @@ export default {
 .cashier-items-wrapper {
   width: 100%;
   min-width: 0;
+}
+
+.cashier-items-wrapper-spaced {
+  margin-top: 1.5rem;
 }
 
 .cashier-section-header-minimal {
