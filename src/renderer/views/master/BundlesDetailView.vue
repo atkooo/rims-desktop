@@ -42,12 +42,44 @@
         :loading="loading"
         :searchable-keys="[
           'bundle_name',
+          'bundle_code',
           'item_name',
+          'item_code',
           'accessory_name',
+          'accessory_code',
+          'category_name',
           'notes',
         ]"
         row-key="id"
-      />
+      >
+        <template #cell-bundle_code="{ row }">
+          <strong>{{ row.bundle_code || "-" }}</strong>
+        </template>
+        <template #cell-code="{ row }">
+          <strong>{{ row.item_code || row.accessory_code || "-" }}</strong>
+        </template>
+        <template #cell-type="{ row }">
+          <span v-if="row.type_label && row.type_label !== '-'" class="type-badge" :class="row.type">
+            {{ row.type_label }}
+          </span>
+          <span v-else>-</span>
+        </template>
+        <template #cell-name="{ row }">
+          {{ row.item_name || row.accessory_name || "-" }}
+        </template>
+        <template #cell-category="{ row }">
+          {{ row.category_name || "-" }}
+        </template>
+        <template #cell-price="{ row }">
+          <span v-if="row.item_id">
+            {{ formatCurrency(row.item_sale_price || row.item_price || 0) }}
+          </span>
+          <span v-else-if="row.accessory_id">
+            {{ formatCurrency(row.accessory_sale_price || 0) }}
+          </span>
+          <span v-else>-</span>
+        </template>
+      </AppTable>
     </section>
   </div>
 </template>
@@ -66,10 +98,21 @@ export default {
     const loading = ref(false);
     const error = ref("");
 
+    const currencyFormatter = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    });
+
+    const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
+
     const columns = [
+      { key: "bundle_code", label: "Kode Paket" },
       { key: "bundle_name", label: "Nama Paket" },
-      { key: "item_name", label: "Item" },
-      { key: "accessory_name", label: "Aksesoris" },
+      { key: "code", label: "Kode" },
+      { key: "type", label: "Tipe" },
+      { key: "name", label: "Nama" },
+      { key: "category", label: "Kategori" },
+      { key: "price", label: "Harga" },
       { key: "quantity", label: "Jumlah" },
       { key: "notes", label: "Catatan" },
     ];
@@ -107,7 +150,28 @@ export default {
       columns,
       stats,
       loadData,
+      formatCurrency,
     };
   },
 };
 </script>
+
+<style scoped>
+.type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.type-badge.item {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.type-badge.accessory {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+</style>

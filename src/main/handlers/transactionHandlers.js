@@ -1380,6 +1380,79 @@ function setupStockMovementHandlers() {
         idField = "bundle_id";
         idValue = movementData.bundleId;
         nameField = "bundle_name";
+
+        // Validasi khusus untuk menambahkan stok bundle (IN)
+        if (movementData.movementType === "IN") {
+          // Cek apakah bundle sudah punya komposisi
+          const bundleDetails = await database.query(
+            `SELECT 
+              bd.item_id, 
+              bd.accessory_id, 
+              bd.quantity AS detail_quantity
+             FROM bundle_details bd
+             WHERE bd.bundle_id = ?`,
+            [movementData.bundleId],
+          );
+
+          if (!bundleDetails || bundleDetails.length === 0) {
+            throw new Error("Paket harus memiliki komposisi terlebih dahulu sebelum bisa ditambahkan stok");
+          }
+
+          // Hitung kebutuhan item dan aksesoris untuk membuat bundle
+          const requiredItems = new Map(); // item_id -> total quantity needed
+          const requiredAccessories = new Map(); // accessory_id -> total quantity needed
+
+          for (const detail of bundleDetails) {
+            if (detail.item_id) {
+              const current = requiredItems.get(detail.item_id) || 0;
+              requiredItems.set(detail.item_id, current + detail.detail_quantity);
+            } else if (detail.accessory_id) {
+              const current = requiredAccessories.get(detail.accessory_id) || 0;
+              requiredAccessories.set(detail.accessory_id, current + detail.detail_quantity);
+            }
+          }
+
+          // Hitung maksimal bundle yang bisa dibuat berdasarkan stok item/aksesoris yang tersedia
+          let maxBundlesCanCreate = Infinity;
+
+          // Cek stok item yang tersedia
+          for (const [itemId, requiredQtyPerBundle] of requiredItems) {
+            const item = await database.queryOne(
+              "SELECT available_quantity FROM items WHERE id = ?",
+              [itemId],
+            );
+            if (!item) {
+              throw new Error(`Item dengan ID ${itemId} tidak ditemukan`);
+            }
+            const availableStock = item.available_quantity || 0;
+            const maxFromThisItem = Math.floor(availableStock / requiredQtyPerBundle);
+            maxBundlesCanCreate = Math.min(maxBundlesCanCreate, maxFromThisItem);
+          }
+
+          // Cek stok aksesoris yang tersedia
+          for (const [accessoryId, requiredQtyPerBundle] of requiredAccessories) {
+            const accessory = await database.queryOne(
+              "SELECT available_quantity FROM accessories WHERE id = ?",
+              [accessoryId],
+            );
+            if (!accessory) {
+              throw new Error(`Aksesoris dengan ID ${accessoryId} tidak ditemukan`);
+            }
+            const availableStock = accessory.available_quantity || 0;
+            const maxFromThisAccessory = Math.floor(availableStock / requiredQtyPerBundle);
+            maxBundlesCanCreate = Math.min(maxBundlesCanCreate, maxFromThisAccessory);
+          }
+
+          // Validasi quantity yang diminta tidak melebihi maksimal yang bisa dibuat
+          if (movementData.quantity > maxBundlesCanCreate) {
+            throw new Error(
+              `Stok tidak mencukupi. Maksimal ${maxBundlesCanCreate} paket yang bisa dibuat berdasarkan stok item/aksesoris yang tersedia.`
+            );
+          }
+
+          // Jika validasi berhasil, kurangi stok item dan aksesoris yang digunakan
+          // Ini dilakukan di dalam transaction setelah validasi
+        }
       } else if (hasAccessoryId) {
         const accessory = await database.queryOne(
           "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
@@ -1436,6 +1509,119 @@ function setupStockMovementHandlers() {
             `UPDATE ${tableName} SET available_quantity = ?, stock_quantity = stock_quantity + ? WHERE id = ?`,
             [stockAfter, movementData.quantity, idValue],
           );
+
+          // Khusus untuk bundle: kurangi stok item dan aksesoris yang digunakan
+          if (hasBundleId) {
+            // Ambil komposisi bundle
+            const bundleDetails = await database.query(
+              `SELECT 
+                bd.item_id, 
+                bd.accessory_id, 
+                bd.quantity AS detail_quantity
+               FROM bundle_details bd
+               WHERE bd.bundle_id = ?`,
+              [movementData.bundleId],
+            );
+
+            // Kurangi stok item dan aksesoris sesuai komposisi
+            for (const detail of bundleDetails) {
+              const qtyNeeded = detail.detail_quantity * movementData.quantity;
+              
+              if (detail.item_id) {
+                // Ambil stok item sebelum update
+                const itemBefore = await database.queryOne(
+                  "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+                  [detail.item_id],
+                );
+                if (!itemBefore) {
+                  throw new Error(`Item dengan ID ${detail.item_id} tidak ditemukan`);
+                }
+                const itemStockBefore = itemBefore.available_quantity || 0;
+                const itemStockAfter = itemStockBefore - qtyNeeded;
+
+                if (itemStockAfter < 0) {
+                  throw new Error(`Stok item tidak mencukupi untuk membuat paket`);
+                }
+
+                // Kurangi stok item
+                await database.execute(
+                  `UPDATE items 
+                   SET available_quantity = available_quantity - ?, 
+                       stock_quantity = stock_quantity - ?
+                   WHERE id = ?`,
+                  [qtyNeeded, qtyNeeded, detail.item_id],
+                );
+
+                // Buat stock movement record untuk item (OUT)
+
+                await database.execute(
+                  `INSERT INTO stock_movements (
+                    item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
+                    quantity, stock_before, stock_after, user_id, notes
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  [
+                    detail.item_id,
+                    movementData.bundleId,
+                    null,
+                    "OUT",
+                    "bundle_assembly",
+                    result.id,
+                    qtyNeeded,
+                    itemStockBefore,
+                    itemStockAfter,
+                    movementData.userId || null,
+                    `Digunakan untuk membuat ${movementData.quantity} paket (Bundle ID: ${movementData.bundleId})`,
+                  ],
+                );
+              } else if (detail.accessory_id) {
+                // Ambil stok aksesoris sebelum update
+                const accessoryBefore = await database.queryOne(
+                  "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+                  [detail.accessory_id],
+                );
+                if (!accessoryBefore) {
+                  throw new Error(`Aksesoris dengan ID ${detail.accessory_id} tidak ditemukan`);
+                }
+                const accessoryStockBefore = accessoryBefore.available_quantity || 0;
+                const accessoryStockAfter = accessoryStockBefore - qtyNeeded;
+
+                if (accessoryStockAfter < 0) {
+                  throw new Error(`Stok aksesoris tidak mencukupi untuk membuat paket`);
+                }
+
+                // Kurangi stok aksesoris
+                await database.execute(
+                  `UPDATE accessories 
+                   SET available_quantity = available_quantity - ?, 
+                       stock_quantity = stock_quantity - ?
+                   WHERE id = ?`,
+                  [qtyNeeded, qtyNeeded, detail.accessory_id],
+                );
+
+                // Buat stock movement record untuk aksesoris (OUT)
+
+                await database.execute(
+                  `INSERT INTO stock_movements (
+                    item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
+                    quantity, stock_before, stock_after, user_id, notes
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  [
+                    null,
+                    movementData.bundleId,
+                    detail.accessory_id,
+                    "OUT",
+                    "bundle_assembly",
+                    result.id,
+                    qtyNeeded,
+                    accessoryStockBefore,
+                    accessoryStockAfter,
+                    movementData.userId || null,
+                    `Digunakan untuk membuat ${movementData.quantity} paket (Bundle ID: ${movementData.bundleId})`,
+                  ],
+                );
+              }
+            }
+          }
         } else {
           await database.execute(
             `UPDATE ${tableName} SET available_quantity = ? WHERE id = ?`,

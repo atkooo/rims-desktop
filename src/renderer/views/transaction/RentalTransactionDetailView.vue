@@ -167,7 +167,8 @@
       <table v-else class="detail-table">
         <thead>
           <tr>
-            <th>Item</th>
+            <th>Kode</th>
+            <th>Nama</th>
             <th>Jumlah</th>
             <th>Harga Sewa</th>
             <th>Subtotal</th>
@@ -179,10 +180,11 @@
         </thead>
         <tbody>
           <tr v-for="detail in filteredDetails" :key="detail.id">
+            <td><strong>{{ detail.item_code || "-" }}</strong></td>
             <td>{{ detail.item_name || "-" }}</td>
             <td>{{ detail.quantity }}</td>
             <td>{{ formatCurrency(detail.rental_price) }}</td>
-            <td>{{ formatCurrency(detail.subtotal) }}</td>
+            <td><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
             <td>
               <span :class="{ 'status-badge': true, 'returned': detail.is_returned, 'not-returned': !detail.is_returned }">
                 {{ detail.is_returned ? "Ya" : "Belum" }}

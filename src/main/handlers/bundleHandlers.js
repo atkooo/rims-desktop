@@ -101,10 +101,28 @@ const detailListSql = `
     bd.notes,
     bd.created_at,
     i.name AS item_name,
-    a.name AS accessory_name
+    i.code AS item_code,
+    i.sale_price AS item_sale_price,
+    i.rental_price_per_day AS item_rental_price,
+    i.price AS item_price,
+    c.name AS category_name,
+    a.name AS accessory_name,
+    a.code AS accessory_code,
+    a.sale_price AS accessory_sale_price,
+    CASE 
+      WHEN bd.item_id IS NOT NULL THEN 'item'
+      WHEN bd.accessory_id IS NOT NULL THEN 'accessory'
+      ELSE NULL
+    END AS type,
+    CASE 
+      WHEN bd.item_id IS NOT NULL THEN 'Item'
+      WHEN bd.accessory_id IS NOT NULL THEN 'Aksesoris'
+      ELSE NULL
+    END AS type_label
   FROM bundle_details bd
   LEFT JOIN items i ON bd.item_id = i.id
   LEFT JOIN accessories a ON bd.accessory_id = a.id
+  LEFT JOIN categories c ON i.category_id = c.id
   WHERE bd.bundle_id = ?
   ORDER BY bd.id DESC
 `;

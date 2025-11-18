@@ -137,7 +137,32 @@
           :columns="detailColumns"
           :rows="bundleDetails"
           :loading="false"
-        />
+        >
+          <template #cell-code="{ row }">
+            <strong>{{ row.item_code || row.accessory_code || "-" }}</strong>
+          </template>
+          <template #cell-type="{ row }">
+            <span v-if="row.type_label && row.type_label !== '-'" class="type-badge" :class="row.type">
+              {{ row.type_label }}
+            </span>
+            <span v-else>-</span>
+          </template>
+          <template #cell-name="{ row }">
+            {{ row.item_name || row.accessory_name || "-" }}
+          </template>
+          <template #cell-category="{ row }">
+            {{ row.category_name || "-" }}
+          </template>
+          <template #cell-price="{ row }">
+            <span v-if="row.item_id">
+              {{ formatCurrency(row.item_sale_price || row.item_price || 0) }}
+            </span>
+            <span v-else-if="row.accessory_id">
+              {{ formatCurrency(row.accessory_sale_price || 0) }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </AppTable>
       </section>
 
       <!-- Baris 3: Informasi Sistem -->
@@ -224,8 +249,11 @@ export default {
     };
 
     const detailColumns = [
-      { key: "item_name", label: "Item" },
-      { key: "accessory_name", label: "Aksesoris" },
+      { key: "code", label: "Kode" },
+      { key: "type", label: "Tipe" },
+      { key: "name", label: "Nama" },
+      { key: "category", label: "Kategori" },
+      { key: "price", label: "Harga" },
       { key: "quantity", label: "Jumlah" },
       { key: "notes", label: "Catatan" },
     ];
@@ -554,5 +582,23 @@ export default {
   .group-title {
     font-size: 0.85rem;
   }
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.type-badge.item {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.type-badge.accessory {
+  background-color: #fef3c7;
+  color: #92400e;
 }
 </style>

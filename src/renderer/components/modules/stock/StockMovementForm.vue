@@ -81,12 +81,28 @@
         <div class="form-grid single-column">
           <div class="field-group">
             <FormInput id="quantity" label="Jumlah" type="number" v-model.number="form.quantity"
-              :error="errors.quantity" required min="1" />
+              :error="errors.quantity" required min="1" :max="maxBundleQuantity" />
             <div v-if="selectedReference && form.movementType === 'OUT'" class="stock-info">
               <small>
                 Stok tersedia: {{ selectedReference.available_quantity || 0 }}
                 <span v-if="form.quantity > (selectedReference.available_quantity || 0)">
                   ⚠️ Stok tidak mencukupi
+                </span>
+              </small>
+            </div>
+            <div v-if="selectedReference && form.movementType === 'IN' && form.type === 'bundle'" class="stock-info">
+              <small>
+                <span v-if="maxBundleQuantity !== null">
+                  Maksimal yang bisa dibuat: <strong>{{ maxBundleQuantity }}</strong>
+                  <span v-if="form.quantity > maxBundleQuantity" class="text-warning">
+                    ⚠️ Melebihi stok item/aksesoris yang tersedia
+                  </span>
+                </span>
+                <span v-else-if="bundleCompositionLoading" class="text-muted">
+                  Memuat komposisi paket...
+                </span>
+                <span v-else-if="bundleCompositionError" class="text-danger">
+                  {{ bundleCompositionError }}
                 </span>
               </small>
             </div>
@@ -133,7 +149,7 @@ import { getStoredUser } from "@/services/auth";
 import { useItemStore } from "@/store/items";
 import { useBundleStore } from "@/store/bundles";
 import { createStockMovement } from "@/services/transactions";
-import { fetchAccessories } from "@/services/masterData";
+import { fetchAccessories, fetchBundleDetailsByBundle } from "@/services/masterData";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
@@ -166,6 +182,9 @@ export default {
     const loading = ref(false);
     const errors = ref({});
     const accessories = ref([]);
+    const maxBundleQuantity = ref(null);
+    const bundleCompositionLoading = ref(false);
+    const bundleCompositionError = ref("");
 
     // Form state
     const form = ref({
@@ -226,6 +245,8 @@ export default {
         selectedReference.value = null;
         form.value.bundleId = "";
         errors.value.referenceId = "";
+        maxBundleQuantity.value = null;
+        bundleCompositionError.value = "";
       }
     };
 
@@ -255,12 +276,21 @@ export default {
       errors.value.referenceId = "";
     };
 
-    const handleBundleSelect = (bundle) => {
+    const handleBundleSelect = async (bundle) => {
       selectedReference.value = bundle;
       form.value.bundleId = bundle.id;
       form.value.itemId = "";
       form.value.accessoryId = "";
       errors.value.referenceId = "";
+      
+      // Reset max quantity
+      maxBundleQuantity.value = null;
+      bundleCompositionError.value = "";
+      
+      // Jika movement type IN, hitung maksimal bundle yang bisa dibuat
+      if (form.value.movementType === "IN") {
+        await calculateMaxBundleQuantity(bundle.id);
+      }
     };
 
     const handleAccessorySelect = (accessory) => {
@@ -277,6 +307,90 @@ export default {
       form.value.bundleId = "";
       form.value.accessoryId = "";
       errors.value.referenceId = "";
+      maxBundleQuantity.value = null;
+      bundleCompositionError.value = "";
+    };
+
+    const calculateMaxBundleQuantity = async (bundleId) => {
+      if (!bundleId || form.value.movementType !== "IN") {
+        maxBundleQuantity.value = null;
+        return;
+      }
+
+      bundleCompositionLoading.value = true;
+      bundleCompositionError.value = "";
+      maxBundleQuantity.value = null;
+
+      try {
+        // Ambil komposisi bundle
+        const bundleDetails = await fetchBundleDetailsByBundle(bundleId);
+
+        if (!bundleDetails || bundleDetails.length === 0) {
+          bundleCompositionError.value = "Paket belum memiliki komposisi";
+          maxBundleQuantity.value = 0;
+          return;
+        }
+
+        // Hitung kebutuhan item dan aksesoris
+        const requiredItems = new Map(); // item_id -> quantity per bundle
+        const requiredAccessories = new Map(); // accessory_id -> quantity per bundle
+
+        for (const detail of bundleDetails) {
+          if (detail.item_id) {
+            const current = requiredItems.get(detail.item_id) || 0;
+            requiredItems.set(detail.item_id, current + detail.quantity);
+          } else if (detail.accessory_id) {
+            const current = requiredAccessories.get(detail.accessory_id) || 0;
+            requiredAccessories.set(detail.accessory_id, current + detail.quantity);
+          }
+        }
+
+        // Hitung maksimal bundle yang bisa dibuat
+        let maxBundles = Infinity;
+
+        // Cek stok item
+        for (const [itemId, qtyPerBundle] of requiredItems) {
+          const item = itemStore.items.find((i) => i.id === itemId);
+          if (!item) {
+            bundleCompositionError.value = `Item dengan ID ${itemId} tidak ditemukan`;
+            maxBundleQuantity.value = 0;
+            return;
+          }
+          const availableStock = item.available_quantity || 0;
+          const maxFromItem = Math.floor(availableStock / qtyPerBundle);
+          maxBundles = Math.min(maxBundles, maxFromItem);
+        }
+
+        // Cek stok aksesoris
+        for (const [accessoryId, qtyPerBundle] of requiredAccessories) {
+          const accessory = accessories.value.find((a) => a.id === accessoryId);
+          if (!accessory) {
+            // Fetch accessories jika belum ada
+            const allAccessories = await fetchAccessories();
+            const foundAccessory = allAccessories.find((a) => a.id === accessoryId);
+            if (!foundAccessory) {
+              bundleCompositionError.value = `Aksesoris dengan ID ${accessoryId} tidak ditemukan`;
+              maxBundleQuantity.value = 0;
+              return;
+            }
+            const availableStock = foundAccessory.available_quantity || 0;
+            const maxFromAccessory = Math.floor(availableStock / qtyPerBundle);
+            maxBundles = Math.min(maxBundles, maxFromAccessory);
+          } else {
+            const availableStock = accessory.available_quantity || 0;
+            const maxFromAccessory = Math.floor(availableStock / qtyPerBundle);
+            maxBundles = Math.min(maxBundles, maxFromAccessory);
+          }
+        }
+
+        maxBundleQuantity.value = maxBundles === Infinity ? 0 : maxBundles;
+      } catch (error) {
+        console.error("Error calculating max bundle quantity:", error);
+        bundleCompositionError.value = error.message || "Gagal menghitung maksimal bundle";
+        maxBundleQuantity.value = null;
+      } finally {
+        bundleCompositionLoading.value = false;
+      }
     };
 
     const validateForm = () => {
@@ -316,6 +430,16 @@ export default {
         form.value.quantity > (selectedReference.value.available_quantity || 0)
       ) {
         newErrors.quantity = "Stok tidak mencukupi";
+      }
+
+      // Validate stock for IN bundle movement
+      if (
+        form.value.movementType === "IN" &&
+        form.value.type === "bundle" &&
+        maxBundleQuantity.value !== null &&
+        form.value.quantity > maxBundleQuantity.value
+      ) {
+        newErrors.quantity = `Maksimal ${maxBundleQuantity.value} paket yang bisa dibuat berdasarkan stok item/aksesoris yang tersedia`;
       }
 
       errors.value = newErrors;
@@ -375,7 +499,23 @@ export default {
       };
       selectedReference.value = null;
       errors.value = {};
+      maxBundleQuantity.value = null;
+      bundleCompositionError.value = "";
+      bundleCompositionLoading.value = false;
     };
+
+    // Watch for movementType change to calculate max bundle quantity
+    watch(
+      () => [form.value.movementType, form.value.bundleId],
+      async ([newMovementType, bundleId]) => {
+        if (newMovementType === "IN" && bundleId && form.value.type === "bundle") {
+          await calculateMaxBundleQuantity(bundleId);
+        } else {
+          maxBundleQuantity.value = null;
+          bundleCompositionError.value = "";
+        }
+      },
+    );
 
     // Watch for dialog opening
     watch(
@@ -419,6 +559,9 @@ export default {
       showItemPicker,
       showBundlePicker,
       showAccessoryPicker,
+      maxBundleQuantity,
+      bundleCompositionLoading,
+      bundleCompositionError,
       getTypeLabel,
       getPickerButtonLabel,
       handleTypeChange,
@@ -434,6 +577,28 @@ export default {
 </script>
 
 <style scoped>
+.stock-info {
+  margin-top: 0.5rem;
+}
+
+.stock-info small {
+  display: block;
+  color: #6b7280;
+}
+
+.stock-info .text-warning {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.stock-info .text-danger {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.stock-info .text-muted {
+  color: #9ca3af;
+}
 .stock-movement-form {
   display: flex;
   flex-direction: column;

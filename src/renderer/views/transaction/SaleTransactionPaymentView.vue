@@ -65,7 +65,9 @@
         <table class="items-table">
           <thead>
             <tr>
-              <th>Item</th>
+              <th>Kode</th>
+              <th>Tipe</th>
+              <th>Nama</th>
               <th>Jumlah</th>
               <th>Harga</th>
               <th>Subtotal</th>
@@ -73,10 +75,16 @@
           </thead>
           <tbody>
             <tr v-for="detail in transactionDetails" :key="detail.id">
+              <td><strong>{{ detail.item_code || "-" }}</strong></td>
+              <td>
+                <span class="type-badge" :class="detail.item_type">
+                  {{ detail.item_type_label || "Item" }}
+                </span>
+              </td>
               <td>{{ detail.item_name || "-" }}</td>
               <td>{{ detail.quantity }}</td>
               <td>{{ formatCurrency(detail.sale_price) }}</td>
-              <td>{{ formatCurrency(detail.subtotal) }}</td>
+              <td><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
             </tr>
           </tbody>
         </table>
@@ -596,6 +604,24 @@ export default {
 .items-table thead {
   background-color: #f3f4f6;
   font-weight: 600;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.type-badge.item {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.type-badge.accessory {
+  background-color: #fef3c7;
+  color: #92400e;
 }
 
 .items-table tbody tr:last-child td {

@@ -62,12 +62,14 @@ function setupTransactionViewHandlers() {
         rd.item_id,
         rt.transaction_code,
         i.name AS item_name,
+        i.code AS item_code,
         rd.quantity,
         rd.rental_price,
         rd.subtotal,
         rd.is_returned,
         rd.return_condition,
-        rd.notes
+        rd.notes,
+        rd.created_at
       FROM rental_transaction_details rd
       LEFT JOIN rental_transactions rt ON rd.rental_transaction_id = rt.id
       LEFT JOIN items i ON rd.item_id = i.id
@@ -120,7 +122,9 @@ function setupTransactionViewHandlers() {
         sd.accessory_id,
         st.transaction_code,
         COALESCE(i.name, a.name) AS item_name,
+        COALESCE(i.code, a.code) AS item_code,
         CASE WHEN sd.item_id IS NOT NULL THEN 'item' ELSE 'accessory' END AS item_type,
+        CASE WHEN sd.item_id IS NOT NULL THEN 'Item' ELSE 'Aksesoris' END AS item_type_label,
         sd.quantity,
         sd.sale_price,
         sd.subtotal,
