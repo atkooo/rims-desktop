@@ -5,6 +5,8 @@ const validator = require("../helpers/validator");
 const {
   toInteger,
   sanitizeAvailable,
+  generateAccessoryCode,
+  normalizeCode,
 } = require("../helpers/codeUtils");
 
 const toNumber = (value) => {
@@ -20,11 +22,27 @@ const toBoolean = (value) =>
   value === "TRUE";
 
 function setupAccessoryHandlers() {
+  // Get next accessory code
+  ipcMain.handle("accessories:getNextCode", async () => {
+    try {
+      const code = await generateAccessoryCode(database);
+      return code;
+    } catch (error) {
+      logger.error("Error generating accessory code:", error);
+      throw error;
+    }
+  });
+
   ipcMain.handle("accessories:create", async (_event, payload = {}) => {
     try {
-      // Auto-generate code if empty
-      const { normalizeCode } = require("../helpers/codeUtils");
-      const code = normalizeCode(payload.code, payload.name, "ACC");
+      // Generate code based on sequential number if not provided
+      let code = (payload.code || "").trim();
+      if (!code) {
+        code = await generateAccessoryCode(database);
+      } else {
+        // Normalize provided code
+        code = normalizeCode(code, payload.name || "", "ACC");
+      }
       const name = (payload.name ?? "").toString().trim();
       const description = (payload.description ?? "").toString().trim();
 
@@ -113,10 +131,14 @@ function setupAccessoryHandlers() {
       const updates = {};
 
       if (payload.code !== undefined) {
-        // Auto-generate code if empty
-        const { normalizeCode } = require("../helpers/codeUtils");
-        const code = normalizeCode(payload.code, payload.name || "", "ACC");
-        updates.code = code;
+        // Generate code if empty, otherwise normalize provided code
+        if (!payload.code || !payload.code.trim()) {
+          const code = await generateAccessoryCode(database);
+          updates.code = code;
+        } else {
+          const code = normalizeCode(payload.code, payload.name || "", "ACC");
+          updates.code = code;
+        }
       }
 
       if (payload.name !== undefined) {

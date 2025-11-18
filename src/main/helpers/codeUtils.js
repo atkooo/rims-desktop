@@ -133,6 +133,15 @@ async function generateBundleCode(db) {
   return generateSequentialCode(db, "bundles", "PAKET");
 }
 
+/**
+ * Generate accessory code with sequential number
+ * @param {Object} db - Database instance
+ * @returns {Promise<string>} Generated code (ACC-001, ACC-002, etc.)
+ */
+async function generateAccessoryCode(db) {
+  return generateSequentialCode(db, "accessories", "ACC");
+}
+
 module.exports = {
   normalizeCode,
   generateTransactionCode,
@@ -141,5 +150,6 @@ module.exports = {
   getItemCodePrefix,
   generateItemCode,
   generateBundleCode,
+  generateAccessoryCode,
   generateSequentialCode,
 };

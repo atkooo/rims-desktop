@@ -18,8 +18,25 @@ const bundleItemSql = `
   WHERE bd.bundle_id = ?
 `;
 
+const bundleItemRentalSql = `
+  SELECT
+    bd.bundle_id,
+    bd.quantity,
+    bd.item_id,
+    COALESCE(i.rental_price_per_day, i.price, 0) AS rental_price,
+    b.name AS bundle_name
+  FROM bundle_details bd
+  JOIN bundles b ON bd.bundle_id = b.id AND (b.bundle_type = 'rental' OR b.bundle_type = 'both')
+  JOIN items i ON bd.item_id = i.id
+  WHERE bd.bundle_id = ?
+`;
+
 async function fetchBundleItemDetails(bundleId) {
   return database.query(bundleItemSql, [bundleId]);
+}
+
+async function fetchBundleItemDetailsForRental(bundleId) {
+  return database.query(bundleItemRentalSql, [bundleId]);
 }
 
 /**
@@ -41,6 +58,27 @@ async function validateStock(itemId, requiredQuantity) {
   }
 
   return item;
+}
+
+/**
+ * Validate stock availability for an accessory
+ */
+async function validateAccessoryStock(accessoryId, requiredQuantity) {
+  const accessory = await database.queryOne(
+    "SELECT available_quantity, stock_quantity, name, code FROM accessories WHERE id = ?",
+    [accessoryId],
+  );
+
+  if (!accessory) {
+    throw new Error("Aksesoris tidak ditemukan");
+  }
+
+  const availableStock = accessory.available_quantity || 0;
+  if (availableStock < requiredQuantity) {
+    throw new Error("Stok aksesoris tidak cukup");
+  }
+
+  return accessory;
 }
 
 /**
@@ -164,6 +202,42 @@ async function expandBundleSelections(selections = []) {
   return result;
 }
 
+async function expandBundleSelectionsForRental(selections = []) {
+  const cache = new Map();
+  const result = [];
+
+  for (const selection of selections) {
+    const bundleId = toInteger(selection.bundleId);
+    if (!bundleId) {
+      throw new Error("Data tidak valid");
+    }
+    const bundleQuantity = Math.max(1, toInteger(selection.quantity));
+
+    if (!cache.has(bundleId)) {
+      const details = await fetchBundleItemDetailsForRental(bundleId);
+      if (!details.length) {
+        throw new Error("Data tidak valid");
+      }
+      cache.set(bundleId, details);
+    }
+
+    const details = cache.get(bundleId);
+    for (const detail of details) {
+      const detailQuantity =
+        Math.max(1, toInteger(detail.quantity)) * bundleQuantity;
+      const rentalPrice = Number(detail.rental_price) || 0;
+      if (detailQuantity <= 0) continue;
+      result.push({
+        itemId: detail.item_id,
+        quantity: detailQuantity,
+        rentalPrice,
+        subtotal: rentalPrice * detailQuantity,
+      });
+    }
+  }
+  return result;
+}
+
 function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
@@ -255,7 +329,10 @@ function setupTransactionHandlers() {
       const hasBundles =
         Array.isArray(transactionData.bundles) &&
         transactionData.bundles.length > 0;
-      if (saleItems.length === 0 && !hasBundles) {
+      const hasAccessories =
+        Array.isArray(transactionData.accessories) &&
+        transactionData.accessories.length > 0;
+      if (saleItems.length === 0 && !hasBundles && !hasAccessories) {
         throw new Error("Data tidak valid");
       }
 
@@ -302,18 +379,40 @@ function setupTransactionHandlers() {
             ],
           );
 
-          // Validate stock before processing rental transaction
-          for (const item of transactionData.items) {
-            const quantity = Math.max(1, Number(item.quantity) || 0);
-            await validateStock(item.itemId, quantity);
+          // Expand bundles to items for rental
+          const rentalItems = Array.isArray(transactionData.items)
+            ? transactionData.items
+            : [];
+          const hasBundles =
+            Array.isArray(transactionData.bundles) &&
+            transactionData.bundles.length > 0;
+          const bundleLines = hasBundles
+            ? await expandBundleSelectionsForRental(transactionData.bundles)
+            : [];
+          const rentalLines = [...rentalItems, ...bundleLines];
+          
+          // Validate that at least one item or bundle is selected
+          if (rentalLines.length === 0) {
+            throw new Error("Data tidak valid: Pilih minimal 1 item atau paket");
           }
 
-          // Insert rental transaction items
-          for (const item of transactionData.items) {
+          // Validate stock before processing rental transaction
+          for (const line of rentalLines) {
+            const quantity = Math.max(1, Number(line.quantity) || 0);
+            await validateStock(line.itemId, quantity);
+          }
+
+          // Insert rental transaction items (from items and expanded bundles)
+          for (const line of rentalLines) {
+            const quantity = Math.max(1, Number(line.quantity) || 0);
+            const rentalPrice = Number(line.rentalPrice) || 0;
+            // Subtotal should already include totalDays calculation from frontend
+            const lineSubtotal = Number(line.subtotal) || rentalPrice * quantity * transactionData.totalDays;
+
             // Get current stock before update
             const itemBefore = await database.queryOne(
               "SELECT available_quantity FROM items WHERE id = ?",
-              [item.itemId],
+              [line.itemId],
             );
             const stockBefore = itemBefore?.available_quantity || 0;
 
@@ -324,28 +423,28 @@ function setupTransactionHandlers() {
               ) VALUES (?, ?, ?, ?, ?)`,
               [
                 result.id,
-                item.itemId,
-                item.quantity,
-                item.rentalPrice,
-                item.subtotal,
+                line.itemId,
+                quantity,
+                rentalPrice,
+                lineSubtotal,
               ],
             );
 
             // Update available quantity for the item
             await database.execute(
               "UPDATE items SET available_quantity = available_quantity - ? WHERE id = ?",
-              [item.quantity, item.itemId],
+              [quantity, line.itemId],
             );
 
-            const stockAfter = stockBefore - item.quantity;
+            const stockAfter = stockBefore - quantity;
 
             // Create stock movement record
             await createStockMovement({
-              itemId: item.itemId,
+              itemId: line.itemId,
               movementType: "OUT",
               referenceType: "rental_transaction",
               referenceId: result.id,
-              quantity: item.quantity,
+              quantity,
               stockBefore,
               stockAfter,
               userId: transactionData.userId,
@@ -385,6 +484,9 @@ function setupTransactionHandlers() {
             ? await expandBundleSelections(transactionData.bundles)
             : [];
           const saleLines = [...saleItems, ...bundleLines];
+          const accessories = Array.isArray(transactionData.accessories)
+            ? transactionData.accessories
+            : [];
 
           // Validate stock before processing transaction
           for (const line of saleLines) {
@@ -392,6 +494,13 @@ function setupTransactionHandlers() {
             await validateStock(line.itemId, quantity);
           }
 
+          // Validate accessory stock
+          for (const accessory of accessories) {
+            const quantity = Math.max(1, Number(accessory.quantity) || 1);
+            await validateAccessoryStock(accessory.accessoryId, quantity);
+          }
+
+          // Process items and bundles
           for (const line of saleLines) {
             const quantity = Math.max(1, Number(line.quantity) || 0);
             const salePrice = Number(line.salePrice) || 0;
@@ -406,10 +515,10 @@ function setupTransactionHandlers() {
 
             await database.execute(
               `INSERT INTO sales_transaction_details (
-                sales_transaction_id, item_id, quantity,
+                sales_transaction_id, item_id, accessory_id, quantity,
                 sale_price, subtotal
-              ) VALUES (?, ?, ?, ?, ?)`,
-              [result.id, line.itemId, quantity, salePrice, lineSubtotal],
+              ) VALUES (?, ?, ?, ?, ?, ?)`,
+              [result.id, line.itemId, null, quantity, salePrice, lineSubtotal],
             );
 
             // Update available quantity and stock quantity for the item
@@ -423,6 +532,49 @@ function setupTransactionHandlers() {
             // Create stock movement record
             await createStockMovement({
               itemId: line.itemId,
+              movementType: "OUT",
+              referenceType: "sales_transaction",
+              referenceId: result.id,
+              quantity,
+              stockBefore,
+              stockAfter,
+              userId: transactionData.userId,
+              notes: `Sales transaction: ${transactionCode}`,
+            });
+          }
+
+          // Process accessories
+          for (const accessory of accessories) {
+            const quantity = Math.max(1, Number(accessory.quantity) || 1);
+            const salePrice = Number(accessory.salePrice) || 0;
+            const lineSubtotal = Number(accessory.subtotal) || salePrice * quantity;
+
+            // Get current stock before update
+            const accessoryBefore = await database.queryOne(
+              "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+              [accessory.accessoryId],
+            );
+            const stockBefore = accessoryBefore?.available_quantity || 0;
+
+            await database.execute(
+              `INSERT INTO sales_transaction_details (
+                sales_transaction_id, item_id, accessory_id, quantity,
+                sale_price, subtotal
+              ) VALUES (?, ?, ?, ?, ?, ?)`,
+              [result.id, null, accessory.accessoryId, quantity, salePrice, lineSubtotal],
+            );
+
+            // Update available quantity and stock quantity for the accessory
+            await database.execute(
+              "UPDATE accessories SET available_quantity = available_quantity - ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+              [quantity, quantity, accessory.accessoryId],
+            );
+
+            const stockAfter = stockBefore - quantity;
+
+            // Create stock movement record
+            await createStockMovement({
+              accessoryId: accessory.accessoryId,
               movementType: "OUT",
               referenceType: "sales_transaction",
               referenceId: result.id,

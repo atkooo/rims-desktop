@@ -51,11 +51,14 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         throw new Error("Transaksi penjualan tidak ditemukan");
       }
 
-      // Get transaction details
+      // Get transaction details (items and accessories)
       transactionDetails = await database.query(
-        `SELECT std.*, i.name AS item_name, i.code AS item_code
+        `SELECT std.*, 
+         COALESCE(i.name, a.name) AS item_name, 
+         COALESCE(i.code, a.code) AS item_code
          FROM sales_transaction_details std
          LEFT JOIN items i ON std.item_id = i.id
+         LEFT JOIN accessories a ON std.accessory_id = a.id
          WHERE std.sales_transaction_id = ?
          ORDER BY std.id`,
         [transactionId],

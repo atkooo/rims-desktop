@@ -39,7 +39,6 @@
             <div class="filter-group">
               <label>Periode:</label>
               <select v-model="filters.period" class="filter-select">
-                <option value="anytime">Semua Waktu</option>
                 <option value="daily">Harian</option>
                 <option value="monthly">Bulanan</option>
                 <option value="custom">Custom (Range Tanggal)</option>
@@ -173,7 +172,7 @@ export default {
 
     // Initialize filters
     const filters = ref({
-      period: "anytime", // anytime, daily, monthly, custom
+      period: "daily", // daily, monthly, custom
       dateFrom: "",
       dateTo: "",
     });
@@ -206,7 +205,7 @@ export default {
 
         // Prepare filter parameters
         const filterParams = {
-          period: hasDateFilter.value ? filters.value.period : "anytime",
+          period: hasDateFilter.value ? filters.value.period : "daily",
           dateFrom: hasDateFilter.value ? (filters.value.dateFrom || null) : null,
           dateTo: hasDateFilter.value ? (filters.value.dateTo || null) : null,
         };
@@ -258,7 +257,7 @@ export default {
 
         // Prepare filter parameters
         const filterParams = {
-          period: hasDateFilter.value ? filters.value.period : "anytime",
+          period: hasDateFilter.value ? filters.value.period : "daily",
           dateFrom: hasDateFilter.value ? (filters.value.dateFrom || null) : null,
           dateTo: hasDateFilter.value ? (filters.value.dateTo || null) : null,
         };

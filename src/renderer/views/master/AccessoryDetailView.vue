@@ -60,10 +60,6 @@
               <div class="detail-value">{{ formatCurrency(accessory.sale_price) }}</div>
             </div>
             <div class="detail-row">
-              <label>Harga Sewa/Hari</label>
-              <div class="detail-value">{{ formatCurrency(accessory.rental_price_per_day) }}</div>
-            </div>
-            <div class="detail-row">
               <label>Total Stok</label>
               <div class="detail-value">{{ accessory.stock_quantity || 0 }}</div>
             </div>

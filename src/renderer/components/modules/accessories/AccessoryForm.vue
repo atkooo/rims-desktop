@@ -30,20 +30,6 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="rentalPrice" class="form-label">Harga Sewa / Hari</label>
-          <input
-            id="rentalPrice"
-            :value="formatNumberInput(form.rental_price_per_day)"
-            @input="handleRentalPriceInput"
-            type="text"
-            class="form-input"
-            :class="{ error: errors.rental_price_per_day }"
-          />
-          <div v-if="errors.rental_price_per_day" class="error-message">
-            {{ errors.rental_price_per_day }}
-          </div>
-        </div>
-        <div class="form-group">
           <label for="salePrice" class="form-label">Harga Jual</label>
           <input
             id="salePrice"
@@ -117,10 +103,6 @@
 
       <div class="form-switches">
         <label class="switch">
-          <input type="checkbox" v-model="form.is_available_for_rent" disabled />
-          <span>Bisa Disewa (Aksesoris tidak bisa disewa)</span>
-        </label>
-        <label class="switch">
           <input type="checkbox" v-model="form.is_available_for_sale" />
           <span>Bisa Dijual</span>
         </label>
@@ -151,13 +133,12 @@ const defaultForm = () => ({
   name: "",
   description: "",
   purchase_price: "",
-  rental_price_per_day: "",
   sale_price: "",
   stock_quantity: "",
   available_quantity: "",
   min_stock_alert: "",
   discount_group_id: null,
-  is_available_for_rent: true,
+  is_available_for_rent: false,
   is_available_for_sale: true,
   is_active: true,
 });
@@ -207,9 +188,6 @@ export default {
     const handlePurchasePriceInput = createInputHandler(
       (value) => (form.value.purchase_price = value)
     );
-    const handleRentalPriceInput = createInputHandler(
-      (value) => (form.value.rental_price_per_day = value)
-    );
     const handleSalePriceInput = createInputHandler(
       (value) => (form.value.sale_price = value)
     );
@@ -244,7 +222,7 @@ export default {
 
       // Stok selalu 0 saat create/edit, akan diatur melalui manajemen stok
 
-      ["purchase_price", "rental_price_per_day", "sale_price"].forEach(
+      ["purchase_price", "sale_price"].forEach(
         (field) => {
           if (toNumber(form.value[field]) < 0) {
             validationErrors[field] = "Tidak boleh bernilai negatif";
@@ -266,7 +244,7 @@ export default {
         name: form.value.name.trim(),
         description: form.value.description?.trim() ?? "",
         purchase_price: toNumber(form.value.purchase_price),
-        rental_price_per_day: toNumber(form.value.rental_price_per_day),
+        rental_price_per_day: 0, // Aksesoris tidak bisa disewa, selalu 0
         sale_price: toNumber(form.value.sale_price),
         min_stock_alert: Math.max(0, toInteger(form.value.min_stock_alert)),
         discount_group_id: form.value.discount_group_id || null,
@@ -366,7 +344,6 @@ export default {
       formatCurrency,
       formatNumberInput,
       handlePurchasePriceInput,
-      handleRentalPriceInput,
       handleSalePriceInput,
     };
   },
