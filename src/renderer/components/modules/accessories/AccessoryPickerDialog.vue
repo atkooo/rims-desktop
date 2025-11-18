@@ -76,13 +76,14 @@
 </template>
 
 <script>
-import { computed, ref, watch } from "vue";
+  import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { fetchAccessories } from "@/services/masterData";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { formatCurrency } from "@/composables/useCurrency";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "AccessoryPickerDialog",
@@ -143,8 +144,11 @@ export default {
         .slice(0, 80);
     });
 
-    const loadAccessories = async () => {
-      if (accessories.value.length > 0) return;
+    const loadAccessories = async (force = false) => {
+      if (!force && accessories.value.length > 0) return;
+      if (force) {
+        accessories.value = [];
+      }
       loading.value = true;
       try {
         accessories.value = await fetchAccessories();
@@ -168,6 +172,19 @@ export default {
         }
       },
     );
+
+    const refreshAccessories = () => {
+      loadAccessories(true);
+    };
+
+    const unsubscribeInventory = eventBus.on(
+      "inventory:updated",
+      refreshAccessories,
+    );
+
+    onBeforeUnmount(() => {
+      unsubscribeInventory();
+    });
 
     return {
       search,
@@ -302,5 +319,3 @@ export default {
   margin-left: 0.25rem;
 }
 </style>
-
-

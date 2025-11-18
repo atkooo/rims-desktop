@@ -194,6 +194,8 @@ const searchQuery = ref("");
 const searchBusy = ref(false);
 const transactionStore = useTransactionStore();
 const stockAlerts = useStockAlerts();
+const stockAlertsActive = ref(false);
+let stockAlertsStarting = false;
 let storageListener = null;
 let searchTimeout = null;
 const profileMenuOpen = ref(false);
@@ -338,6 +340,32 @@ const refreshTransactions = () => {
 const refreshAllNotifications = async () => {
   refreshTransactions();
   await stockAlerts.checkStockAlerts(false);
+};
+
+const startStockAlertMonitor = async () => {
+  if (
+    !currentUser.value ||
+    stockAlertsActive.value ||
+    stockAlertsStarting
+  ) {
+    return;
+  }
+
+  stockAlertsStarting = true;
+  try {
+    await stockAlerts.initialize();
+    stockAlerts.startPeriodicCheck(60000);
+    stockAlertsActive.value = true;
+  } catch (error) {
+    console.error("Gagal memulai pemeriksaan stok:", error);
+  } finally {
+    stockAlertsStarting = false;
+  }
+};
+
+const stopStockAlertMonitor = () => {
+  stockAlerts.stopPeriodicCheck();
+  stockAlertsActive.value = false;
 };
 
 const formatDate = (dateString) => {
@@ -564,6 +592,7 @@ const logout = async () => {
   } catch (error) {
     console.error("Gagal logout", error);
   } finally {
+    stopStockAlertMonitor();
     currentUser.value = null;
     router.push("/login");
   }
@@ -605,16 +634,11 @@ onMounted(async () => {
   if (!transactionStore.transactions.length) {
     transactionStore.fetchTransactions().catch(() => {});
   }
-  
-  // Initialize stock alerts and start periodic checking
-  await stockAlerts.initialize();
-  stockAlerts.startPeriodicCheck(60000); // Check every minute
-  
   document.addEventListener("click", handleClickOutside);
 });
 
 onBeforeUnmount(() => {
-  stockAlerts.stopPeriodicCheck();
+  stopStockAlertMonitor();
   if (storageListener) {
     window.removeEventListener("storage", storageListener);
   }
@@ -625,6 +649,18 @@ onBeforeUnmount(() => {
   detachDropdownListeners();
   detachNotificationListeners();
 });
+
+watch(
+  currentUser,
+  (user) => {
+    if (user) {
+      startStockAlertMonitor();
+    } else {
+      stopStockAlertMonitor();
+    }
+  },
+  { immediate: true },
+);
 
 watch(profileMenuOpen, async (isOpen) => {
   if (isOpen) {

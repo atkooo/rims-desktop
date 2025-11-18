@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ipcRenderer } from "@/services/ipc";
 import { TRANSACTION_STATUS } from "@shared/constants";
+import { eventBus } from "@/utils/eventBus";
 
 export const useTransactionStore = defineStore("transactions", {
   state: () => ({
@@ -133,6 +134,7 @@ export const useTransactionStore = defineStore("transactions", {
         );
         this.transactions.unshift(newTransaction);
         this.error = null;
+        eventBus.emit("inventory:updated");
         return newTransaction;
       } catch (err) {
         this.error = err.message;
@@ -159,6 +161,7 @@ export const useTransactionStore = defineStore("transactions", {
           };
         }
         this.error = null;
+        eventBus.emit("inventory:updated");
         return updatedTransaction;
       } catch (err) {
         this.error = err.message;
@@ -197,6 +200,7 @@ export const useTransactionStore = defineStore("transactions", {
         await ipcRenderer.invoke("transactions:delete", id);
         this.transactions = this.transactions.filter((t) => t.id !== id);
         this.error = null;
+        eventBus.emit("inventory:updated");
       } catch (err) {
         this.error = err.message;
         throw err;

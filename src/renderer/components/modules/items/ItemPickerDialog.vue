@@ -74,13 +74,14 @@
 </template>
 
 <script>
-import { computed, ref, watch } from "vue";
+  import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { useItemStore } from "@/store/items";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { useItemType } from "@/composables/useItemType";
+import { eventBus } from "@/utils/eventBus";
 import { formatCurrency } from "@/composables/useCurrency";
 
 export default {
@@ -206,6 +207,21 @@ export default {
         }
       },
     );
+
+    const refreshInventory = () => {
+      itemStore.fetchItems().catch((error) => {
+        console.error("Gagal menyegarkan inventori:", error);
+      });
+    };
+
+    const unsubscribeInventory = eventBus.on(
+      "inventory:updated",
+      refreshInventory,
+    );
+
+    onBeforeUnmount(() => {
+      unsubscribeInventory();
+    });
 
     return {
       search,

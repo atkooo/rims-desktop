@@ -1,11 +1,6 @@
 <template>
-  <AppDialog
-    v-model="showDialog"
-    title="Mutasi Stok Baru"
-    confirm-text="Simpan"
-    :loading="loading"
-    @confirm="handleSubmit"
-  >
+  <AppDialog v-model="showDialog" title="Mutasi Stok Baru" confirm-text="Simpan" :loading="loading"
+    @confirm="handleSubmit">
     <form @submit.prevent="handleSubmit" class="stock-movement-form">
       <div v-if="errors.submit" class="form-error">
         {{ errors.submit }}
@@ -16,14 +11,8 @@
         <div class="form-grid">
           <div class="field-group">
             <label for="type">Tipe</label>
-            <select
-              id="type"
-              v-model="form.type"
-              class="form-select"
-              :class="{ error: errors.type }"
-              @change="handleTypeChange"
-              required
-            >
+            <select id="type" v-model="form.type" class="form-select" :class="{ error: errors.type }"
+              @change="handleTypeChange" required>
               <option :value="null" disabled>Pilih Tipe</option>
               <option value="item">Item</option>
               <option value="bundle">Bundle/Paket</option>
@@ -35,14 +24,8 @@
           </div>
           <div class="field-group" v-if="form.type === 'bundle'">
             <label for="bundleType">Tipe Bundle</label>
-            <select
-              id="bundleType"
-              v-model="form.bundleType"
-              class="form-select"
-              :class="{ error: errors.bundleType }"
-              @change="handleBundleTypeChange"
-              required
-            >
+            <select id="bundleType" v-model="form.bundleType" class="form-select" :class="{ error: errors.bundleType }"
+              @change="handleBundleTypeChange" required>
               <option :value="null" disabled>Pilih Tipe Bundle</option>
               <option value="both">Both</option>
               <option value="sale">Sale</option>
@@ -54,13 +37,8 @@
           </div>
           <div class="field-group">
             <label for="movementType">Jenis Mutasi</label>
-            <select
-              id="movementType"
-              v-model="form.movementType"
-              class="form-select"
-              :class="{ error: errors.movementType }"
-              required
-            >
+            <select id="movementType" v-model="form.movementType" class="form-select"
+              :class="{ error: errors.movementType }" required>
               <option value="">Pilih Jenis</option>
               <option value="IN">Masuk (IN)</option>
               <option value="OUT">Keluar (OUT)</option>
@@ -81,22 +59,12 @@
                     {{ selectedReference.code }}
                   </span>
                 </span>
-                <AppButton
-                  type="button"
-                  variant="secondary"
-                  size="small"
-                  @click="clearSelection"
-                >
+                <AppButton type="button" variant="secondary" size="small" @click="clearSelection">
                   Hapus
                 </AppButton>
               </div>
-              <AppButton
-                v-else
-                type="button"
-                variant="secondary"
-                :disabled="!form.type || (form.type === 'bundle' && !form.bundleType)"
-                @click="openPicker"
-              >
+              <AppButton v-else type="button" variant="secondary"
+                :disabled="!form.type || (form.type === 'bundle' && !form.bundleType)" @click="openPicker">
                 <Icon name="search" :size="16" />
                 <span>{{ getPickerButtonLabel() }}</span>
               </AppButton>
@@ -112,24 +80,12 @@
         <h3>Jumlah</h3>
         <div class="form-grid single-column">
           <div class="field-group">
-            <FormInput
-              id="quantity"
-              label="Jumlah"
-              type="number"
-              v-model.number="form.quantity"
-              :error="errors.quantity"
-              required
-              min="1"
-            />
-            <div
-              v-if="selectedReference && form.movementType === 'OUT'"
-              class="stock-info"
-            >
+            <FormInput id="quantity" label="Jumlah" type="number" v-model.number="form.quantity"
+              :error="errors.quantity" required min="1" />
+            <div v-if="selectedReference && form.movementType === 'OUT'" class="stock-info">
               <small>
                 Stok tersedia: {{ selectedReference.available_quantity || 0 }}
-                <span
-                  v-if="form.quantity > (selectedReference.available_quantity || 0)"
-                >
+                <span v-if="form.quantity > (selectedReference.available_quantity || 0)">
                   ⚠️ Stok tidak mencukupi
                 </span>
               </small>
@@ -143,11 +99,7 @@
         <div class="form-grid">
           <div class="field-group">
             <label for="referenceType">Tipe Referensi</label>
-            <select
-              id="referenceType"
-              v-model="form.referenceType"
-              class="form-select"
-            >
+            <select id="referenceType" v-model="form.referenceType" class="form-select">
               <option value="">Pilih Tipe Referensi</option>
               <option value="purchase">Pembelian (Purchase)</option>
               <option value="adjustment">Penyesuaian (Adjustment)</option>
@@ -160,35 +112,18 @@
         </div>
         <div class="form-grid">
           <div class="field-group full-width">
-            <FormInput
-              id="notes"
-              label="Catatan"
-              v-model="form.notes"
-              type="textarea"
-              placeholder="Alasan mutasi stok"
-            />
+            <FormInput id="notes" label="Catatan" v-model="form.notes" type="textarea"
+              placeholder="Alasan mutasi stok" />
           </div>
         </div>
       </section>
     </form>
 
     <!-- Picker Dialogs -->
-    <ItemPickerDialog
-      v-model="showItemPicker"
-      :restrict-stock="false"
-      @select="handleItemSelect"
-    />
-    <BundlePickerDialog
-      v-model="showBundlePicker"
-      :bundle-type="form.bundleType || 'both'"
-      :restrict-stock="false"
-      @select="handleBundleSelect"
-    />
-    <AccessoryPickerDialog
-      v-model="showAccessoryPicker"
-      :restrict-stock="false"
-      @select="handleAccessorySelect"
-    />
+    <ItemPickerDialog v-model="showItemPicker" :restrict-stock="false" @select="handleItemSelect" />
+    <BundlePickerDialog v-model="showBundlePicker" :bundle-type="form.bundleType || 'both'" :restrict-stock="false"
+      @select="handleBundleSelect" />
+    <AccessoryPickerDialog v-model="showAccessoryPicker" :restrict-stock="false" @select="handleAccessorySelect" />
   </AppDialog>
 </template>
 
@@ -409,6 +344,10 @@ export default {
         };
 
         await createStockMovement(movementData);
+        await Promise.all([
+          itemStore.fetchItems(),
+          bundleStore.fetchBundles(true),
+        ]);
 
         emit("saved");
         showDialog.value = false;

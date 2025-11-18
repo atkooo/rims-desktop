@@ -72,13 +72,14 @@
 </template>
 
 <script>
-import { computed, ref, watch, toRef } from "vue";
+import { computed, ref, watch, toRef, onBeforeUnmount } from "vue";
 import { useBundleStore } from "@/store/bundles";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { formatCurrency } from "@/composables/useCurrency";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "BundlePickerDialog",
@@ -178,6 +179,21 @@ export default {
         }
       },
     );
+
+    const refreshBundles = () => {
+      bundleStore.fetchBundles(true).catch((error) => {
+        console.error("Gagal memuat paket:", error);
+      });
+    };
+
+    const unsubscribeInventory = eventBus.on(
+      "inventory:updated",
+      refreshBundles,
+    );
+
+    onBeforeUnmount(() => {
+      unsubscribeInventory();
+    });
 
     const getBundlePriceDisplay = (bundle) => {
       if (props.bundleType === "both") {
