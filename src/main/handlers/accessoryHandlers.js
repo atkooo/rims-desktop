@@ -76,7 +76,14 @@ function setupAccessoryHandlers() {
         toNumber(payload.sale_price),
         stockQuantity,
         availableQuantity,
-        Math.max(0, toInteger(payload.min_stock_alert)),
+        Math.max(
+          0,
+          toInteger(
+            payload.min_stock_alert === undefined || payload.min_stock_alert === null
+              ? 1
+              : payload.min_stock_alert,
+          ),
+        ),
         isAvailableForRent ? 1 : 0, // Always false for accessories
         toBoolean(payload.is_available_for_sale) ? 1 : 0,
         toBoolean(payload.is_active) ? 1 : 0,

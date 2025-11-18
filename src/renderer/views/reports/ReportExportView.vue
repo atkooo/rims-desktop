@@ -82,10 +82,6 @@
           </AppButton>
         </div>
 
-        <div v-if="error" class="error-banner">
-          {{ error }}
-        </div>
-
         <div v-if="success" class="success-banner">
           {{ success }}
         </div>
@@ -139,7 +135,6 @@ export default {
   setup(props) {
     const exporting = ref(false);
     const previewing = ref(false);
-    const error = ref("");
     const success = ref("");
     const selectedReport = ref("");
     const { showSuccess, showError } = useNotification();
@@ -185,13 +180,12 @@ export default {
 
     const exportReport = async (format) => {
       exporting.value = true;
-      error.value = "";
       success.value = "";
 
       try {
         // Validate report selection
         if (!selectedReport.value) {
-          error.value = "Harap pilih jenis laporan terlebih dahulu";
+          showError("Harap pilih jenis laporan terlebih dahulu");
           exporting.value = false;
           return;
         }
@@ -199,12 +193,12 @@ export default {
         // Validate custom date range
         if (hasDateFilter.value && filters.value.period === "custom") {
           if (!filters.value.dateFrom || !filters.value.dateTo) {
-            error.value = "Harap pilih range tanggal";
+            showError("Harap pilih range tanggal");
             exporting.value = false;
             return;
           }
           if (new Date(filters.value.dateFrom) > new Date(filters.value.dateTo)) {
-            error.value = "Tanggal mulai tidak boleh lebih besar dari tanggal akhir";
+            showError("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
             exporting.value = false;
             return;
           }
@@ -224,12 +218,13 @@ export default {
         );
         if (result.success) {
           success.value = `File berhasil diexport ke: ${result.filePath}`;
+          showSuccess("File berhasil diexport");
         } else {
-          error.value = result.error || "Gagal mengexport laporan";
+          showError(result.error || "Gagal mengexport laporan");
         }
       } catch (err) {
         console.error("Error exporting report:", err);
-        error.value = err.message || "Gagal mengexport laporan";
+        showError(err.message || "Gagal mengexport laporan");
       } finally {
         exporting.value = false;
       }
@@ -237,13 +232,12 @@ export default {
 
     const previewReport = async () => {
       previewing.value = true;
-      error.value = "";
       success.value = "";
 
       try {
         // Validate report selection
         if (!selectedReport.value) {
-          error.value = "Harap pilih jenis laporan terlebih dahulu";
+          showError("Harap pilih jenis laporan terlebih dahulu");
           previewing.value = false;
           return;
         }
@@ -251,12 +245,12 @@ export default {
         // Validate custom date range
         if (hasDateFilter.value && filters.value.period === "custom") {
           if (!filters.value.dateFrom || !filters.value.dateTo) {
-            error.value = "Harap pilih range tanggal";
+            showError("Harap pilih range tanggal");
             previewing.value = false;
             return;
           }
           if (new Date(filters.value.dateFrom) > new Date(filters.value.dateTo)) {
-            error.value = "Tanggal mulai tidak boleh lebih besar dari tanggal akhir";
+            showError("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
             previewing.value = false;
             return;
           }
@@ -276,11 +270,10 @@ export default {
         if (result.success) {
           showSuccess("File preview dibuka di aplikasi eksternal");
         } else {
-          error.value = result.error || "Gagal membuka preview";
+          showError(result.error || "Gagal membuka preview");
         }
       } catch (err) {
         console.error("Error previewing report:", err);
-        error.value = err.message || "Gagal membuka preview";
         showError(err.message || "Gagal membuka preview");
       } finally {
         previewing.value = false;
@@ -290,7 +283,6 @@ export default {
     return {
       exporting,
       previewing,
-      error,
       success,
       filters,
       selectedReport,
@@ -438,14 +430,6 @@ export default {
 .info-item strong {
   color: #111827;
   font-weight: 600;
-}
-
-.error-banner {
-  background-color: #fee2e2;
-  color: #991b1b;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-top: 1rem;
 }
 
 .success-banner {

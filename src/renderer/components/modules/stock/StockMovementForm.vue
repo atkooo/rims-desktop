@@ -20,12 +20,18 @@
               id="type"
               v-model="form.type"
               class="form-select"
+              :class="{ error: errors.type }"
               @change="handleTypeChange"
+              required
             >
+              <option :value="null" disabled>Pilih Tipe</option>
               <option value="item">Item</option>
               <option value="bundle">Bundle/Paket</option>
               <option value="accessory">Aksesoris</option>
             </select>
+            <div v-if="errors.type" class="error-message">
+              {{ errors.type }}
+            </div>
           </div>
           <div class="field-group" v-if="form.type === 'bundle'">
             <label for="bundleType">Tipe Bundle</label>
@@ -33,12 +39,18 @@
               id="bundleType"
               v-model="form.bundleType"
               class="form-select"
+              :class="{ error: errors.bundleType }"
               @change="handleBundleTypeChange"
+              required
             >
+              <option :value="null" disabled>Pilih Tipe Bundle</option>
               <option value="both">Both</option>
               <option value="sale">Sale</option>
               <option value="rental">Rental</option>
             </select>
+            <div v-if="errors.bundleType" class="error-message">
+              {{ errors.bundleType }}
+            </div>
           </div>
           <div class="field-group">
             <label for="movementType">Jenis Mutasi</label>
@@ -82,6 +94,7 @@
                 v-else
                 type="button"
                 variant="secondary"
+                :disabled="!form.type || (form.type === 'bundle' && !form.bundleType)"
                 @click="openPicker"
               >
                 <Icon name="search" :size="16" />
@@ -221,8 +234,8 @@ export default {
 
     // Form state
     const form = ref({
-      type: "item", // "item", "bundle", "accessory"
-      bundleType: "both", // "sale", "rental", "both"
+      type: null, // "item", "bundle", "accessory"
+      bundleType: null, // "sale", "rental", "both"
       itemId: "",
       bundleId: "",
       accessoryId: "",
@@ -249,14 +262,14 @@ export default {
       if (form.value.type === "item") return "Pilih Item";
       if (form.value.type === "bundle") return "Pilih Bundle/Paket";
       if (form.value.type === "accessory") return "Pilih Aksesoris";
-      return "Pilih";
+      return "Pilih Tipe terlebih dahulu";
     };
 
     const getPickerButtonLabel = () => {
       if (form.value.type === "item") return "Cari Item";
       if (form.value.type === "bundle") return "Cari Bundle";
       if (form.value.type === "accessory") return "Cari Aksesoris";
-      return "Cari";
+      return "Pilih Tipe terlebih dahulu";
     };
 
     const handleTypeChange = () => {
@@ -266,9 +279,9 @@ export default {
       form.value.bundleId = "";
       form.value.accessoryId = "";
       errors.value.referenceId = "";
-      // Reset bundle type to default when switching away from bundle
+      // Reset bundle type when switching away from bundle
       if (form.value.type !== "bundle") {
-        form.value.bundleType = "both";
+        form.value.bundleType = null;
       }
     };
 
@@ -282,9 +295,17 @@ export default {
     };
 
     const openPicker = () => {
+      if (!form.value.type) {
+        errors.value.type = "Pilih tipe terlebih dahulu";
+        return;
+      }
       if (form.value.type === "item") {
         showItemPicker.value = true;
       } else if (form.value.type === "bundle") {
+        if (!form.value.bundleType) {
+          errors.value.bundleType = "Pilih tipe bundle terlebih dahulu";
+          return;
+        }
         showBundlePicker.value = true;
       } else if (form.value.type === "accessory") {
         showAccessoryPicker.value = true;
@@ -325,6 +346,16 @@ export default {
 
     const validateForm = () => {
       const newErrors = {};
+
+      // Validate type selection
+      if (!form.value.type) {
+        newErrors.type = "Tipe wajib dipilih";
+      }
+
+      // Validate bundle type if type is bundle
+      if (form.value.type === "bundle" && !form.value.bundleType) {
+        newErrors.bundleType = "Tipe bundle wajib dipilih";
+      }
 
       // Validate reference selection
       if (form.value.type === "item" && !form.value.itemId) {
@@ -393,8 +424,8 @@ export default {
     // Reset form when dialog opens
     const resetForm = () => {
       form.value = {
-        type: "item",
-        bundleType: "both",
+        type: null,
+        bundleType: null,
         itemId: "",
         bundleId: "",
         accessoryId: "",

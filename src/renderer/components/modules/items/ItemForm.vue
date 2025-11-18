@@ -52,7 +52,8 @@
 
           <div class="form-group">
             <label class="form-label">Status</label>
-            <select v-model="form.status" class="form-select">
+            <select v-model="form.status" class="form-select" required>
+              <option :value="null" disabled>Pilih Status</option>
               <option value="AVAILABLE">Available</option>
               <option value="RENTED">Rented</option>
               <option value="MAINTENANCE">Maintenance</option>
@@ -86,7 +87,8 @@
         <div class="form-pair">
           <div class="form-group">
             <label class="form-label">Tipe Item</label>
-            <select v-model="form.type" class="form-select">
+            <select v-model="form.type" class="form-select" required>
+              <option :value="null" disabled>Pilih Tipe Item</option>
               <option v-for="type in ITEM_TYPE" :key="type" :value="type">
                 {{ type }}
               </option>
@@ -138,13 +140,36 @@
 
         <!-- Ukuran -->
         <div class="form-group grid-span-2">
-          <label class="form-label">Ukuran</label>
-          <select v-model.number="form.size_id" class="form-select">
-            <option :value="null">Pilih ukuran</option>
-            <option v-for="size in sizeOptions" :key="size.id" :value="size.id">
-              {{ size.name }}
-            </option>
-          </select>
+          <label class="form-label">
+            Ukuran <span class="required">*</span>
+          </label>
+          <div class="size-selection">
+            <button class="size-trigger" type="button" @click="openSizePicker">
+              <div class="size-trigger-text">
+                <template v-if="selectedSize">
+                  <strong>{{ selectedSize.name }}</strong>
+                  <span v-if="selectedSize.code"> · {{ selectedSize.code }}</span>
+                  <span class="size-trigger-meta">
+                    {{ selectedSize.description || "Tanpa deskripsi" }}
+                  </span>
+                </template>
+                <template v-else>
+                  Pilih ukuran item
+                </template>
+              </div>
+              <span class="size-trigger-action">
+                {{ selectedSize ? "Ganti" : "Pilih" }}
+              </span>
+            </button>
+            <button
+              v-if="selectedSize"
+              type="button"
+              class="size-clear"
+              @click="clearSelectedSize"
+            >
+              Hapus pilihan
+            </button>
+          </div>
           <div v-if="errors.size_id" class="error-message">
             {{ errors.size_id }}
           </div>
@@ -211,6 +236,11 @@
         </div>
       </div>
     </form>
+
+    <ItemSizePickerDialog
+      v-model="showSizePicker"
+      @select="handleSizeSelect"
+    />
   </AppDialog>
 </template>
 
@@ -220,6 +250,7 @@ import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
+import ItemSizePickerDialog from "@/components/modules/items/ItemSizePickerDialog.vue";
 import { ipcRenderer } from "@/services/ipc";
 import { fetchDiscountGroups } from "@/services/masterData";
 import { useNumberFormat } from "@/composables/useNumberFormat";
@@ -230,9 +261,9 @@ const defaultForm = () => ({
   price: 0,
   sale_price: 0,
   rental_price_per_day: 0,
-  type: "RENTAL",
+  type: null,
   description: "",
-  status: "AVAILABLE",
+  status: null,
   code: "",
   dailyRate: 0,
   weeklyRate: 0,
@@ -249,7 +280,7 @@ const defaultForm = () => ({
 
 export default {
   name: "ItemForm",
-  components: { AppDialog, FormInput },
+  components: { AppDialog, FormInput, ItemSizePickerDialog },
   props: {
     modelValue: Boolean,
     editData: { type: Object, default: null },
@@ -267,7 +298,20 @@ export default {
       get: () => props.modelValue,
       set: (value) => emit("update:modelValue", value),
     });
-    const sizeOptions = computed(() => itemStore.sizes || []);
+    const showSizePicker = ref(false);
+    const selectedSize = computed(() => {
+      const value = form.value.size_id;
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      const numericId = Number(value);
+      if (Number.isNaN(numericId)) return null;
+      return (
+        itemStore.sizes.find(
+          (size) => Number(size.id) === numericId,
+        ) || null
+      );
+    });
     const categories = ref([]);
     const discountGroups = ref([]);
     const autoCodeRef = ref("");
@@ -298,11 +342,11 @@ export default {
     );
 
     const syncAutoCode = async () => {
-      if (isEdit.value || generatingCode.value) return;
+      if (isEdit.value || generatingCode.value || !form.value.type) return;
       
       try {
         generatingCode.value = true;
-        const itemType = form.value.type || "RENTAL";
+        const itemType = form.value.type;
         const generated = await ipcRenderer.invoke("items:getNextCode", itemType);
         
         if (!form.value.code || form.value.code === autoCodeRef.value) {
@@ -348,14 +392,13 @@ export default {
             discount_group_id: props.editData.discount_group_id ?? null,
           }
         : defaultForm();
-      if (!isEdit.value && categories.value.length && !form.value.category_id) {
-        form.value.category_id = categories.value[0].id;
-      }
+      // Jangan auto-select kategori, biarkan user memilih
       errors.value = {};
-      if (!isEdit.value) {
-        // Generate code asynchronously
-        syncAutoCode().catch(console.error);
+      // Pastikan data ukuran tersedia untuk menampilkan ringkasan
+      if (!itemStore.sizes.length) {
+        itemStore.fetchSizes().catch(() => {});
       }
+      // Code akan di-generate saat type dipilih
     };
 
     const validateForm = () => {
@@ -364,6 +407,8 @@ export default {
       // Kode akan di-generate otomatis, tidak perlu validasi
       if (!form.value.price || form.value.price <= 0)
         e.price = "Harga harus > 0";
+      if (!form.value.type) e.type = "Tipe item wajib dipilih";
+      if (!form.value.status) e.status = "Status wajib dipilih";
       if (!form.value.category_id) e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       
@@ -419,6 +464,7 @@ export default {
     watch(
       () => form.value.type,
       async (newType) => {
+        if (!newType) return;
         const availability = getAvailabilityByType(newType);
         form.value.is_available_for_rent = availability.is_available_for_rent;
         form.value.is_available_for_sale = availability.is_available_for_sale;
@@ -427,19 +473,14 @@ export default {
         if (!isEdit.value) {
           await syncAutoCode();
         }
-      },
-      { immediate: true }
+      }
     );
 
     watch(
       () => props.modelValue,
       (val) => val && resetForm(),
     );
-    watch(categories, (list) => {
-      if (!isEdit.value && list.length && !form.value.category_id) {
-        form.value.category_id = list[0].id;
-      }
-    });
+    // Jangan auto-select kategori saat categories loaded
     // Code is now generated based on type, not name
     // Removed watch for name as it's no longer needed
 
@@ -476,6 +517,22 @@ export default {
       loadDiscountGroups();
     });
 
+    const openSizePicker = () => {
+      showSizePicker.value = true;
+      if (!itemStore.sizes.length) {
+        itemStore.fetchSizes().catch(() => {});
+      }
+    };
+
+    const handleSizeSelect = (size) => {
+      form.value.size_id = size.id;
+      errors.value.size_id = "";
+    };
+
+    const clearSelectedSize = () => {
+      form.value.size_id = null;
+    };
+
     return {
       form,
       errors,
@@ -484,7 +541,6 @@ export default {
       showDialog,
       ITEM_TYPE,
       handleSubmit,
-      sizeOptions,
       categories,
       discountGroups,
       formatCurrency,
@@ -494,6 +550,11 @@ export default {
       handleDailyRateInput,
       handleWeeklyRateInput,
       handleDepositInput,
+      showSizePicker,
+      openSizePicker,
+      handleSizeSelect,
+      clearSelectedSize,
+      selectedSize,
     };
   },
 };
@@ -592,6 +653,66 @@ export default {
   font-size: 0.75rem;
   margin-top: 0.25rem;
   line-height: 1.6;
+}
+
+.size-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.size-trigger {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.size-trigger:hover {
+  border-color: #6366f1;
+}
+
+.size-trigger-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: #111827;
+}
+
+.size-trigger-text strong {
+  font-weight: 600;
+}
+
+.size-trigger-text span {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.size-trigger-meta {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.size-trigger-action {
+  font-size: 0.85rem;
+  color: #4f46e5;
+}
+
+.size-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
 .label-optional {

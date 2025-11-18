@@ -48,7 +48,12 @@ function setupReportExportHandlers() {
       const data = await database.query(query);
 
       if (!data || data.length === 0) {
-        throw new Error("No data available for export");
+        logger.warn(`Report export skipped, no data for type: ${reportType}`);
+        return {
+          success: false,
+          error: "Laporan tidak memiliki data untuk di-export. Periksa kembali filter yang digunakan.",
+          code: "NO_DATA",
+        };
       }
 
       // Show save dialog
@@ -106,7 +111,12 @@ function setupReportExportHandlers() {
       const data = await database.query(query);
 
       if (!data || data.length === 0) {
-        throw new Error("No data available for preview");
+        logger.warn(`Report preview skipped, no data for type: ${reportType}`);
+        return {
+          success: false,
+          error: "Laporan tidak memiliki data untuk ditampilkan. Periksa kembali filter yang digunakan.",
+          code: "NO_DATA",
+        };
       }
 
       // Create temporary file path

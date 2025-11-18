@@ -146,8 +146,10 @@ function setupStockAlertHandlers() {
           FROM items i
           LEFT JOIN categories c ON i.category_id = c.id
           WHERE i.is_active = 1
-            AND i.min_stock_alert > 0
-            AND i.stock_quantity <= i.min_stock_alert
+            AND (
+              i.stock_quantity <= 0
+              OR (i.min_stock_alert > 0 AND i.stock_quantity <= i.min_stock_alert)
+            )
         
           UNION ALL
           
@@ -161,8 +163,10 @@ function setupStockAlertHandlers() {
             a.min_stock_alert
           FROM accessories a
           WHERE a.is_active = 1
-            AND a.min_stock_alert > 0
-            AND a.stock_quantity <= a.min_stock_alert
+            AND (
+              a.stock_quantity <= 0
+              OR (a.min_stock_alert > 0 AND a.stock_quantity <= a.min_stock_alert)
+            )
         )
         ORDER BY shortage DESC, name ASC
       `;

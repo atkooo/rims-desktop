@@ -21,7 +21,9 @@
             id="bundleType"
             class="form-select"
             v-model="form.bundle_type"
+            required
           >
+            <option :value="null" disabled>Pilih Tipe Paket</option>
             <option value="rental">Rental</option>
             <option value="sale">Sale</option>
             <option value="both">Both</option>
@@ -121,7 +123,7 @@ import { ipcRenderer } from "@/services/ipc";
 const defaultForm = () => ({
   code: "",
   name: "",
-  bundle_type: "rental",
+  bundle_type: null,
   description: "",
   price: "",
   rental_price_per_day: "",
@@ -192,15 +194,14 @@ export default {
         form.value = {
           ...defaultForm(),
           ...props.editData,
-          bundle_type: props.editData.bundle_type || "rental",
+          bundle_type: props.editData.bundle_type || null,
           discount_group_id: props.editData.discount_group_id ?? null,
           is_active:
             props.editData.is_active === 1 || props.editData.is_active === true,
         };
       } else {
         form.value = defaultForm();
-        // Generate code for new bundle
-        syncAutoCode().catch(console.error);
+        // Code akan di-generate setelah bundle_type dipilih
       }
       errors.value = {};
       submitError.value = "";
@@ -212,7 +213,9 @@ export default {
       if (!form.value.name || !form.value.name.trim()) {
         validationErrors.name = "Nama wajib diisi";
       }
-      if (!["rental", "sale", "both"].includes(form.value.bundle_type)) {
+      if (!form.value.bundle_type) {
+        validationErrors.bundle_type = "Tipe paket wajib dipilih";
+      } else if (!["rental", "sale", "both"].includes(form.value.bundle_type)) {
         validationErrors.bundle_type = "Tipe tidak valid";
       }
 

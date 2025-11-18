@@ -453,12 +453,13 @@
         </div>
 
         <div class="form-group">
-          <label>
+          <label class="checkbox-label">
             <input
               type="checkbox"
               v-model="userForm.is_active"
+              class="checkbox-input"
             />
-            <span style="margin-left: 8px">User Aktif</span>
+            <span>User Aktif</span>
           </label>
         </div>
 
@@ -681,7 +682,7 @@ async function editUser(user) {
       full_name: userData.full_name || "",
       email: userData.email || "",
       role_id: userData.role_id || "",
-      is_active: userData.is_active !== undefined ? userData.is_active : true,
+      is_active: userData.is_active !== undefined ? Boolean(userData.is_active) : true,
     };
     userFormError.value = "";
     isEditUser.value = true;
@@ -729,7 +730,7 @@ async function saveUser() {
       full_name: String(userForm.value.full_name || "").trim(),
       email: String(userForm.value.email || "").trim() || null,
       role_id: Number(userForm.value.role_id),
-      is_active: userForm.value.is_active,
+      is_active: Boolean(userForm.value.is_active),
     };
 
     if (isEditUser.value) {
@@ -1202,7 +1203,7 @@ onMounted(async () => {
   margin-bottom: 15px;
 }
 
-.form-group label {
+.form-group label:not(.checkbox-label) {
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
@@ -1220,7 +1221,7 @@ onMounted(async () => {
   font-size: 0.85rem;
 }
 
-.form-group input,
+.form-group input:not([type="checkbox"]),
 .form-group textarea,
 .form-group select {
   width: 100%;
@@ -1233,7 +1234,7 @@ onMounted(async () => {
   background-color: white;
 }
 
-.form-group input:focus,
+.form-group input:not([type="checkbox"]):focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
@@ -1244,6 +1245,38 @@ onMounted(async () => {
 .form-group input:disabled {
   background-color: #f3f4f6;
   cursor: not-allowed;
+}
+
+.form-group input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 0;
+  font-weight: 500;
+  color: #111827;
+}
+
+.checkbox-label:hover {
+  color: #6366f1;
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #6366f1;
+  flex-shrink: 0;
 }
 
 .error-message {

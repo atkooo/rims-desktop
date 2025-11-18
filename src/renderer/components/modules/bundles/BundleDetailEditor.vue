@@ -13,7 +13,9 @@
               v-model="form.type"
               class="form-select"
               @change="handleTypeChange"
+              required
             >
+              <option :value="null" disabled>Pilih Jenis</option>
               <option value="item">Item</option>
               <option value="accessory">Aksesoris</option>
             </select>
@@ -231,7 +233,7 @@ import { useItemStore } from "@/store/items";
 import { formatCurrency } from "@/composables/useCurrency";
 
 const defaultForm = () => ({
-  type: "item",
+  type: null,
   referenceId: "",
   quantity: 1,
   notes: "",
@@ -418,6 +420,9 @@ export default {
 
     const validateForm = () => {
       const validationErrors = {};
+      if (!form.value.type) {
+        validationErrors.type = "Jenis wajib dipilih";
+      }
       if (!form.value.referenceId) {
         validationErrors.referenceId = "Pilih data terlebih dahulu";
       }

@@ -106,8 +106,15 @@ function setupItemHandlers() {
       const stockQuantity = 0;
       const availableQuantity = 0;
       
-      // Get min_stock_alert from itemData, default to 0
-      const minStockAlert = Math.max(0, toInteger(itemData.min_stock_alert ?? 0));
+      // Get min_stock_alert from itemData, default to 1 agar tidak nol saat awal
+      const minStockAlert = Math.max(
+        0,
+        toInteger(
+          itemData.min_stock_alert === undefined || itemData.min_stock_alert === null
+            ? 1
+            : itemData.min_stock_alert,
+        ),
+      );
 
       // Get deposit from itemData, default to 0
       const deposit = Math.max(0, Number(itemData.deposit ?? 0));
