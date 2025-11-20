@@ -708,11 +708,18 @@ export default {
 .size-clear {
   border: none;
   background: none;
-  padding: 0;
+  padding: 0.25rem 0;
   font-size: 0.8rem;
-  color: #dc2626;
+  color: #6b7280;
   cursor: pointer;
   align-self: flex-start;
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.size-clear:hover {
+  color: #374151;
+  text-decoration: none;
 }
 
 .label-optional {
