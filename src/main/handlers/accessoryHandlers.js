@@ -1,7 +1,8 @@
-const { ipcMain } = require("electron");
+const { ipcMain, dialog } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
+const ExcelJS = require("exceljs");
 const {
   toInteger,
   sanitizeAvailable,
@@ -292,6 +293,261 @@ function setupAccessoryHandlers() {
       return accessory;
     } catch (error) {
       logger.error(`Error getting accessory by code ${code}:`, error);
+      throw error;
+    }
+  });
+
+  // Download template Excel for bulk import
+  ipcMain.handle("accessories:downloadTemplate", async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Accessories Template");
+
+      // Get discount groups for reference
+      const discountGroups = await database.query("SELECT id, name FROM discount_groups WHERE is_active = 1 ORDER BY name");
+
+      // Define headers
+      const headers = [
+        "Nama*",
+        "Deskripsi",
+        "Harga Beli",
+        "Harga Sewa/Hari",
+        "Harga Jual",
+        "Min Stok Alert",
+        "Tersedia untuk Jual",
+        "Aktif",
+        "Grup Diskon",
+      ];
+
+      // Set headers
+      worksheet.addRow(headers);
+
+      // Style header row - hanya kolom yang digunakan
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.alignment = { vertical: "middle", horizontal: "center" };
+      
+      // Set warna background hanya untuk sel yang digunakan (kolom A sampai I = 9 kolom)
+      for (let col = 1; col <= headers.length; col++) {
+        const cell = headerRow.getCell(col);
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF4F46E5" },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      }
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 30 }, // Nama
+        { width: 40 }, // Deskripsi
+        { width: 15 }, // Harga Beli
+        { width: 15 }, // Harga Sewa/Hari
+        { width: 15 }, // Harga Jual
+        { width: 15 }, // Min Stok Alert
+        { width: 20 }, // Tersedia untuk Jual
+        { width: 15 }, // Aktif
+        { width: 20 }, // Grup Diskon
+      ];
+
+      // Add data validation for boolean fields
+      ["G2:G1000", "H2:H1000"].forEach(range => {
+        worksheet.dataValidations.add(range, {
+          type: "list",
+          allowBlank: true,
+          formulae: ['"Ya,Tidak"'],
+          showErrorMessage: true,
+          errorStyle: "error",
+          errorTitle: "Invalid Value",
+          error: "Pilih Ya atau Tidak",
+        });
+      });
+
+      // Add data validation for discount groups
+      if (discountGroups.length > 0) {
+        worksheet.dataValidations.add("I2:I1000", {
+          type: "list",
+          allowBlank: true,
+          formulae: [`"${discountGroups.map(dg => dg.name).join(",")}"`],
+          showErrorMessage: true,
+          errorStyle: "error",
+          errorTitle: "Invalid Discount Group",
+          error: "Pilih grup diskon dari daftar yang tersedia",
+        });
+      }
+
+      // Add instruction row
+      worksheet.insertRow(2, [
+        "Contoh: Sepatu Pengantin",
+        "Deskripsi aksesoris",
+        "0",
+        "0",
+        "100000",
+        "1",
+        "Ya",
+        "Ya",
+        "Nama grup diskon (opsional)",
+      ]);
+
+      // Style instruction row
+      const instructionRow = worksheet.getRow(2);
+      instructionRow.font = { italic: true, color: { argb: "FF6B7280" } };
+      instructionRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF3F4F6" },
+      };
+
+      // Add note sheet
+      const noteSheet = workbook.addWorksheet("Panduan");
+      noteSheet.addRow(["PANDUAN PENGISIAN TEMPLATE AKSESORIS"]);
+      noteSheet.addRow([]);
+      noteSheet.addRow(["Kolom dengan tanda * wajib diisi"]);
+      noteSheet.addRow([]);
+      noteSheet.addRow(["Nama: Nama aksesoris (wajib)"]);
+      noteSheet.addRow(["Harga Sewa/Hari: Biasanya 0 untuk aksesoris (tidak disewakan)"]);
+      noteSheet.addRow(["Tersedia untuk Jual: Ya atau Tidak (default: Ya)"]);
+      noteSheet.addRow(["Aktif: Ya atau Tidak (default: Ya)"]);
+      noteSheet.addRow([]);
+      noteSheet.addRow(["CATATAN:"]);
+      noteSheet.addRow(["1. Hapus baris contoh sebelum mengisi data"]);
+      noteSheet.addRow(["2. Stok akan diatur ke 0 saat import (atur melalui manajemen stok)"]);
+      noteSheet.addRow(["3. Kode akan dibuat otomatis oleh sistem"]);
+      noteSheet.addRow(["4. Aksesoris tidak tersedia untuk sewa (hanya jual)"]);
+      noteSheet.addRow(["5. Pastikan format angka untuk harga menggunakan titik (.) sebagai desimal"]);
+
+      // Save file
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: "Simpan Template Aksesoris",
+        defaultPath: "Template_Aksesoris.xlsx",
+        filters: [
+          { name: "Excel Files", extensions: ["xlsx"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (canceled || !filePath) {
+        return { success: false, error: "Download dibatalkan" };
+      }
+
+      await workbook.xlsx.writeFile(filePath);
+      return { success: true, filePath };
+    } catch (error) {
+      logger.error("Error downloading accessories template:", error);
+      throw error;
+    }
+  });
+
+  // Import accessories from Excel
+  ipcMain.handle("accessories:importExcel", async (event, filePath) => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+
+      const worksheet = workbook.getWorksheet("Accessories Template") || workbook.worksheets[0];
+      if (!worksheet) {
+        throw new Error("Worksheet tidak ditemukan");
+      }
+
+      // Get reference data
+      const discountGroups = await database.query("SELECT id, name FROM discount_groups WHERE is_active = 1");
+      const discountGroupMap = new Map(discountGroups.map(dg => [dg.name.toLowerCase(), dg.id]));
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      await database.execute("BEGIN TRANSACTION");
+
+      try {
+        // Skip header and instruction rows (rows 1-2)
+        for (let rowNum = 3; rowNum <= worksheet.rowCount; rowNum++) {
+          const row = worksheet.getRow(rowNum);
+          
+          // Skip empty rows
+          if (!row.getCell(1).value || !row.getCell(1).value.toString().trim()) {
+            continue;
+          }
+
+          try {
+            const name = (row.getCell(1).value || "").toString().trim();
+            const description = (row.getCell(2).value || "").toString().trim() || null;
+            const purchasePrice = parseFloat(row.getCell(3).value || 0) || 0;
+            const rentalPricePerDay = parseFloat(row.getCell(4).value || 0) || 0;
+            const salePrice = parseFloat(row.getCell(5).value || 0) || 0;
+            const minStockAlert = parseInt(row.getCell(6).value || 1) || 1;
+            const isAvailableForSale = (row.getCell(7).value || "Ya").toString().trim().toLowerCase() === "ya";
+            const isActive = (row.getCell(8).value || "Ya").toString().trim().toLowerCase() === "ya";
+            const discountGroupName = (row.getCell(9).value || "").toString().trim() || null;
+
+            // Validation
+            if (!name) {
+              throw new Error("Nama wajib diisi");
+            }
+
+            let discountGroupId = null;
+            if (discountGroupName) {
+              discountGroupId = discountGroupMap.get(discountGroupName.toLowerCase());
+              if (!discountGroupId) {
+                throw new Error(`Grup diskon "${discountGroupName}" tidak ditemukan`);
+              }
+            }
+
+            // Generate code automatically
+            const finalCode = await generateAccessoryCode(database);
+
+            const now = new Date().toISOString();
+
+            // Insert accessory
+            await database.execute(
+              `INSERT INTO accessories (
+                code, name, description, purchase_price, rental_price_per_day,
+                sale_price, stock_quantity, available_quantity, min_stock_alert,
+                is_available_for_rent, is_available_for_sale, is_active,
+                discount_group_id, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                finalCode,
+                name,
+                description,
+                purchasePrice,
+                rentalPricePerDay,
+                salePrice,
+                0, // stock_quantity
+                0, // available_quantity
+                minStockAlert,
+                0, // is_available_for_rent (always false for accessories)
+                isAvailableForSale ? 1 : 0,
+                isActive ? 1 : 0,
+                discountGroupId,
+                now,
+                now,
+              ]
+            );
+
+            results.success++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push({
+              row: rowNum,
+              error: error.message || "Error tidak diketahui",
+            });
+            logger.error(`Error importing row ${rowNum}:`, error);
+          }
+        }
+
+        await database.execute("COMMIT");
+        return results;
+      } catch (error) {
+        await database.execute("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("Error importing accessories from Excel:", error);
       throw error;
     }
   });

@@ -152,18 +152,24 @@ async function validateCashierSession(userId) {
     return null;
   }
 
-  const activeSession = await database.queryOne(
-    `SELECT id FROM cashier_sessions 
-     WHERE user_id = ? AND status = 'open' 
+  // Cek apakah ada sesi kasir yang terbuka (siapa pun yang membuka)
+  const anyOpenSession = await database.queryOne(
+    `SELECT id, user_id, session_code FROM cashier_sessions 
+     WHERE status = 'open' 
      ORDER BY opening_date DESC LIMIT 1`,
-    [userId],
   );
 
-  if (!activeSession) {
+  // Jika tidak ada sesi kasir yang terbuka sama sekali
+  if (!anyOpenSession) {
     throw new Error("Sesi kasir belum dibuka");
   }
 
-  return activeSession.id;
+  // Jika ada sesi kasir terbuka, cek apakah user yang melakukan transaksi adalah user yang membuka sesi
+  if (anyOpenSession.user_id !== userId) {
+    throw new Error("Anda tidak memiliki otoritas untuk melakukan transaksi. Hanya kasir yang membuka sesi kasir yang berhak melakukan transaksi.");
+  }
+
+  return anyOpenSession.id;
 }
 
 async function expandBundleSelections(selections = []) {

@@ -8,12 +8,17 @@
         </p>
       </div>
       <div class="header-actions">
-        <AppButton variant="primary" @click="openCreate">
-          Tambah Aksesoris
-        </AppButton>
-        <AppButton variant="secondary" :loading="loading" @click="loadData">
-          Refresh Data
-        </AppButton>
+        <div class="header-actions-group">
+          <AppButton variant="secondary" @click="showBulkImport = true">
+            Import Excel
+          </AppButton>
+          <AppButton variant="primary" @click="openCreate">
+            Tambah Aksesoris
+          </AppButton>
+          <AppButton variant="secondary" :loading="loading" @click="loadData">
+            Refresh Data
+          </AppButton>
+        </div>
       </div>
     </div>
 
@@ -151,6 +156,12 @@
         >?
       </p>
     </AppDialog>
+
+    <BulkImportDialog
+      v-model="showBulkImport"
+      type="accessories"
+      @imported="handleBulkImported"
+    />
   </div>
 </template>
 
@@ -168,12 +179,13 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AccessoryForm from "@/components/modules/accessories/AccessoryForm.vue";
+import BulkImportDialog from "@/components/modules/master/BulkImportDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchAccessories, deleteAccessory } from "@/services/masterData";
 
 export default {
   name: "AccessoriesView",
-  components: { AppButton, AppDialog, AppTable, AccessoryForm, Icon },
+  components: { AppButton, AppDialog, AppTable, AccessoryForm, BulkImportDialog, Icon },
   setup() {
     const router = useRouter();
     const accessories = ref([]);
@@ -186,6 +198,7 @@ export default {
     const accessoryToDelete = ref(null);
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const showBulkImport = ref(false);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -269,6 +282,11 @@ export default {
       loadData();
     };
 
+    const handleBulkImported = async () => {
+      showBulkImport.value = false;
+      await loadData();
+    };
+
     const promptDelete = (item) => {
       openMenuId.value = null;
       accessoryToDelete.value = item;
@@ -347,6 +365,8 @@ export default {
       confirmDelete,
       toggleActionMenu,
       getMenuPosition,
+      showBulkImport,
+      handleBulkImported,
       formatCurrency,
     };
   },
@@ -554,5 +574,11 @@ export default {
   padding: 0.75rem 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
+}
+
+.header-actions-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 </style>

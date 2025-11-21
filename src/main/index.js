@@ -28,7 +28,7 @@ if (!envLoaded) {
   console.log("No .env file found. Using environment variables from system or defaults.");
 }
 
-const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require("electron");
 
 // After app is available, try additional paths for packaged apps
 if (!envLoaded && app && typeof app.getPath === "function") {
@@ -297,6 +297,17 @@ ipcMain.handle("app:openLogDirectory", () => {
   } catch (error) {
     logger.error("Error opening log directory:", error);
     return { success: false, error: error.message };
+  }
+});
+
+// Handler for file dialog
+ipcMain.handle("dialog:showOpenDialog", async (event, options) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, options);
+    return result;
+  } catch (error) {
+    logger.error("Error showing open dialog:", error);
+    throw error;
   }
 });
 

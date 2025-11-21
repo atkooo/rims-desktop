@@ -7,9 +7,9 @@
  * Error message mappings - map error messages ke pesan yang lebih general
  */
 const ERROR_MESSAGES = {
-  // Cashier session errors
+  // Cashier session errors - harus spesifik, jangan terlalu general
   "Sesi kasir belum dibuka": "Sesi kasir belum dibuka",
-  "sesi kasir": "Sesi kasir belum dibuka",
+  "tidak memiliki otoritas": "Anda tidak memiliki otoritas untuk melakukan transaksi. Hanya kasir yang membuka sesi kasir yang berhak melakukan transaksi.",
   "cashier session": "Sesi kasir belum dibuka",
   
   // Stock errors
@@ -94,14 +94,36 @@ function cleanErrorMessage(error) {
   }
 
   // Map ke pesan yang lebih user-friendly jika ada
+  // Prioritas: cek mapping yang lebih spesifik dulu
   const lowerMessage = message.toLowerCase();
-  for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
-    if (lowerMessage.includes(key.toLowerCase())) {
-      // Jika pesan sudah sesuai dengan mapping, return mapping
-      // Jika tidak, cek apakah mapping lebih baik
-      if (message.toLowerCase().includes(key.toLowerCase())) {
+  
+  // Jika pesan sudah cukup spesifik dan jelas (lebih dari 30 karakter), 
+  // cek apakah ada mapping yang sangat spesifik yang cocok
+  if (message.length > 30) {
+    // Cek mapping yang sangat spesifik terlebih dahulu (yang lebih panjang)
+    // Sort by key length descending untuk prioritas mapping yang lebih spesifik
+    const sortedMappings = Object.entries(ERROR_MESSAGES).sort((a, b) => b[0].length - a[0].length);
+    
+    for (const [key, value] of sortedMappings) {
+      // Untuk pesan panjang, hanya gunakan mapping yang cukup spesifik (lebih dari 15 karakter)
+      // atau mapping yang exact match dengan pesan
+      if (key.length > 15 && lowerMessage.includes(key.toLowerCase())) {
+        // Jika mapping cocok, return value mapping
         return value;
       }
+    }
+    
+    // Jika tidak ada mapping spesifik yang cocok, return pesan asli (jangan ubah)
+    return message;
+  }
+  
+  // Untuk pesan pendek, gunakan mapping seperti biasa
+  // Sort by key length descending untuk prioritas mapping yang lebih spesifik
+  const sortedMappings = Object.entries(ERROR_MESSAGES).sort((a, b) => b[0].length - a[0].length);
+  
+  for (const [key, value] of sortedMappings) {
+    if (lowerMessage.includes(key.toLowerCase())) {
+      return value;
     }
   }
 

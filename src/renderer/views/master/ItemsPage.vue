@@ -8,9 +8,14 @@
             Kelola katalog barang dan pantau status stok secara terpusat.
           </p>
         </div>
-        <AppButton variant="primary" @click="handleAddNew">
-          Tambah Item
-        </AppButton>
+        <div class="header-actions-group">
+          <AppButton variant="secondary" @click="showBulkImport = true">
+            Import Excel
+          </AppButton>
+          <AppButton variant="primary" @click="handleAddNew">
+            Tambah Item
+          </AppButton>
+        </div>
       </div>
     </div>
 
@@ -176,6 +181,12 @@
     </AppDialog>
 
     <ItemForm v-model="showForm" :edit-data="itemToEdit" @saved="handleFormSaved" />
+
+    <BulkImportDialog
+      v-model="showBulkImport"
+      type="items"
+      @imported="handleBulkImported"
+    />
   </div>
 </template>
 
@@ -189,6 +200,7 @@ import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 import ItemForm from "@/components/modules/items/ItemForm.vue";
+import BulkImportDialog from "@/components/modules/master/BulkImportDialog.vue";
 
 export default {
   name: "ItemsPage",
@@ -199,6 +211,7 @@ export default {
     AppDialog,
     Icon,
     ItemForm,
+    BulkImportDialog,
   },
 
   setup() {
@@ -212,6 +225,7 @@ export default {
     const itemToDelete = ref(null);
     const showForm = ref(false);
     const itemToEdit = ref(null);
+    const showBulkImport = ref(false);
 
     // Filter state
     const filters = ref({
@@ -378,6 +392,11 @@ export default {
       await itemStore.fetchItems();
     };
 
+    const handleBulkImported = async () => {
+      showBulkImport.value = false;
+      await itemStore.fetchItems();
+    };
+
     // Load data
     const loadCategories = async () => {
       try {
@@ -440,6 +459,8 @@ export default {
       promptDelete,
       confirmDelete,
       handleFormSaved,
+      showBulkImport,
+      handleBulkImported,
     };
   },
 };
@@ -624,5 +645,11 @@ export default {
   margin-top: 0.75rem;
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+.header-actions-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 </style>
