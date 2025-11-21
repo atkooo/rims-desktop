@@ -282,6 +282,7 @@ import { fetchCustomers } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { TRANSACTION_TYPE } from "@shared/constants";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { toDateInput } from "@/utils/dateUtils";
 
 const transactionTypeOptions = [
   { value: TRANSACTION_TYPE.RENTAL, label: "Sewa & Pengembalian" },
@@ -298,13 +299,6 @@ const paymentStatusOptions = [
   { value: "unpaid", label: "Belum Dibayar" },
   { value: "paid", label: "Lunas" },
 ];
-
-const toDateInput = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
-};
 
 const createDefaultForm = (type = TRANSACTION_TYPE.RENTAL) => {
   const today = new Date();

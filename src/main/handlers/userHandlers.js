@@ -270,6 +270,103 @@ function setupUserHandlers() {
       throw error;
     }
   });
+
+  // Update own profile (user can only update their own full_name, email, and password)
+  ipcMain.handle("users:updateOwnProfile", async (event, { full_name, email, password, currentPassword }) => {
+    try {
+      const currentUser = getCurrentUserSafely();
+      if (!currentUser || !currentUser.id) {
+        throw new Error("User tidak terautentikasi");
+      }
+
+      const userId = currentUser.id;
+
+      // Check if user exists
+      const existing = await database.queryOne(
+        "SELECT id, password_hash FROM users WHERE id = ?",
+        [userId],
+      );
+      if (!existing) {
+        throw new Error("User tidak ditemukan");
+      }
+
+      // If changing password, verify current password
+      if (password) {
+        if (!currentPassword) {
+          throw new Error("Password lama wajib diisi untuk mengubah password");
+        }
+        const { verifyPassword } = require("../auth");
+        if (!verifyPassword(currentPassword, existing.password_hash)) {
+          throw new Error("Password lama salah");
+        }
+        if (password.length < 6) {
+          throw new Error("Password baru minimal 6 karakter");
+        }
+      }
+
+      const updates = [];
+      const values = [];
+
+      if (full_name !== undefined) {
+        if (!full_name || !full_name.trim()) {
+          throw new Error("Nama lengkap wajib diisi");
+        }
+        updates.push("full_name = ?");
+        values.push(full_name.trim());
+      }
+
+      if (email !== undefined) {
+        updates.push("email = ?");
+        values.push(email ? email.trim() : null);
+      }
+
+      if (password) {
+        const passwordHash = scryptHash(password);
+        updates.push("password_hash = ?");
+        values.push(passwordHash);
+      }
+
+      if (updates.length === 0) {
+        throw new Error("Tidak ada data yang diubah");
+      }
+
+      updates.push("updated_at = CURRENT_TIMESTAMP");
+      values.push(userId);
+
+      await database.execute(
+        `UPDATE users SET ${updates.join(", ")} WHERE id = ?`,
+        values,
+      );
+
+      await logActivity({
+        userId: userId,
+        action: "UPDATE",
+        module: "users",
+        description: `Updated own profile`,
+      });
+
+      // Return updated user
+      const updatedUser = await database.queryOne(
+        `SELECT 
+          u.id,
+          u.username,
+          u.full_name,
+          u.email,
+          u.role_id,
+          u.is_active,
+          r.name AS role_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.id = ?`,
+        [userId],
+      );
+
+      return updatedUser;
+    } catch (error) {
+      logger.error("Error updating own profile:", error);
+      throw error;
+    }
+  });
 }
 
 module.exports = setupUserHandlers;

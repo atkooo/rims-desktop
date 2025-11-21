@@ -154,7 +154,7 @@ export default {
       try {
         const user = await getCurrentUser();
         if (user?.id) {
-          const session = await getCurrentSession(user.id);
+          const session = await getCurrentSession(user.id, user.role);
           cashierStatus.value = session
             ? { status: "open", ...session }
             : { status: "closed" };

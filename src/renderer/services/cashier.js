@@ -1,8 +1,8 @@
 import { ipcRenderer } from "@/services/ipc";
 
 // Get current open session for user
-export function getCurrentSession(userId) {
-  return ipcRenderer.invoke("cashier:getCurrentSession", userId);
+export function getCurrentSession(userId, userRole = null) {
+  return ipcRenderer.invoke("cashier:getCurrentSession", userId, userRole);
 }
 
 // Get all sessions with optional filters

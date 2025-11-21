@@ -27,16 +27,38 @@
 </template>
 
 <script>
+import { onMounted, onBeforeUnmount } from "vue";
+import { useRouter } from "vue-router";
 import { useNotification } from "./composables/useNotification";
 import Sidebar from "./components/layout/Sidebar.vue";
 import Topbar from "./components/layout/Topbar.vue";
 import Breadcrumbs from "./components/layout/Breadcrumbs.vue";
 import AppNotification from "./components/ui/AppNotification.vue";
+import { eventBus } from "./utils/eventBus";
 
 export default {
   components: { Sidebar, Topbar, Breadcrumbs, AppNotification },
   setup() {
+    const router = useRouter();
     const { notification, hideNotification } = useNotification();
+
+    const handleGlobalSearch = (query) => {
+      if (query && query.trim()) {
+        router.push({
+          name: "search-results",
+          query: { q: query.trim() },
+        });
+      }
+    };
+
+    onMounted(() => {
+      eventBus.on("global-search", handleGlobalSearch);
+    });
+
+    onBeforeUnmount(() => {
+      eventBus.off("global-search", handleGlobalSearch);
+    });
+
     return {
       notification,
       hideNotification,

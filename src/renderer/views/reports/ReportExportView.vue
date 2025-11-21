@@ -145,7 +145,6 @@ export default {
         { value: "sales-transactions", label: "Transaksi Penjualan", hasDate: true },
         { value: "daily-revenue", label: "Pendapatan Harian", hasDate: true },
         { value: "revenue-by-cashier", label: "Pendapatan per Kasir", hasDate: true },
-        { value: "transactions-by-customer", label: "Transaksi per Customer", hasDate: true },
       ],
       finance: [
         { value: "payments", label: "Laporan Pembayaran", hasDate: true },

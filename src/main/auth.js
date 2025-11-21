@@ -156,4 +156,4 @@ function getCurrentUser() {
   return currentUser;
 }
 
-module.exports = { registerAuthIpc, getCurrentUser, scryptHash };
+module.exports = { registerAuthIpc, getCurrentUser, scryptHash, verifyPassword };

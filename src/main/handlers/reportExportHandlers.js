@@ -17,7 +17,6 @@ const reportTypeMap = {
   "daily-revenue": "reports:getDailyRevenue",
   "revenue-by-cashier": "reports:getRevenueByCashier",
   payments: "reports:getPayments",
-  "transactions-by-customer": "reports:getTransactionsByCustomer",
   "stock-items": "reports:getStockItems",
   "stock-accessories": "reports:getStockAccessories",
   "stock-bundles": "reports:getStockBundles",
@@ -170,6 +169,10 @@ function setupReportExportHandlers() {
       dateColumn = "opening_date";
     } else if (reportType === "payments") {
       dateColumn = "payment_date";
+    } else if (reportType === "sales-transactions") {
+      dateColumn = "sale_date";
+    } else if (reportType === "rental-transactions") {
+      dateColumn = "rental_date";
     }
 
     // Build date condition based on period
@@ -199,6 +202,24 @@ function setupReportExportHandlers() {
       // Split by UNION ALL and add WHERE clause to each part
       const parts = query.split("UNION ALL");
       const modifiedParts = parts.map((part, index) => {
+        // Trim whitespace from part
+        part = part.trim();
+        // Check if this part ends with outer query structure (closing paren, ORDER BY, etc.)
+        // If so, we need to extract just the SELECT part before processing
+        const trimmedPart = part.trim();
+        let outerQuerySuffix = "";
+        const lastParenIndex = trimmedPart.lastIndexOf(')');
+        const upperTrimmed = trimmedPart.toUpperCase();
+        const hasOuterOrderBy = upperTrimmed.includes(') ORDER BY');
+        if (hasOuterOrderBy && lastParenIndex > 0) {
+          // This part includes outer query structure, extract it
+          const selectPartEnd = trimmedPart.lastIndexOf(')');
+          if (selectPartEnd > 0) {
+            outerQuerySuffix = trimmedPart.substring(selectPartEnd);
+            part = trimmedPart.substring(0, selectPartEnd).trim();
+          }
+        }
+        
         // Determine date column based on part (rental_date or sale_date)
         let dateCol = "transaction_date";
         const upperPart = part.toUpperCase();
@@ -222,11 +243,18 @@ function setupReportExportHandlers() {
           partDateCondition = `date(${dateCol}) >= date('${dateFrom}') AND date(${dateCol}) <= date('${dateTo}')`;
         }
 
-        if (!partDateCondition) return part;
+        if (!partDateCondition) {
+          // Return original part with outer query suffix if any
+          return part + outerQuerySuffix;
+        }
 
         // Find the FROM clause in each part
-        const fromIndex = part.toUpperCase().indexOf(" FROM ");
-        if (fromIndex === -1) return part;
+        const fromIndex = upperPart.indexOf(" FROM ");
+        if (fromIndex === -1) {
+          // This part doesn't have a FROM clause, might be outer query structure
+          // Skip processing to avoid syntax errors
+          return part + outerQuerySuffix;
+        }
 
         // Check if this part already has WHERE
         const hasWhere = upperPart.includes(" WHERE ");
@@ -237,46 +265,144 @@ function setupReportExportHandlers() {
           if (groupByIndex > 0) {
             const beforeGroupBy = part.substring(0, groupByIndex);
             const afterGroupBy = part.substring(groupByIndex);
-            return `${beforeGroupBy} AND ${partDateCondition} ${afterGroupBy}`;
+            return `${beforeGroupBy} AND ${partDateCondition} ${afterGroupBy}${outerQuerySuffix}`;
           } else {
-            return `${part} AND ${partDateCondition}`;
+            return `${part} AND ${partDateCondition}${outerQuerySuffix}`;
           }
         } else {
           // Add WHERE clause before GROUP BY
           if (groupByIndex > 0) {
             const beforeGroupBy = part.substring(0, groupByIndex);
             const afterGroupBy = part.substring(groupByIndex);
-            return `${beforeGroupBy} WHERE ${partDateCondition} ${afterGroupBy}`;
+            return `${beforeGroupBy} WHERE ${partDateCondition} ${afterGroupBy}${outerQuerySuffix}`;
           } else {
-            return `${part} WHERE ${partDateCondition}`;
+            // No GROUP BY found in this part - find end of FROM/JOIN clauses
+            // Find the last JOIN or FROM to insert WHERE after it
+            const upperPart = part.toUpperCase();
+            const lastJoinIndex = Math.max(
+              upperPart.lastIndexOf(" LEFT JOIN "),
+              upperPart.lastIndexOf(" RIGHT JOIN "),
+              upperPart.lastIndexOf(" INNER JOIN "),
+              upperPart.lastIndexOf(" FULL JOIN "),
+              upperPart.lastIndexOf(" JOIN ")
+            );
+            const fromIndex = upperPart.lastIndexOf(" FROM ");
+            
+            let insertPos = -1;
+            if (lastJoinIndex > fromIndex && lastJoinIndex > 0) {
+              // Insert after last JOIN - find end of JOIN's ON clause
+              const afterJoin = part.substring(lastJoinIndex);
+              // Find the end of the ON clause (look for WHERE, GROUP BY, ORDER BY, or end)
+              const onEndMatch = afterJoin.match(/\s+ON\s+[^WHERE\s]+(?:\s+AND\s+[^WHERE\s]+)*\s*(?=WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|$)/i);
+              if (onEndMatch) {
+                insertPos = lastJoinIndex + onEndMatch.index + onEndMatch[0].length;
+              } else {
+                // Fallback: insert after JOIN keyword
+                const joinEndMatch = afterJoin.match(/JOIN\s+[^\s]+\s*(?:AS\s+[^\s]+\s*)?(?:ON\s+[^\s]+\s*)?/i);
+                if (joinEndMatch) {
+                  insertPos = lastJoinIndex + joinEndMatch.index + joinEndMatch[0].length;
+                }
+              }
+            }
+            
+            if (insertPos === -1 && fromIndex > 0) {
+              // Insert after FROM clause
+              const afterFrom = part.substring(fromIndex);
+              // Find end of table name/alias or JOIN
+              const tableEndMatch = afterFrom.match(/FROM\s+[^\s]+(?:\s+(?:AS\s+)?[^\s]+)?\s*(?=WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|JOIN|$)/i);
+              if (tableEndMatch) {
+                insertPos = fromIndex + tableEndMatch.index + tableEndMatch[0].length;
+              } else {
+                // Simple fallback: after FROM keyword
+                insertPos = fromIndex + 5; // " FROM ".length
+              }
+            }
+            
+            if (insertPos > 0) {
+              const beforeWhere = part.substring(0, insertPos).trim();
+              const afterWhere = part.substring(insertPos).trim();
+              // Don't add WHERE if there's already a closing parenthesis or invalid syntax
+              if (!afterWhere.trim().startsWith(')') && !afterWhere.trim().startsWith('ORDER BY')) {
+                return `${beforeWhere} WHERE ${partDateCondition} ${afterWhere}${outerQuerySuffix}`;
+              }
+            }
+            
+            // Last resort: if we can't find a good place, skip this part
+            // (better than creating invalid SQL)
+            return part + outerQuerySuffix;
           }
         }
       });
 
       return modifiedParts.join(" UNION ALL ");
     } else {
-      // For simple queries, add WHERE clause before ORDER BY
+      // For simple queries, add WHERE clause before ORDER BY, GROUP BY, HAVING, or at end of FROM/JOIN clauses
       const upperQuery = query.toUpperCase();
       const hasWhere = upperQuery.includes(" WHERE ");
       const orderByIndex = upperQuery.lastIndexOf(" ORDER BY ");
+      const groupByIndex = upperQuery.lastIndexOf(" GROUP BY ");
+      const havingIndex = upperQuery.lastIndexOf(" HAVING ");
+
+      // Find the best insertion point: before GROUP BY, HAVING, or ORDER BY
+      // WHERE must come before GROUP BY, so prioritize GROUP BY over ORDER BY
+      let insertIndex = -1;
+      if (groupByIndex > 0) {
+        insertIndex = groupByIndex;
+      } else if (havingIndex > 0) {
+        insertIndex = havingIndex;
+      } else if (orderByIndex > 0) {
+        insertIndex = orderByIndex;
+      }
 
       if (hasWhere) {
         // Add AND condition
-        if (orderByIndex > 0) {
-          const beforeOrderBy = query.substring(0, orderByIndex);
-          const afterOrderBy = query.substring(orderByIndex);
-          return `${beforeOrderBy} AND ${dateCondition} ${afterOrderBy}`;
+        if (insertIndex > 0) {
+          const beforeInsert = query.substring(0, insertIndex);
+          const afterInsert = query.substring(insertIndex);
+          return `${beforeInsert} AND ${dateCondition} ${afterInsert}`;
         } else {
+          // No ORDER BY/GROUP BY/HAVING found, append at end
           return `${query} AND ${dateCondition}`;
         }
       } else {
         // Add WHERE clause
-        if (orderByIndex > 0) {
-          const beforeOrderBy = query.substring(0, orderByIndex);
-          const afterOrderBy = query.substring(orderByIndex);
-          return `${beforeOrderBy} WHERE ${dateCondition} ${afterOrderBy}`;
+        if (insertIndex > 0) {
+          const beforeInsert = query.substring(0, insertIndex);
+          const afterInsert = query.substring(insertIndex);
+          return `${beforeInsert} WHERE ${dateCondition} ${afterInsert}`;
         } else {
-          return `${query} WHERE ${dateCondition}`;
+          // No ORDER BY/GROUP BY/HAVING found, find end of FROM/JOIN clauses
+          // Use regex to find the position after the last FROM/JOIN clause
+          const fromJoinPattern = /(?:FROM|JOIN)\s+[^\s]+\s*(?:AS\s+[^\s]+\s*)?(?:ON\s+[^WHERE\s]+(?:\s+AND\s+[^WHERE\s]+)*\s*)?/gi;
+          let lastMatch = null;
+          let match;
+          while ((match = fromJoinPattern.exec(query)) !== null) {
+            lastMatch = match;
+          }
+          
+          if (lastMatch) {
+            // Insert WHERE after the last FROM/JOIN match
+            const insertPos = lastMatch.index + lastMatch[0].length;
+            const beforeWhere = query.substring(0, insertPos).trim();
+            const afterWhere = query.substring(insertPos).trim();
+            return `${beforeWhere} WHERE ${dateCondition} ${afterWhere}`;
+          } else {
+            // Fallback: try to find FROM and insert after it
+            const fromIndex = upperQuery.lastIndexOf(" FROM ");
+            if (fromIndex > 0) {
+              // Find end of FROM clause (before WHERE, GROUP BY, ORDER BY, or end of query)
+              const afterFrom = query.substring(fromIndex);
+              const endMatch = afterFrom.match(/\s+(WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|$)/i);
+              if (endMatch) {
+                const insertPos = fromIndex + endMatch.index;
+                const beforeWhere = query.substring(0, insertPos).trim();
+                const afterWhere = query.substring(insertPos).trim();
+                return `${beforeWhere} WHERE ${dateCondition} ${afterWhere}`;
+              }
+            }
+            // Last resort: append at end (may cause syntax error but better than nothing)
+            return `${query} WHERE ${dateCondition}`;
+          }
         }
       }
     }
@@ -535,30 +661,6 @@ function setupReportExportHandlers() {
         LEFT JOIN cashier_sessions cs1 ON rt.cashier_session_id = cs1.id
         LEFT JOIN cashier_sessions cs2 ON st.cashier_session_id = cs2.id
         ORDER BY p.payment_date DESC
-      `,
-      "transactions-by-customer": `
-        SELECT
-          c.id AS customer_id,
-          c.code AS customer_code,
-          c.name AS customer_name,
-          c.phone,
-          c.email,
-          COUNT(DISTINCT rt.id) AS rental_count,
-          COUNT(DISTINCT st.id) AS sales_count,
-          COUNT(DISTINCT rt.id) + COUNT(DISTINCT st.id) AS total_transactions,
-          COALESCE(SUM(rt.total_amount), 0) AS total_rental_amount,
-          COALESCE(SUM(st.total_amount), 0) AS total_sales_amount,
-          COALESCE(SUM(rt.total_amount), 0) + COALESCE(SUM(st.total_amount), 0) AS total_amount,
-          COALESCE(SUM(CASE WHEN p1.transaction_type = 'rental' THEN p1.amount ELSE 0 END), 0) +
-          COALESCE(SUM(CASE WHEN p2.transaction_type = 'sale' THEN p2.amount ELSE 0 END), 0) AS total_paid
-        FROM customers c
-        LEFT JOIN rental_transactions rt ON rt.customer_id = c.id
-        LEFT JOIN sales_transactions st ON st.customer_id = c.id
-        LEFT JOIN payments p1 ON p1.transaction_type = 'rental' AND p1.transaction_id = rt.id
-        LEFT JOIN payments p2 ON p2.transaction_type = 'sale' AND p2.transaction_id = st.id
-        GROUP BY c.id
-        HAVING total_transactions > 0
-        ORDER BY total_amount DESC
       `,
       // Stock reports
       "stock-items": `

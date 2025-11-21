@@ -246,13 +246,8 @@ import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
 import { useNumberFormat } from "@/composables/useNumberFormat";
-
-const toDateInput = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
-};
+import { toDateInput } from "@/utils/dateUtils";
+import { useCurrency } from "@/composables/useCurrency";
 
 const createDefaultForm = () => {
   const today = new Date();
@@ -293,12 +288,7 @@ export default {
     const showPaymentModal = ref(false);
     const savedTransactionId = ref(null);
 
-    const currencyFormatter = new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    });
-
-    const formatCurrency = (value) => currencyFormatter.format(value || 0);
+    const { formatCurrency } = useCurrency();
 
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
@@ -484,7 +474,7 @@ export default {
       try {
         const user = await getCurrentUser();
         if (user?.id) {
-          const session = await getCurrentSession(user.id);
+          const session = await getCurrentSession(user.id, user.role);
           cashierStatus.value = session
             ? { status: "open", ...session }
             : { status: "closed" };
@@ -602,6 +592,7 @@ export default {
       totalItems,
       totalBundles,
       bundleSubtotal,
+      subtotal,
       cashierStatus,
       calculatedTax,
       taxHint,

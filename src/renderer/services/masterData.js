@@ -145,6 +145,10 @@ export function updateUser(id, payload) {
   return ipcRenderer.invoke("users:update", id, payload);
 }
 
+export function updateOwnProfile(payload) {
+  return ipcRenderer.invoke("users:updateOwnProfile", payload);
+}
+
 export function deleteUser(id) {
   return ipcRenderer.invoke("users:delete", id);
 }

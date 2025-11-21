@@ -243,6 +243,22 @@
     </svg>
 
     <svg
+      v-else-if="name === 'lock'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+
+    <svg
       v-else-if="name === 'clipboard'"
       :width="size"
       :height="size"
@@ -637,6 +653,33 @@
       <path d="M6 9V2h12v7" />
       <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
       <path d="M6 14h12v8H6z" />
+    </svg>
+
+    <svg
+      v-else-if="name === 'barcode'"
+      :width="size"
+      :height="size"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      :stroke-width="strokeWidth"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 5v14" />
+      <path d="M8 5v14" />
+      <path d="M12 5v14" />
+      <path d="M17 5v14" />
+      <path d="M21 5v14" />
+      <path d="M5 3h2" />
+      <path d="M9 3h1" />
+      <path d="M13 3h1" />
+      <path d="M18 3h1" />
+      <path d="M5 21h2" />
+      <path d="M9 21h1" />
+      <path d="M13 21h1" />
+      <path d="M18 21h1" />
     </svg>
 
     <svg

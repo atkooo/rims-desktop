@@ -187,13 +187,7 @@ import { useItemStore } from "@/store/items";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
 import { useNumberFormat } from "@/composables/useNumberFormat";
-
-const toDateInput = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
-};
+import { toDateInput } from "@/utils/dateUtils";
 
 export default {
   name: "SalesTransactionEditView",

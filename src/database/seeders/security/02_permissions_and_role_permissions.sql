@@ -17,6 +17,7 @@ INSERT INTO permissions (name, slug, description, module) VALUES
 ('Create Items', 'master.items.create', 'Akses untuk membuat item', 'master'),
 ('Update Items', 'master.items.update', 'Akses untuk mengubah item', 'master'),
 ('Delete Items', 'master.items.delete', 'Akses untuk menghapus item', 'master'),
+('Generate Barcode Labels', 'master.items.generate-barcode', 'Akses untuk generate label barcode', 'master'),
 
 ('View Item Sizes', 'master.item-sizes.view', 'Akses untuk melihat ukuran item', 'master'),
 ('Create Item Sizes', 'master.item-sizes.create', 'Akses untuk membuat ukuran item', 'master'),
@@ -120,7 +121,7 @@ CROSS JOIN permissions p
 WHERE r.name = 'staff'
 AND p.slug IN (
     'dashboard.view',
-    'master.categories.view', 'master.items.view', 'master.item-sizes.view',
+    'master.categories.view', 'master.items.view', 'master.items.generate-barcode', 'master.item-sizes.view',
     'master.accessories.view', 'master.bundles.view', 'master.customers.view',
     'master.discount-groups.view',
     'transactions.rentals.view', 'transactions.rentals.create', 'transactions.rentals.update',

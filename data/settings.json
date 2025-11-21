@@ -9,5 +9,8 @@
     "supabase_anon_key": null,
     "last_check": "2025-11-14T03:35:40.050Z",
     "check_interval": 3600000
-  }
+  },
+  "companyName": "RIMS",
+  "address": "",
+  "phone": "08123456789"
 }

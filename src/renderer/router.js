@@ -20,6 +20,7 @@ import SettingsPage from "./views/settings/SettingsPage.vue";
 import ReceiptSettingsPage from "./views/settings/ReceiptSettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
+import UserProfileView from "./views/UserProfileView.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
@@ -32,6 +33,8 @@ import SalesTransactionEditView from "./views/transaction/SalesTransactionEditVi
 import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
 import ReportExportView from "./views/reports/ReportExportView.vue";
 import StockAlertManagementView from "./views/stock/StockAlertManagementView.vue";
+import BulkLabelGeneratorView from "./views/master/BulkLabelGeneratorView.vue";
+import SearchResultsView from "./views/SearchResultsView.vue";
 import { getCurrentUser } from "./services/auth.js";
 import {
   hasPermissionSync,
@@ -50,6 +53,7 @@ const routePermissions = {
   "/master/item-sizes": "master.item-sizes.view",
   "/master/bundles": "master.bundles.view",
   "/master/bundle-details": "master.bundles.view",
+  "/master/bulk-labels": "master.items.generate-barcode",
   "/master/customers": "master.customers.view",
   "/master/discount-groups": "master.discount-groups.view",
   "/master/roles": "roles.view",
@@ -78,6 +82,7 @@ const routes = [
   { path: "/", name: "dashboard", component: Dashboard },
   { path: "/login", name: "login", component: Login },
   { path: "/activation", name: "activation", component: Activation },
+  { path: "/search", name: "search-results", component: SearchResultsView },
   // Master Data
   { path: "/master/categories", name: "categories", component: Categories },
   {
@@ -111,6 +116,11 @@ const routes = [
     path: "/master/items/:id",
     name: "item-detail",
     component: ItemDetailView,
+  },
+  {
+    path: "/master/bulk-labels",
+    name: "bulk-labels",
+    component: BulkLabelGeneratorView,
   },
   { path: "/master/customers", name: "customers", component: CustomersView },
   {
@@ -200,6 +210,11 @@ const routes = [
     path: "/settings/activity-logs",
     name: "settings-activity",
     component: ActivityLogsView,
+  },
+  {
+    path: "/profile",
+    name: "user-profile",
+    component: UserProfileView,
   },
   // Reports
   {

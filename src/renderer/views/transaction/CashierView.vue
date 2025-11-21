@@ -53,18 +53,26 @@
 
       <div class="session-actions">
         <AppButton
+          v-if="canCloseSession"
           variant="danger"
           :loading="closing"
           @click="showCloseDialog = true"
         >
           Tutup Kasir
         </AppButton>
+        <div v-else class="access-denied-message">
+          <p>Hanya user yang membuka sesi kasir ini yang dapat menutupnya.</p>
+        </div>
       </div>
     </section>
 
     <!-- Open Session Form -->
     <section v-else class="card-section">
       <h2>Buka Sesi Kasir Baru</h2>
+      <div v-if="!canOpenSession" class="access-denied-banner">
+        <p>Hanya user dengan role kasir yang dapat membuka sesi kasir.</p>
+      </div>
+      <template v-else>
       <p class="form-description">
         Masukkan saldo awal kasir untuk memulai sesi baru.
       </p>
@@ -113,6 +121,7 @@
           </AppButton>
         </div>
       </form>
+      </template>
     </section>
 
     <!-- Confirm Open Session Dialog -->
@@ -281,6 +290,7 @@ import {
 } from "@/services/cashier";
 import { getCurrentUser } from "@/services/auth";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "CashierView",
@@ -310,12 +320,23 @@ export default {
     const errors = ref({});
     const closeErrors = ref({});
 
-    const currencyFormatter = new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
+    // Check if user can open session (must be kasir role)
+    const canOpenSession = computed(() => {
+      return currentUser.value?.role === "kasir";
     });
 
-    const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
+    // Check if user can close session (must be kasir role AND same user who opened)
+    const canCloseSession = computed(() => {
+      if (!currentUser.value || currentUser.value.role !== "kasir") {
+        return false;
+      }
+      if (!currentSession.value) {
+        return false;
+      }
+      return currentSession.value.user_id === currentUser.value.id;
+    });
+
+    const { formatCurrency } = useCurrency();
 
     const formatDateTime = (value) => {
       if (!value) return "-";
@@ -360,7 +381,10 @@ export default {
         }
 
         if (currentUser.value?.id) {
-          const session = await getCurrentSession(currentUser.value.id);
+          const session = await getCurrentSession(
+            currentUser.value.id,
+            currentUser.value.role
+          );
           currentSession.value = session;
         }
       } catch (err) {
@@ -517,6 +541,8 @@ export default {
       closeForm,
       errors,
       closeErrors,
+      canOpenSession,
+      canCloseSession,
       formatCurrency,
       formatDateTime,
       formatDate,
@@ -837,5 +863,34 @@ export default {
   background: #fef3c7;
   border-radius: 6px;
   border-left: 3px solid #f59e0b;
+}
+
+.access-denied-banner {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.access-denied-banner p {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.access-denied-message {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.access-denied-message p {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 </style>

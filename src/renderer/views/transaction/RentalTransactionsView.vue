@@ -73,7 +73,7 @@
           :columns="columns"
           :rows="filteredItems"
           :loading="loading"
-          :searchable-keys="['transaction_code', 'customer_name', 'status']"
+          :searchable-keys="['transaction_code', 'customer_name', 'user_name', 'status']"
           row-key="id"
           :default-page-size="10"
           show-index
@@ -211,6 +211,7 @@ export default {
         format: formatDate,
         sortable: true,
       },
+      { key: "user_name", label: "Kasir", sortable: true },
       {
         key: "total_amount",
         label: "Total",

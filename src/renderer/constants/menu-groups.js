@@ -78,6 +78,12 @@ export const menuGroups = [
         permission: "master.items.view",
       },
       {
+        to: "/master/bulk-labels",
+        label: "Generate Label Barcode",
+        icon: "barcode",
+        permission: "master.items.generate-barcode",
+      },
+      {
         to: "/master/item-sizes",
         label: "Ukuran Item",
         icon: "ruler",

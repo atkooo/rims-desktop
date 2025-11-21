@@ -1,4 +1,4 @@
-const { ipcMain } = require("electron");
+const { ipcMain, shell } = require("electron");
 const database = require("./helpers/database");
 
 function registerDataIpc() {
@@ -22,6 +22,16 @@ function registerDataIpc() {
       WHERE bd.bundle_id = ?
     `;
     return await database.query(sql, [bundleId]);
+  });
+
+  // Open file path in default application
+  ipcMain.handle("file:openPath", async (event, filePath) => {
+    try {
+      await shell.openPath(filePath);
+      return { success: true, filePath };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 }
 

@@ -18,11 +18,22 @@
         <Icon name="search" :size="16" class="search-icon" />
         <input
           v-model="searchQuery"
-          type="search"
+          type="text"
           placeholder="Cari transaksi, pelanggan, atau kode transaksi"
+          :disabled="searchBusy"
         />
-        <button type="submit" :disabled="searchBusy">
-          {{ searchBusy ? "Mencari..." : "Cari" }}
+        <button
+          v-if="searchQuery && !searchBusy"
+          type="button"
+          class="clear-btn"
+          @click="clearSearch"
+          aria-label="Clear search"
+        >
+          <Icon name="x" :size="14" />
+        </button>
+        <button type="submit" :disabled="searchBusy || !searchQuery.trim()" class="search-btn">
+          <Icon v-if="searchBusy" name="refresh-cw" :size="14" class="spinning" />
+          <span v-else>Cari</span>
         </button>
       </form>
     </div>
@@ -180,6 +191,8 @@ import { useTransactionStore } from "@/store/transactions";
 import { eventBus } from "@/utils/eventBus";
 import { TRANSACTION_STATUS } from "@shared/constants";
 import { useStockAlerts } from "@/composables/useStockAlerts";
+import { formatDateRelative } from "@/utils/dateUtils";
+import { useCurrency } from "@/composables/useCurrency";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -195,6 +208,8 @@ const searchBusy = ref(false);
 const transactionStore = useTransactionStore();
 const stockAlerts = useStockAlerts();
 const stockAlertsActive = ref(false);
+const { formatCurrency } = useCurrency();
+const formatDate = formatDateRelative;
 let stockAlertsStarting = false;
 let storageListener = null;
 let searchTimeout = null;
@@ -323,12 +338,22 @@ const initials = computed(() => {
 });
 
 const handleSearch = () => {
+  if (!searchQuery.value.trim()) return;
   eventBus.emit("global-search", searchQuery.value.trim());
   searchBusy.value = true;
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     searchBusy.value = false;
-  }, 350);
+  }, 500);
+};
+
+const clearSearch = () => {
+  searchQuery.value = "";
+  searchBusy.value = false;
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
 };
 
 const refreshTransactions = () => {
@@ -366,36 +391,6 @@ const startStockAlertMonitor = async () => {
 const stopStockAlertMonitor = () => {
   stockAlerts.stopPeriodicCheck();
   stockAlertsActive.value = false;
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return "Hari ini";
-  } else if (diffDays === 1) {
-    return "Kemarin";
-  } else if (diffDays < 7) {
-    return `${diffDays} hari lalu`;
-  } else {
-    return date.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  }
-};
-
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
 };
 
 const handleNotificationItemClick = (notification) => {
@@ -562,7 +557,7 @@ const closeNotificationMenu = () => {
 
 const goToProfile = () => {
   closeProfileMenu();
-  router.push("/settings/system");
+  router.push("/profile");
 };
 
 const refreshUser = async (force = false) => {
@@ -736,7 +731,7 @@ watch(notificationMenuOpen, async (isOpen) => {
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 4px 56px 4px 40px;
+  padding: 4px 4px 4px 40px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #f8fafc;
@@ -747,6 +742,15 @@ watch(notificationMenuOpen, async (isOpen) => {
   flex: 1 1 320px;
   min-width: 220px;
   max-width: 480px;
+}
+
+/* Hide native search clear button */
+.topbar__search input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.topbar__search input[type="search"]::-ms-clear {
+  display: none;
 }
 
 .topbar__search:focus-within {
@@ -776,7 +780,12 @@ watch(notificationMenuOpen, async (isOpen) => {
   font-size: 14px;
   color: #0f172a;
   outline: none;
-  padding: 6px 0;
+  padding: 6px 8px 6px 0;
+}
+
+.topbar__search input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .topbar__search input:focus-visible {
@@ -784,16 +793,8 @@ watch(notificationMenuOpen, async (isOpen) => {
   box-shadow: none;
 }
 
-.topbar__search button:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-.topbar__search button {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+.topbar__search .search-btn {
+  position: relative;
   border: none;
   border-radius: 999px;
   padding: 6px 14px;
@@ -802,13 +803,59 @@ watch(notificationMenuOpen, async (isOpen) => {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: #fff;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
 }
 
-.topbar__search button:disabled {
+.topbar__search .search-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca, #5855eb);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.topbar__search .search-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+}
+
+.topbar__search .clear-btn {
+  position: relative;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+
+.topbar__search .clear-btn:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.topbar__search .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .icon-btn {

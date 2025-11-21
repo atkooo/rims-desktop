@@ -63,6 +63,7 @@
           :searchable-keys="[
             'transaction_code',
             'customer_name',
+            'user_name',
             'payment_status',
           ]"
           row-key="id"
@@ -196,6 +197,7 @@ export default {
         format: formatDate,
         sortable: true,
       },
+      { key: "user_name", label: "Kasir", sortable: true },
       {
         key: "total_amount",
         label: "Total",

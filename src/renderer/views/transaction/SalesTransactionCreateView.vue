@@ -245,13 +245,7 @@ import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
 import { useNumberFormat } from "@/composables/useNumberFormat";
-
-const toDateInput = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
-};
+import { toDateInput } from "@/utils/dateUtils";
 
 const createDefaultForm = () => ({
   customerId: "",
@@ -268,6 +262,7 @@ export default {
   name: "SalesTransactionCreateView",
   components: {
     AppButton,
+    DatePicker,
     FormInput,
     ItemSelector,
     BundleSelector,
@@ -630,7 +625,7 @@ export default {
       try {
         const user = await getCurrentUser();
         if (user?.id) {
-          const session = await getCurrentSession(user.id);
+          const session = await getCurrentSession(user.id, user.role);
           cashierStatus.value = session
             ? { status: "open", ...session }
             : { status: "closed" };
@@ -945,6 +940,24 @@ export default {
 .cashier-input-inline.error,
 .cashier-select-inline.error {
   border-color: #dc2626;
+}
+
+.cashier-date-inline {
+  margin-bottom: 0;
+}
+
+.cashier-date-inline :deep(.form-label) {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cashier-date-inline :deep(.form-input) {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
 }
 
 /* Main Content - Full Width */

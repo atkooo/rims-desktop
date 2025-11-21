@@ -2,7 +2,7 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
-const { logActivity } = require("../helpers/activity");
+const { logActivity, getCurrentUserSafely } = require("../helpers/activity");
 
 function generateSessionCode() {
   const date = new Date();
@@ -74,7 +74,7 @@ async function calculateExpectedBalance(session) {
 
 function setupCashierHandlers() {
   // Get current open session
-  ipcMain.handle("cashier:getCurrentSession", async (event, userId) => {
+  ipcMain.handle("cashier:getCurrentSession", async (event, userId, userRole = null) => {
     try {
       if (!userId) {
         // Return null if no userId provided (no active session)
@@ -89,8 +89,19 @@ function setupCashierHandlers() {
         );
       }
 
-      const session = await database.queryOne(
-        `SELECT 
+      // If user is kasir, show only their own active session
+      // Otherwise (admin, manager, staff, etc), show the most recent active session from any user
+      // This allows all roles to see cashier status, but only kasir can open/close
+      let query, params;
+      
+      // Check if user is kasir - if so, only show their own session
+      // For all other roles (including null/undefined), show any active session
+      const normalizedRole = userRole ? String(userRole).toLowerCase().trim() : '';
+      const isKasir = normalizedRole === 'kasir';
+      
+      if (isKasir) {
+        // Kasir: only show their own active session
+        query = `SELECT 
           cs.*,
           u.username,
           u.full_name
@@ -98,9 +109,26 @@ function setupCashierHandlers() {
         JOIN users u ON cs.user_id = u.id
         WHERE cs.user_id = ? AND cs.status = 'open'
         ORDER BY cs.opening_date DESC
-        LIMIT 1`,
-        [userId],
-      );
+        LIMIT 1`;
+        params = [userId];
+      } else {
+        // All other roles (admin, manager, staff, etc): show any active session
+        // This includes null/undefined userRole to handle edge cases
+        query = `SELECT 
+          cs.*,
+          u.username,
+          u.full_name
+        FROM cashier_sessions cs
+        JOIN users u ON cs.user_id = u.id
+        WHERE cs.status = 'open'
+        ORDER BY cs.opening_date DESC
+        LIMIT 1`;
+        params = [];
+      }
+      
+      logger.debug(`Getting cashier session - userId: ${userId}, userRole: ${userRole}, normalizedRole: ${normalizedRole}, isKasir: ${isKasir}`);
+
+      const session = await database.queryOne(query, params);
 
       if (session) {
         const expectedBalance = await calculateExpectedBalance(session);
@@ -191,10 +219,26 @@ function setupCashierHandlers() {
         );
       }
 
+      // Get current user
+      const currentUser = getCurrentUserSafely();
+      if (!currentUser) {
+        throw new Error("User tidak ditemukan. Silakan login ulang.");
+      }
+
+      // Check if user has kasir role
+      if (currentUser.role !== "kasir") {
+        throw new Error("Hanya user dengan role kasir yang dapat membuka sesi kasir.");
+      }
+
       const { userId, openingBalance, notes } = sessionData;
 
       if (!userId) {
         throw new Error("User ID harus diisi");
+      }
+
+      // Verify that userId matches current user
+      if (currentUser.id !== userId) {
+        throw new Error("User ID tidak sesuai dengan user yang sedang login.");
       }
 
       if (!validator.isPositiveNumber(openingBalance)) {
@@ -269,6 +313,17 @@ function setupCashierHandlers() {
         );
       }
 
+      // Get current user
+      const currentUser = getCurrentUserSafely();
+      if (!currentUser) {
+        throw new Error("User tidak ditemukan. Silakan login ulang.");
+      }
+
+      // Check if user has kasir role
+      if (currentUser.role !== "kasir") {
+        throw new Error("Hanya user dengan role kasir yang dapat menutup sesi kasir.");
+      }
+
       const { sessionId, actualBalance, notes } = sessionData;
 
       if (!sessionId) {
@@ -287,6 +342,11 @@ function setupCashierHandlers() {
 
       if (!session) {
         throw new Error("Sesi kasir tidak ditemukan atau sudah ditutup");
+      }
+
+      // Verify that the session was opened by the current user
+      if (session.user_id !== currentUser.id) {
+        throw new Error("Hanya user yang membuka sesi kasir yang dapat menutup sesi tersebut.");
       }
 
       const expectedBalance = await calculateExpectedBalance(session);
