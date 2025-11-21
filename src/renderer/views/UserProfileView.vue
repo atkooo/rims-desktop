@@ -138,6 +138,7 @@ import Icon from "@/components/ui/Icon.vue";
 import { getCurrentUser } from "@/services/auth";
 import { updateOwnProfile } from "@/services/masterData";
 import { useNotification } from "@/composables/useNotification";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "UserProfileView",
@@ -227,6 +228,9 @@ export default {
           
           // Refresh current user in storage
           await getCurrentUser(true);
+          
+          // Emit event to notify other components (like Topbar) to refresh
+          eventBus.emit("user:profileUpdated", updatedUser);
         }
 
         showSuccess("Profil berhasil diperbarui");
@@ -268,10 +272,17 @@ export default {
       errors.value = {};
 
       try {
-        await updateOwnProfile({
+        const updatedUser = await updateOwnProfile({
           password: passwordForm.value.newPassword,
           currentPassword: passwordForm.value.currentPassword,
         });
+
+        // Refresh current user in storage
+        if (updatedUser) {
+          await getCurrentUser(true);
+          // Emit event to notify other components (like Topbar) to refresh
+          eventBus.emit("user:profileUpdated", updatedUser);
+        }
 
         showSuccess("Password berhasil diubah");
         resetPasswordForm();

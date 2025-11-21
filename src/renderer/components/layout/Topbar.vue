@@ -213,6 +213,7 @@ const formatDate = formatDateRelative;
 let stockAlertsStarting = false;
 let storageListener = null;
 let searchTimeout = null;
+let profileUpdateHandler = null;
 const profileMenuOpen = ref(false);
 const profileMenuRef = ref(null);
 const profileMenuDropdownRef = ref(null);
@@ -626,6 +627,13 @@ onMounted(async () => {
   refreshUser(true);
   storageListener = (event) => handleStorage(event);
   window.addEventListener("storage", storageListener);
+  
+  // Listen for profile update events
+  profileUpdateHandler = () => {
+    refreshUser(true);
+  };
+  eventBus.on("user:profileUpdated", profileUpdateHandler);
+  
   if (!transactionStore.transactions.length) {
     transactionStore.fetchTransactions().catch(() => {});
   }
@@ -643,6 +651,11 @@ onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
   detachDropdownListeners();
   detachNotificationListeners();
+  
+  // Remove event bus listener
+  if (profileUpdateHandler) {
+    eventBus.off("user:profileUpdated", profileUpdateHandler);
+  }
 });
 
 watch(

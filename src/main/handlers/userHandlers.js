@@ -5,7 +5,7 @@ const {
   logActivity,
   getCurrentUserSafely,
 } = require("../helpers/activity");
-const { scryptHash } = require("../auth");
+const { scryptHash, updateCurrentUser } = require("../auth");
 
 function setupUserHandlers() {
   // Get user by ID
@@ -360,6 +360,9 @@ function setupUserHandlers() {
         WHERE u.id = ?`,
         [userId],
       );
+
+      // Update currentUser in auth.js to reflect the changes
+      await updateCurrentUser(userId);
 
       return updatedUser;
     } catch (error) {

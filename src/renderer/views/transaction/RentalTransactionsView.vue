@@ -150,6 +150,28 @@
     @payment-success="handlePaymentSuccess"
     @close="handlePaymentModalClose"
   />
+
+  <!-- Cancel Confirmation Dialog -->
+  <AppDialog
+    v-model="showCancelDialog"
+    title="Konfirmasi Pembatalan Transaksi"
+    confirm-text="Ya, Batalkan"
+    cancel-text="Tidak"
+    confirm-variant="danger"
+    :loading="cancelling"
+    @confirm="confirmCancel"
+    @cancel="showCancelDialog = false"
+  >
+    <div class="cancel-dialog-content">
+      <p class="cancel-message">
+        Apakah Anda yakin ingin membatalkan transaksi <strong>{{ selectedCancelTransaction?.transaction_code }}</strong>?
+      </p>
+      <div class="cancel-warning">
+        <Icon name="alert-triangle" :size="20" />
+        <span>Stok akan dikembalikan secara otomatis setelah pembatalan.</span>
+      </div>
+    </div>
+  </AppDialog>
 </template>
 
 <script>
@@ -157,6 +179,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchRentalTransactions, cancelTransaction } from "@/services/transactions";
@@ -164,7 +187,7 @@ import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "RentalTransactionsView",
-  components: { AppButton, AppTable, Icon, PaymentModal },
+  components: { AppButton, AppTable, Icon, AppDialog, PaymentModal },
   setup() {
     const rentals = ref([]);
     const loading = ref(false);
@@ -174,6 +197,9 @@ export default {
     const menuPositions = ref({});
     const showPaymentModal = ref(false);
     const selectedTransactionId = ref(null);
+    const showCancelDialog = ref(false);
+    const selectedCancelTransaction = ref(null);
+    const cancelling = ref(false);
     const { showSuccess, showError } = useNotification();
     const filters = ref({
       status: "",
@@ -461,22 +487,29 @@ export default {
       }
     };
 
-    const handleCancel = async (rental) => {
+    const handleCancel = (rental) => {
       openMenuId.value = null;
       
       if (!rental.id) return;
       
-      // Konfirmasi cancel
-      if (!confirm(`Apakah Anda yakin ingin membatalkan transaksi ${rental.transaction_code}? Stok akan dikembalikan.`)) {
-        return;
-      }
+      selectedCancelTransaction.value = rental;
+      showCancelDialog.value = true;
+    };
 
+    const confirmCancel = async () => {
+      if (!selectedCancelTransaction.value?.id) return;
+
+      cancelling.value = true;
       try {
-        await cancelTransaction(rental.id, "rental");
+        await cancelTransaction(selectedCancelTransaction.value.id, "rental");
         showSuccess("Transaksi berhasil di-cancel. Stok telah dikembalikan.");
+        showCancelDialog.value = false;
+        selectedCancelTransaction.value = null;
         await loadData();
       } catch (error) {
         showError(error);
+      } finally {
+        cancelling.value = false;
       }
     };
 
@@ -516,6 +549,10 @@ export default {
       handlePaymentSuccess,
       handlePaymentModalClose,
       handleCancel,
+      confirmCancel,
+      showCancelDialog,
+      selectedCancelTransaction,
+      cancelling,
       filters,
       getRentalStatusLabel,
     };
@@ -683,5 +720,39 @@ export default {
   outline: none;
   border-color: #4338ca;
   box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
+}
+
+.cancel-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.cancel-message {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.cancel-message strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.cancel-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.cancel-warning .icon {
+  flex-shrink: 0;
+  color: #d97706;
 }
 </style>

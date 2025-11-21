@@ -156,4 +156,33 @@ function getCurrentUser() {
   return currentUser;
 }
 
-module.exports = { registerAuthIpc, getCurrentUser, scryptHash, verifyPassword };
+async function updateCurrentUser(userId) {
+  if (!userId) return;
+  try {
+    const user = await database.queryOne(
+      `SELECT u.id, u.username, u.full_name, u.email, u.role_id, u.is_active,
+              r.name AS role_name
+       FROM users u
+       LEFT JOIN roles r ON r.id = u.role_id
+       WHERE u.id = ?`,
+      [userId],
+    );
+
+    if (user && currentUser && currentUser.id === userId) {
+      const permissions = await getUserPermissions(user.id);
+      currentUser = {
+        id: user.id,
+        role_id: user.role_id,
+        username: user.username,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role_name || null,
+        permissions,
+      };
+    }
+  } catch (error) {
+    console.error("Error updating current user:", error);
+  }
+}
+
+module.exports = { registerAuthIpc, getCurrentUser, updateCurrentUser, scryptHash, verifyPassword };
