@@ -133,7 +133,8 @@ export default {
     },
     transactionId: {
       type: [Number, String],
-      required: true,
+      required: false,
+      default: null,
     },
     transactionType: {
       type: String,
@@ -294,9 +295,21 @@ export default {
     // Watch for dialog open to generate preview
     watch(visible, (newValue) => {
       if (newValue) {
-        loadDefaultSettings().then(() => {
-          generatePreview();
-        });
+        // Only generate preview if transactionId is available
+        if (props.transactionId) {
+          loadDefaultSettings().then(() => {
+            generatePreview();
+          });
+        } else {
+          error.value = "Data transaksi tidak ditemukan";
+        }
+      } else {
+        // Clean up blob URL when dialog closes
+        if (previewBlobUrl.value) {
+          URL.revokeObjectURL(previewBlobUrl.value);
+          previewBlobUrl.value = "";
+        }
+        previewUrl.value = "";
       }
     });
 

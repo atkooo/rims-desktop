@@ -24,6 +24,7 @@
               v-if="showConfirm"
               :variant="confirmVariant"
               :loading="loading"
+              :disabled="confirmDisabled"
               @click="confirm"
             >
               {{ confirmText }}
@@ -75,6 +76,10 @@ export default {
       default: "primary",
     },
     loading: {
+      type: Boolean,
+      default: false,
+    },
+    confirmDisabled: {
       type: Boolean,
       default: false,
     },

@@ -3,6 +3,7 @@ const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
 const { logActivity, getCurrentUserSafely } = require("../helpers/activity");
+const { createBackup } = require("../helpers/backupUtils");
 
 function generateSessionCode() {
   const date = new Date();
@@ -392,6 +393,18 @@ function setupCashierHandlers() {
         WHERE cs.id = ?`,
         [sessionId],
       );
+
+      // Create automatic backup after closing cashier session
+      try {
+        logger.info("Creating automatic backup after cashier session close...");
+        const backupResult = await createBackup("auto", session.user_id);
+        if (backupResult.success) {
+          logger.info("Automatic backup created successfully after cashier close:", backupResult.backupFile);
+        }
+      } catch (backupError) {
+        // Log error but don't fail the close session operation
+        logger.error("Failed to create automatic backup after cashier close:", backupError);
+      }
 
       return closedSession;
     } catch (error) {

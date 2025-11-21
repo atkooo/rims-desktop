@@ -187,10 +187,10 @@
     <AppDialog
       v-model="showRestoreDialog"
       title="Restore Backup"
-      confirm-text="Restore"
+      confirm-text="Lanjut"
       cancel-text="Batal"
-      :loading="restoreLoading"
-      @confirm="restoreBackup"
+      :loading="false"
+      @confirm="showConfirmRestoreDialog = true"
     >
       <div class="restore-dialog">
         <div class="warning-banner">
@@ -216,11 +216,52 @@
         </div>
       </div>
     </AppDialog>
+
+    <!-- Confirm Restore Dialog with Countdown -->
+    <AppDialog
+      v-model="showConfirmRestoreDialog"
+      title="Konfirmasi Restore Backup"
+      :show-footer="true"
+      :confirm-text="confirmRestoreButtonText"
+      :cancel-text="'Batal'"
+      :loading="restoreLoading"
+      :confirm-disabled="!canConfirmRestore"
+      confirm-variant="danger"
+      @confirm="handleConfirmRestore"
+      @cancel="showConfirmRestoreDialog = false"
+      :max-width="500"
+    >
+      <div class="confirm-restore-dialog">
+        <div class="warning-banner-danger">
+          <Icon name="alert-triangle" :size="24" />
+          <div>
+            <h3>Peringatan!</h3>
+            <p>
+              Restore backup akan <strong>mengganti semua data saat ini</strong> dengan data dari backup.
+              Proses ini <strong>tidak dapat dibatalkan</strong> dan akan menyebabkan aplikasi restart.
+            </p>
+            <p>
+              Pastikan Anda telah:
+            </p>
+            <ul>
+              <li>Menyimpan semua pekerjaan terbaru</li>
+              <li>Memilih file backup yang benar</li>
+              <li>Memahami bahwa data saat ini akan hilang</li>
+            </ul>
+          </div>
+        </div>
+        <div class="countdown-info" v-if="restoreCountdown > 0">
+          <p>
+            Tombol "Ya, Restore" akan aktif dalam <strong>{{ restoreCountdown }}</strong> detik...
+          </p>
+        </div>
+      </div>
+    </AppDialog>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
 import { ipcRenderer } from "@/services/ipc";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
@@ -244,6 +285,9 @@ export default {
     const backupLoading = ref(false);
     const restoreLoading = ref(false);
     const showRestoreDialog = ref(false);
+    const showConfirmRestoreDialog = ref(false);
+    const restoreCountdown = ref(3);
+    let restoreCountdownTimer = null;
     const errors = ref({});
     const backupFiles = ref([]);
     const selectedBackup = ref("");
@@ -346,10 +390,52 @@ export default {
     };
 
     // Restore backup
+    const confirmRestoreButtonText = computed(() => {
+      if (restoreCountdown.value > 0) {
+        return `Ya, Restore (${restoreCountdown.value})`;
+      }
+      return "Ya, Restore";
+    });
+
+    const canConfirmRestore = computed(() => {
+      return restoreCountdown.value === 0 && !restoreLoading.value;
+    });
+
+    // Watch for confirm dialog open to start countdown
+    watch(showConfirmRestoreDialog, (newValue) => {
+      if (newValue) {
+        restoreCountdown.value = 3;
+        if (restoreCountdownTimer) {
+          clearInterval(restoreCountdownTimer);
+        }
+        restoreCountdownTimer = setInterval(() => {
+          restoreCountdown.value--;
+          if (restoreCountdown.value <= 0) {
+            clearInterval(restoreCountdownTimer);
+            restoreCountdownTimer = null;
+          }
+        }, 1000);
+      } else {
+        if (restoreCountdownTimer) {
+          clearInterval(restoreCountdownTimer);
+          restoreCountdownTimer = null;
+        }
+        restoreCountdown.value = 3;
+      }
+    });
+
+    const handleConfirmRestore = async () => {
+      if (!canConfirmRestore.value) {
+        return;
+      }
+      await restoreBackup();
+    };
+
     const restoreBackup = async () => {
       if (!selectedBackup.value) {
         showError("Pilih file backup terlebih dahulu");
         clearMessages();
+        showConfirmRestoreDialog.value = false;
         return;
       }
 
@@ -357,15 +443,18 @@ export default {
       try {
         await ipcRenderer.invoke("backup:restore", selectedBackup.value);
         showRestoreDialog.value = false;
+        showConfirmRestoreDialog.value = false;
         selectedBackup.value = "";
-        await loadSettings();
-        showSuccess("Backup berhasil direstore");
-        clearMessages();
+        showSuccess("Backup berhasil direstore. Aplikasi akan restart...");
+        
+        // Reload aplikasi setelah 1 detik
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } catch (error) {
         console.error("Error restoring backup:", error);
         showError(error);
         clearMessages();
-      } finally {
         restoreLoading.value = false;
       }
     };
@@ -409,12 +498,23 @@ export default {
       await loadSettings();
     });
 
+    onBeforeUnmount(() => {
+      if (restoreCountdownTimer) {
+        clearInterval(restoreCountdownTimer);
+        restoreCountdownTimer = null;
+      }
+    });
+
     return {
       settings,
       loading,
       backupLoading,
       restoreLoading,
       showRestoreDialog,
+      showConfirmRestoreDialog,
+      restoreCountdown,
+      confirmRestoreButtonText,
+      canConfirmRestore,
       errors,
       backupFiles,
       selectedBackup,
@@ -423,6 +523,7 @@ export default {
       saveTaxSettings,
       createBackup,
       restoreBackup,
+      handleConfirmRestore,
     };
   },
 };
@@ -656,6 +757,79 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.confirm-restore-dialog {
+  padding: 0.5rem 0;
+}
+
+.warning-banner-danger {
+  background-color: #fef2f2;
+  border: 2px solid #fca5a5;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.warning-banner-danger .icon {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.warning-banner-danger h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.warning-banner-danger p {
+  margin: 0.5rem 0;
+  color: #7f1d1d;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.warning-banner-danger ul {
+  margin: 0.75rem 0 0 1.5rem;
+  padding: 0;
+  color: #7f1d1d;
+  font-size: 0.9rem;
+}
+
+.warning-banner-danger li {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.warning-banner-danger strong {
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.countdown-info {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.countdown-info p {
+  margin: 0;
+  color: #92400e;
+  font-size: 0.9rem;
+}
+
+.countdown-info strong {
+  color: #d97706;
+  font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .warning-banner {

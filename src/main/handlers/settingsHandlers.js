@@ -7,6 +7,7 @@ const { cleanupTempFiles, cleanupAllTempFiles } = require("../helpers/cleanup");
 const { getSettingsFile, getBackupsDir } = require("../helpers/pathUtils");
 const { loadSettings } = require("../helpers/settingsUtils");
 const { createBackup } = require("../helpers/backupUtils");
+const dbConfig = require("../config/database");
 
 function setupSettingsHandlers() {
   // Get settings
@@ -236,7 +237,7 @@ function setupSettingsHandlers() {
         try {
           // Copy backup file to database location
           logger.info(`Copying backup file to database location... (${copyRetries} retries left)`);
-          await fs.copyFile(backupPath, DATABASE_FILE);
+          await fs.copyFile(backupPath, dbConfig.path);
           logger.info("Backup file copied successfully");
           copySuccess = true;
         } catch (copyError) {
