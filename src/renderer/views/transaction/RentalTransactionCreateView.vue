@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="data-page transaction-page">
     <div class="page-header">
       <div class="header-content">
