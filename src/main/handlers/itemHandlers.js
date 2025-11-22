@@ -514,42 +514,88 @@ function setupItemHandlers() {
       doc.setLineWidth(1);
       doc.rect(5, 5, labelWidth - 10, labelHeight - 10, "S");
 
-      // Title - Item Name
-      doc.setFontSize(12);
+      // Title - Item Name (forced to single line)
+      doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(30, 30, 30);
-      const nameY = 25;
+      const nameY = 20;
       const maxNameWidth = labelWidth - 20;
-      const itemName = doc.splitTextToSize(item.name || "N/A", maxNameWidth);
-      doc.text(itemName, labelWidth / 2, nameY, { align: "center" });
+      
+      // Force single line - truncate if too long
+      let itemNameText = item.name || "N/A";
+      const itemNameLines = doc.splitTextToSize(itemNameText, maxNameWidth);
+      if (itemNameLines.length > 1) {
+        // If name is too long, truncate to fit one line
+        // Use getTextWidth to find exact truncation point
+        let truncated = itemNameText;
+        const ellipsis = "...";
+        while (doc.getTextWidth(truncated + ellipsis) > maxNameWidth && truncated.length > 0) {
+          truncated = truncated.substring(0, truncated.length - 1);
+        }
+        itemNameText = truncated + ellipsis;
+      }
+      const nameHeight = 13; // Single line height
+      doc.text(itemNameText, labelWidth / 2, nameY, { align: "center", maxWidth: maxNameWidth });
 
-      // Barcode image
-      // Border area: starts at 5, ends at labelHeight - 5
-      // Available space: from nameY + spacing to bottom border
-      const bottomBorder = labelHeight - 5;
-      const barcodeSpacing = 12; // Spacing after item name
+      // Price - positioned after item name with proper spacing
+      const priceY = nameY + nameHeight + 6; // Spacing after name
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 100, 0);
+      const priceText = formatCurrency(item.price || 0);
+      const priceHeight = 10; // Height for price line
+      doc.text(priceText, labelWidth / 2, priceY, { align: "center" });
+
+      // Barcode image - fixed size, consistent, within border
+      const borderTop = 5;
+      const borderBottom = labelHeight - 5;
+      const borderLeft = 5;
+      const borderRight = labelWidth - 5;
+      const barcodeSpacing = 6; // Spacing after price
       const marginBottom = 5; // Margin from bottom border
       
-      // Calculate available height for barcode
-      const codeY = nameY + (itemName.length * 14) + barcodeSpacing;
-      const availableHeight = bottomBorder - codeY - marginBottom;
-      const barcodeHeight = Math.min(45, Math.max(30, availableHeight)); // Min 30, Max 45
-      const barcodeWidth = (barcodeHeight / 50) * 150; // Maintain aspect ratio (50:150)
+      // Calculate available space for barcode
+      const codeY = priceY + priceHeight + barcodeSpacing;
+      const availableHeight = borderBottom - codeY - marginBottom;
       
-      // Position barcode
-      const barcodeY = codeY;
-      const barcodeX = (labelWidth - barcodeWidth) / 2;
+      // Fixed barcode size (consistent) but ensure it fits within border
+      let barcodeHeight = 40; // Preferred height
+      let barcodeWidth = (barcodeHeight / 50) * 150; // Maintain aspect ratio
+      
+      // Check if barcode fits vertically
+      if (codeY + barcodeHeight > borderBottom - marginBottom) {
+        // Adjust height to fit
+        barcodeHeight = Math.max(25, borderBottom - codeY - marginBottom);
+        barcodeWidth = (barcodeHeight / 50) * 150;
+      }
+      
+      // Check if barcode fits horizontally
+      let barcodeX = (labelWidth - barcodeWidth) / 2;
+      if (barcodeX < borderLeft) {
+        barcodeX = borderLeft;
+        // If still too wide, reduce size
+        if (barcodeX + barcodeWidth > borderRight) {
+          barcodeWidth = borderRight - borderLeft;
+          barcodeHeight = (barcodeWidth / 150) * 50;
+        }
+      } else if (barcodeX + barcodeWidth > borderRight) {
+        barcodeX = borderRight - barcodeWidth;
+        // If still too wide, reduce size
+        if (barcodeX < borderLeft) {
+          barcodeX = borderLeft;
+          barcodeWidth = borderRight - borderLeft;
+          barcodeHeight = (barcodeWidth / 150) * 50;
+        }
+      }
       
       // Ensure barcode doesn't exceed bottom border
-      const maxBarcodeBottom = bottomBorder - marginBottom;
-      const actualBarcodeBottom = barcodeY + barcodeHeight;
-      
-      if (actualBarcodeBottom > maxBarcodeBottom) {
-        // Adjust barcode position to fit within border
-        const adjustedBarcodeY = maxBarcodeBottom - barcodeHeight;
-        doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedBarcodeY, barcodeWidth, barcodeHeight);
+      if (codeY + barcodeHeight > borderBottom - marginBottom) {
+        // Adjust Y position to fit
+        const adjustedCodeY = borderBottom - marginBottom - barcodeHeight;
+        doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedCodeY, barcodeWidth, barcodeHeight);
       } else {
-        doc.addImage(barcodeDataUrl, "PNG", barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+        // Add barcode at calculated position
+        doc.addImage(barcodeDataUrl, "PNG", barcodeX, codeY, barcodeWidth, barcodeHeight);
       }
 
       // Save PDF
@@ -731,42 +777,87 @@ function setupItemHandlers() {
         doc.setLineWidth(1);
         doc.rect(x + 5, y + 5, labelWidth - 10, labelHeight - 10, "S");
 
-        // Title - Item Name
-        doc.setFontSize(12);
+        // Title - Item Name (forced to single line)
+        doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 30, 30);
-        const nameY = y + 25;
+        const nameY = y + 20;
         const maxNameWidth = labelWidth - 20;
-        const itemName = doc.splitTextToSize(item.name || "N/A", maxNameWidth);
-        doc.text(itemName, x + labelWidth / 2, nameY, { align: "center" });
+        
+        // Force single line - truncate if too long
+        let itemNameText = item.name || "N/A";
+        const itemNameLines = doc.splitTextToSize(itemNameText, maxNameWidth);
+        if (itemNameLines.length > 1) {
+          // If name is too long, truncate to fit one line
+          // Use getTextWidth to find exact truncation point
+          let truncated = itemNameText;
+          const ellipsis = "...";
+          while (doc.getTextWidth(truncated + ellipsis) > maxNameWidth && truncated.length > 0) {
+            truncated = truncated.substring(0, truncated.length - 1);
+          }
+          itemNameText = truncated + ellipsis;
+        }
+        const nameHeight = 12; // Single line height
+        doc.text(itemNameText, x + labelWidth / 2, nameY, { align: "center", maxWidth: maxNameWidth });
 
-        // Barcode image
-        // Border area: starts at y + 5, ends at y + labelHeight - 5
-        // Available space: from nameY + spacing to bottom border
-        const bottomBorder = y + labelHeight - 5;
-        const barcodeSpacing = 12; // Spacing after item name
+        // Price - positioned after item name with proper spacing
+        const priceY = nameY + nameHeight + 5; // Spacing after name
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 100, 0);
+        const priceText = formatCurrency(item.price || 0);
+        const priceHeight = 9; // Height for price line
+        doc.text(priceText, x + labelWidth / 2, priceY, { align: "center" });
+
+        // Barcode image - fixed size, consistent, within border
+        const borderTop = y + 5;
+        const borderBottom = y + labelHeight - 5;
+        const borderLeft = x + 5;
+        const borderRight = x + labelWidth - 5;
+        const barcodeSpacing = 5; // Spacing after price
         const marginBottom = 5; // Margin from bottom border
         
-        // Calculate available height for barcode
-        const codeY = nameY + (itemName.length * 14) + barcodeSpacing;
-        const availableHeight = bottomBorder - codeY - marginBottom;
-        const barcodeImgHeight = Math.min(45, Math.max(30, availableHeight)); // Min 30, Max 45
-        const barcodeImgWidth = (barcodeImgHeight / 50) * 150; // Maintain aspect ratio (50:150)
+        // Calculate available space for barcode
+        const codeY = priceY + priceHeight + barcodeSpacing;
         
-        // Position barcode
-        const barcodeY = codeY;
-        const barcodeX = x + (labelWidth - barcodeImgWidth) / 2;
+        // Fixed barcode size (consistent) but ensure it fits within border
+        let barcodeImgHeight = 30; // Preferred height for bulk labels
+        let barcodeImgWidth = (barcodeImgHeight / 50) * 150; // Maintain aspect ratio
+        
+        // Check if barcode fits vertically
+        if (codeY + barcodeImgHeight > borderBottom - marginBottom) {
+          // Adjust height to fit
+          barcodeImgHeight = Math.max(20, borderBottom - codeY - marginBottom);
+          barcodeImgWidth = (barcodeImgHeight / 50) * 150;
+        }
+        
+        // Check if barcode fits horizontally
+        let barcodeX = x + (labelWidth - barcodeImgWidth) / 2;
+        if (barcodeX < borderLeft) {
+          barcodeX = borderLeft;
+          // If still too wide, reduce size
+          if (barcodeX + barcodeImgWidth > borderRight) {
+            barcodeImgWidth = borderRight - borderLeft;
+            barcodeImgHeight = (barcodeImgWidth / 150) * 50;
+          }
+        } else if (barcodeX + barcodeImgWidth > borderRight) {
+          barcodeX = borderRight - barcodeImgWidth;
+          // If still too wide, reduce size
+          if (barcodeX < borderLeft) {
+            barcodeX = borderLeft;
+            barcodeImgWidth = borderRight - borderLeft;
+            barcodeImgHeight = (barcodeImgWidth / 150) * 50;
+          }
+        }
         
         // Ensure barcode doesn't exceed bottom border
-        const maxBarcodeBottom = bottomBorder - marginBottom;
-        const actualBarcodeBottom = barcodeY + barcodeImgHeight;
-        
-        if (actualBarcodeBottom > maxBarcodeBottom) {
-          // Adjust barcode position to fit within border
-          const adjustedBarcodeY = maxBarcodeBottom - barcodeImgHeight;
-          doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedBarcodeY, barcodeImgWidth, barcodeImgHeight);
+        if (codeY + barcodeImgHeight > borderBottom - marginBottom) {
+          // Adjust Y position to fit
+          const adjustedCodeY = borderBottom - marginBottom - barcodeImgHeight;
+          doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedCodeY, barcodeImgWidth, barcodeImgHeight);
         } else {
-          doc.addImage(barcodeDataUrl, "PNG", barcodeX, barcodeY, barcodeImgWidth, barcodeImgHeight);
+          // Add barcode at calculated position
+          doc.addImage(barcodeDataUrl, "PNG", barcodeX, codeY, barcodeImgWidth, barcodeImgHeight);
         }
 
         // Move to next position
