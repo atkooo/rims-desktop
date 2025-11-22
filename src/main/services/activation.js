@@ -156,8 +156,12 @@ async function getSyncServiceUrl() {
 
 /**
  * Make HTTP request to sync service
+ * @param {string} url - Request URL
+ * @param {string} method - HTTP method (default: 'GET')
+ * @param {object|null} data - Request body data (default: null)
+ * @param {number} timeout - Request timeout in milliseconds (default: 10000)
  */
-function makeRequest(url, method = 'GET', data = null) {
+function makeRequest(url, method = 'GET', data = null, timeout = 10000) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const isHttps = urlObj.protocol === 'https:';
@@ -171,6 +175,7 @@ function makeRequest(url, method = 'GET', data = null) {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: timeout,
     };
 
     if (data) {
@@ -191,20 +196,31 @@ function makeRequest(url, method = 'GET', data = null) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(parsed);
           } else {
-            reject(new Error(parsed.error || `HTTP ${res.statusCode}: ${responseData}`));
+            // Extract error message from response
+            const errorMsg = parsed.error || parsed.message || `HTTP ${res.statusCode}: ${responseData}`;
+            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
+            reject(new Error(errorMsg));
           }
         } catch (error) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(responseData);
           } else {
-            reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+            const errorMsg = `HTTP ${res.statusCode}: ${responseData}`;
+            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
+            reject(new Error(errorMsg));
           }
         }
       });
     });
 
     req.on('error', (error) => {
+      logger.error(`Request error: ${error.message}`);
       reject(error);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`Request timeout after ${timeout}ms`));
     });
 
     if (data) {
@@ -236,9 +252,10 @@ async function checkActivationStatus(forceRefresh = false) {
     const syncServiceUrl = await getSyncServiceUrl();
     const url = `${syncServiceUrl}/api/sync/activation/check`;
 
+    // Use shorter timeout for activation check (5 seconds)
     const result = await makeRequest(url, 'POST', {
       machineId: trimmedMachineId
-    });
+    }, 5000);
 
     if (result.success) {
       cachedStatus = {
@@ -298,9 +315,10 @@ async function verifyActivation() {
     const syncServiceUrl = await getSyncServiceUrl();
     const url = `${syncServiceUrl}/api/sync/activation/verify`;
 
+    // Use timeout for activation verify (10 seconds)
     const result = await makeRequest(url, 'POST', {
       machineId: machineId
-    });
+    }, 10000);
 
     if (result.success) {
       clearCache();

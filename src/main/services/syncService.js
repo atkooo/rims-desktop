@@ -21,75 +21,138 @@ async function getSyncServiceUrl() {
 }
 
 /**
- * Make HTTP request to sync service
+ * Check if error is retryable (transient error)
  */
-function makeRequest(url, method = 'GET', data = null, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const isHttps = urlObj.protocol === 'https:';
-    const client = isHttps ? https : http;
-    
-    const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || (isHttps ? 443 : 80),
-      path: urlObj.pathname + urlObj.search,
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: timeout,
-    };
+function isRetryableError(error) {
+  if (!error) return false;
+  
+  const errorMessage = error.message || error.toString();
+  const errorCode = error.code;
+  
+  // Network errors that are typically transient
+  const retryableCodes = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', 'EAI_AGAIN'];
+  const retryableMessages = ['timeout', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'];
+  
+  // Check error code
+  if (errorCode && retryableCodes.includes(errorCode)) {
+    return true;
+  }
+  
+  // Check error message
+  if (errorMessage && retryableMessages.some(msg => errorMessage.includes(msg))) {
+    return true;
+  }
+  
+  // HTTP 5xx errors are retryable
+  if (errorMessage && /HTTP 5\d{2}/.test(errorMessage)) {
+    return true;
+  }
+  
+  return false;
+}
 
-    if (data) {
-      const jsonData = JSON.stringify(data);
-      options.headers['Content-Length'] = Buffer.byteLength(jsonData);
-    }
+/**
+ * Make HTTP request to sync service with retry support
+ * @param {string} url - Request URL
+ * @param {string} method - HTTP method (default: 'GET')
+ * @param {object|null} data - Request body data (default: null)
+ * @param {number} timeout - Request timeout in milliseconds (default: 10000)
+ * @param {number} maxRetries - Maximum number of retries (default: 0, no retry)
+ * @param {number} retryDelay - Delay between retries in milliseconds (default: 1000)
+ */
+async function makeRequest(url, method = 'GET', data = null, timeout = 10000, maxRetries = 0, retryDelay = 1000) {
+  let lastError;
+  let attempt = 0;
+  
+  while (attempt <= maxRetries) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const urlObj = new URL(url);
+        const isHttps = urlObj.protocol === 'https:';
+        const client = isHttps ? https : http;
+        
+        const options = {
+          hostname: urlObj.hostname,
+          port: urlObj.port || (isHttps ? 443 : 80),
+          path: urlObj.pathname + urlObj.search,
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: timeout,
+        };
 
-    const req = client.request(options, (res) => {
-      let responseData = '';
-
-      res.on('data', (chunk) => {
-        responseData += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(responseData);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(parsed);
-          } else {
-            // Extract error message from response
-            const errorMsg = parsed.error || parsed.message || `HTTP ${res.statusCode}: ${responseData}`;
-            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-            reject(new Error(errorMsg));
-          }
-        } catch (error) {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(responseData);
-          } else {
-            const errorMsg = `HTTP ${res.statusCode}: ${responseData}`;
-            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-            reject(new Error(errorMsg));
-          }
+        if (data) {
+          const jsonData = JSON.stringify(data);
+          options.headers['Content-Length'] = Buffer.byteLength(jsonData);
         }
+
+        const req = client.request(options, (res) => {
+          let responseData = '';
+
+          res.on('data', (chunk) => {
+            responseData += chunk;
+          });
+
+          res.on('end', () => {
+            try {
+              const parsed = JSON.parse(responseData);
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                resolve(parsed);
+              } else {
+                // Extract error message from response
+                const errorMsg = parsed.error || parsed.message || `HTTP ${res.statusCode}: ${responseData}`;
+                logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
+                const error = new Error(errorMsg);
+                error.statusCode = res.statusCode;
+                reject(error);
+              }
+            } catch (error) {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                resolve(responseData);
+              } else {
+                const errorMsg = `HTTP ${res.statusCode}: ${responseData}`;
+                logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
+                const httpError = new Error(errorMsg);
+                httpError.statusCode = res.statusCode;
+                reject(httpError);
+              }
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          reject(error);
+        });
+
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error(`Request timeout after ${timeout}ms`));
+        });
+
+        if (data) {
+          req.write(JSON.stringify(data));
+        }
+
+        req.end();
       });
-    });
-
-    req.on('error', (error) => {
-      reject(error);
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error(`Request timeout after ${timeout}ms`));
-    });
-
-    if (data) {
-      req.write(JSON.stringify(data));
+    } catch (error) {
+      lastError = error;
+      
+      // If not retryable or no more retries, throw error
+      if (!isRetryableError(error) || attempt >= maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying with exponential backoff
+      const delay = retryDelay * Math.pow(2, attempt);
+      logger.warn(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      attempt++;
     }
-
-    req.end();
-  });
+  }
+  
+  throw lastError;
 }
 
 /**
@@ -116,10 +179,11 @@ async function syncRentalTransaction(transactionId) {
     const syncServiceUrl = await getSyncServiceUrl();
     const url = `${syncServiceUrl}/api/sync/rental-transaction`;
     
+    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
     const result = await makeRequest(url, 'POST', {
       transaction,
       details
-    });
+    }, 30000, 2, 1000);
 
     if (result.success) {
       // Update is_sync to 1
@@ -180,10 +244,11 @@ async function syncSalesTransaction(transactionId) {
 
     let result;
     try {
+      // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
       result = await makeRequest(url, 'POST', {
         transaction,
         details
-      });
+      }, 30000, 2, 1000);
       logger.info(`Sync service response:`, result);
     } catch (requestError) {
       logger.error(`Request error for sales transaction ${transactionId}:`, requestError);
@@ -236,7 +301,8 @@ async function syncPayment(paymentId) {
     const syncServiceUrl = await getSyncServiceUrl();
     const url = `${syncServiceUrl}/api/sync/payment`;
     
-    const result = await makeRequest(url, 'POST', payment);
+    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
+    const result = await makeRequest(url, 'POST', payment, 30000, 2, 1000);
 
     if (result.success) {
       // Update is_sync to 1
@@ -274,7 +340,8 @@ async function syncStockMovement(movementId) {
     const syncServiceUrl = await getSyncServiceUrl();
     const url = `${syncServiceUrl}/api/sync/stock-movement`;
     
-    const result = await makeRequest(url, 'POST', movement);
+    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
+    const result = await makeRequest(url, 'POST', movement, 30000, 2, 1000);
 
     if (result.success) {
       // Update is_sync to 1
