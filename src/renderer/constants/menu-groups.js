@@ -137,6 +137,12 @@ export const menuGroups = [
         permission: "settings.activity-logs.view",
       },
       {
+        to: "/settings/sync-service",
+        label: "Sync Service",
+        icon: "refresh-cw",
+        permission: "settings.view",
+      },
+      {
         to: "/master/user-role-management",
         label: "User & Role Management",
         icon: "shield",

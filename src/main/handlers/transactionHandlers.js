@@ -98,8 +98,8 @@ async function createStockMovement({
   await database.execute(
     `INSERT INTO stock_movements (
       item_id, movement_type, reference_type, reference_id,
-      quantity, stock_before, stock_after, user_id, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      quantity, stock_before, stock_after, user_id, notes, is_sync
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     [
       itemId,
       movementType,
@@ -366,8 +366,8 @@ function setupTransactionHandlers() {
             `INSERT INTO rental_transactions (
               transaction_code, customer_id, user_id, rental_date, 
               planned_return_date, total_days, subtotal, deposit, tax,
-              total_amount, status, notes, cashier_session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              total_amount, status, notes, cashier_session_id, is_sync
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -425,8 +425,8 @@ function setupTransactionHandlers() {
             await database.execute(
               `INSERT INTO rental_transaction_details (
                 rental_transaction_id, item_id, quantity, 
-                rental_price, subtotal
-              ) VALUES (?, ?, ?, ?, ?)`,
+                rental_price, subtotal, is_sync
+              ) VALUES (?, ?, ?, ?, ?, 0)`,
               [
                 result.id,
                 line.itemId,
@@ -469,8 +469,8 @@ function setupTransactionHandlers() {
           result = await database.execute(
             `INSERT INTO sales_transactions (
               transaction_code, customer_id, user_id, sale_date,
-              subtotal, discount, tax, total_amount, notes, cashier_session_id, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              subtotal, discount, tax, total_amount, notes, cashier_session_id, status, is_sync
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             [
               transactionCode,
               customerId,
@@ -522,8 +522,8 @@ function setupTransactionHandlers() {
             await database.execute(
               `INSERT INTO sales_transaction_details (
                 sales_transaction_id, item_id, accessory_id, quantity,
-                sale_price, subtotal
-              ) VALUES (?, ?, ?, ?, ?, ?)`,
+                sale_price, subtotal, is_sync
+              ) VALUES (?, ?, ?, ?, ?, ?, 0)`,
               [result.id, line.itemId, null, quantity, salePrice, lineSubtotal],
             );
 
@@ -565,8 +565,8 @@ function setupTransactionHandlers() {
             await database.execute(
               `INSERT INTO sales_transaction_details (
                 sales_transaction_id, item_id, accessory_id, quantity,
-                sale_price, subtotal
-              ) VALUES (?, ?, ?, ?, ?, ?)`,
+                sale_price, subtotal, is_sync
+              ) VALUES (?, ?, ?, ?, ?, ?, 0)`,
               [result.id, null, accessory.accessoryId, quantity, salePrice, lineSubtotal],
             );
 
@@ -1223,8 +1223,8 @@ function setupPaymentHandlers() {
       const result = await database.execute(
         `INSERT INTO payments (
           transaction_type, transaction_id, payment_date, amount,
-          payment_method, reference_number, user_id, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          payment_method, reference_number, user_id, notes, is_sync
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         [
           paymentData.transactionType,
           paymentData.transactionId,
@@ -1490,8 +1490,8 @@ function setupStockMovementHandlers() {
         const result = await database.execute(
           `INSERT INTO stock_movements (
             item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
-            quantity, stock_before, stock_after, user_id, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            quantity, stock_before, stock_after, user_id, notes, is_sync
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
           [
             movementData.itemId || null,
             movementData.bundleId || null,
@@ -1563,8 +1563,8 @@ function setupStockMovementHandlers() {
                 await database.execute(
                   `INSERT INTO stock_movements (
                     item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
-                    quantity, stock_before, stock_after, user_id, notes
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    quantity, stock_before, stock_after, user_id, notes, is_sync
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                   [
                     detail.item_id,
                     movementData.bundleId,
@@ -1609,8 +1609,8 @@ function setupStockMovementHandlers() {
                 await database.execute(
                   `INSERT INTO stock_movements (
                     item_id, bundle_id, accessory_id, movement_type, reference_type, reference_id,
-                    quantity, stock_before, stock_after, user_id, notes
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    quantity, stock_before, stock_after, user_id, notes, is_sync
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                   [
                     null,
                     movementData.bundleId,

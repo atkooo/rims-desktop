@@ -86,6 +86,7 @@ const setupRoleHandlers = require("./handlers/roleHandlers");
 const setupUserHandlers = require("./handlers/userHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const setupActivationHandlers = require("./handlers/activationHandlers");
+const { setupSyncHandlers } = require("./handlers/syncHandlers");
 const { registerAuthIpc } = require("./auth");
 const { registerDataIpc } = require("./data-ipc");
 const activationService = require("./services/activation");
@@ -390,6 +391,18 @@ app.whenReady().then(async () => {
   setupReceiptHandlers();
   setupRoleHandlers();
   setupUserHandlers();
+  setupSyncHandlers();
+  
+  // Sync service must be started manually through rims-sync-service application
+  // RIMS-Desktop will only check status and communicate with the service if it's running
+  logger.info('Sync service must be started manually through rims-sync-service application');
+  
+  // Setup auto sync
+  const autoSyncService = require('./services/autoSyncService');
+  autoSyncService.startAutoSync().catch((error) => {
+    logger.error('Error starting auto sync:', error);
+  });
+  
   createWindow();
 
   // Global shortcuts to toggle/exit fullscreen
@@ -411,6 +424,32 @@ app.whenReady().then(async () => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", async () => {
+  // Stop sync service when app is closing
+  try {
+    const syncServiceManager = require('./services/syncServiceManager');
+    const status = syncServiceManager.getSyncServiceStatus();
+    if (status.running) {
+      logger.info('Stopping sync service before app quit...');
+      const result = await syncServiceManager.stopSyncService();
+      if (result.success) {
+        logger.info('Sync service stopped successfully');
+      } else {
+        logger.warn('Failed to stop sync service:', result.error);
+      }
+    }
+  } catch (error) {
+    logger.error('Error stopping sync service on quit:', error);
+    // Don't block app quit, but try to kill the process anyway
+    try {
+      const syncServiceManager = require('./services/syncServiceManager');
+      await syncServiceManager.stopSyncService();
+    } catch (e) {
+      // Ignore errors during cleanup
+    }
+  }
 });
 
 app.on("activate", () => {

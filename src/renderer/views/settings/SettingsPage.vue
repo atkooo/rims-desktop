@@ -181,6 +181,72 @@
           </AppButton>
         </div>
       </div>
+
+      <!-- Sync Service Section -->
+      <div class="settings-section">
+        <header class="section-header">
+          <div class="section-icon">
+            <Icon name="refresh-cw" :size="24" />
+          </div>
+          <div>
+            <h2>Sinkronisasi Data</h2>
+            <p class="section-subtitle">
+              Sinkronkan data transaksi ke Supabase melalui sync service. Data yang sudah disinkronkan akan ditandai dengan is_sync = 1.
+            </p>
+          </div>
+        </header>
+        <div class="sync-status" v-if="syncStatus">
+          <div class="status-item" :class="{ 'status-success': syncStatus.success, 'status-error': !syncStatus.success }">
+            <Icon :name="syncStatus.success ? 'check-circle' : 'x-circle'" :size="18" />
+            <span>{{ syncStatus.success ? 'Sync service tersedia' : 'Sync service tidak tersedia' }}</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <AppButton
+            variant="secondary"
+            :loading="checkingStatus"
+            @click="checkSyncStatus"
+          >
+            <Icon name="activity" :size="16" /> Cek Status Sync Service
+          </AppButton>
+          <AppButton
+            variant="primary"
+            :loading="syncing"
+            @click="syncAllPending"
+          >
+            <Icon name="refresh-cw" :size="16" /> Sinkronkan Semua Data Pending
+          </AppButton>
+        </div>
+        <div v-if="syncResults" class="sync-results">
+          <h4>Hasil Sinkronisasi:</h4>
+          <div class="results-grid">
+            <div class="result-item">
+              <span>Rental Transactions:</span>
+              <strong :class="syncResults.rental.failed > 0 ? 'text-warning' : 'text-success'">
+                {{ syncResults.rental.success }} berhasil, {{ syncResults.rental.failed }} gagal
+              </strong>
+            </div>
+            <div class="result-item">
+              <span>Sales Transactions:</span>
+              <strong :class="syncResults.sales.failed > 0 ? 'text-warning' : 'text-success'">
+                {{ syncResults.sales.success }} berhasil, {{ syncResults.sales.failed }} gagal
+              </strong>
+            </div>
+            <div class="result-item">
+              <span>Payments:</span>
+              <strong :class="syncResults.payments.failed > 0 ? 'text-warning' : 'text-success'">
+                {{ syncResults.payments.success }} berhasil, {{ syncResults.payments.failed }} gagal
+              </strong>
+            </div>
+            <div class="result-item">
+              <span>Stock Movements:</span>
+              <strong :class="syncResults.stockMovements.failed > 0 ? 'text-warning' : 'text-success'">
+                {{ syncResults.stockMovements.success }} berhasil, {{ syncResults.stockMovements.failed }} gagal
+              </strong>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Restore Backup Dialog -->
@@ -268,6 +334,7 @@ import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { useNotification } from "@/composables/useNotification";
+import { checkSyncServiceStatus, syncAllPending } from "@/services/sync";
 
 export default {
   name: "SettingsPage",
@@ -291,6 +358,10 @@ export default {
     const errors = ref({});
     const backupFiles = ref([]);
     const selectedBackup = ref("");
+    const syncing = ref(false);
+    const checkingStatus = ref(false);
+    const syncStatus = ref(null);
+    const syncResults = ref(null);
     const lastBackupDate = ref(null);
 
     const settings = ref({
@@ -505,6 +576,60 @@ export default {
       }
     });
 
+    // Sync functions
+    const checkSyncStatus = async () => {
+      checkingStatus.value = true;
+      try {
+        const result = await checkSyncServiceStatus();
+        syncStatus.value = result;
+        if (result.success) {
+          showSuccess("Sync service tersedia dan berjalan");
+        } else {
+          showError(`Sync service tidak tersedia: ${result.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error("Error checking sync status:", error);
+        showError("Gagal mengecek status sync service");
+        syncStatus.value = { success: false, error: error.message };
+      } finally {
+        checkingStatus.value = false;
+      }
+    };
+
+    const syncAllPendingData = async () => {
+      syncing.value = true;
+      syncResults.value = null;
+      try {
+        const result = await syncAllPending();
+        if (result.success) {
+          syncResults.value = result.results;
+          const totalSuccess = 
+            result.results.rental.success + 
+            result.results.sales.success + 
+            result.results.payments.success + 
+            result.results.stockMovements.success;
+          const totalFailed = 
+            result.results.rental.failed + 
+            result.results.sales.failed + 
+            result.results.payments.failed + 
+            result.results.stockMovements.failed;
+          
+          if (totalFailed === 0) {
+            showSuccess(`Semua data berhasil disinkronkan (${totalSuccess} item)`);
+          } else {
+            showError(`Sinkronisasi selesai: ${totalSuccess} berhasil, ${totalFailed} gagal`);
+          }
+        } else {
+          showError(`Gagal sinkronisasi: ${result.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error("Error syncing all pending:", error);
+        showError("Gagal melakukan sinkronisasi");
+      } finally {
+        syncing.value = false;
+      }
+    };
+
     return {
       settings,
       loading,
@@ -524,6 +649,12 @@ export default {
       createBackup,
       restoreBackup,
       handleConfirmRestore,
+      syncing,
+      checkingStatus,
+      syncStatus,
+      syncResults,
+      checkSyncStatus,
+      syncAllPending: syncAllPendingData,
     };
   },
 };
@@ -1004,6 +1135,79 @@ export default {
     width: 40px;
     height: 40px;
     font-size: 1rem;
+  }
+}
+
+.sync-status {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.status-item.status-success {
+  color: #059669;
+}
+
+.status-item.status-error {
+  color: #dc2626;
+}
+
+.sync-results {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.sync-results h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.result-item span {
+  color: #6b7280;
+}
+
+.result-item strong {
+  font-weight: 600;
+}
+
+.text-success {
+  color: #059669;
+}
+
+.text-warning {
+  color: #d97706;
+}
+
+@media (max-width: 768px) {
+  .results-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

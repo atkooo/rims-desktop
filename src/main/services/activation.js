@@ -4,8 +4,11 @@ const fs = require("fs").promises;
 const fsSync = require("fs");
 const path = require("path");
 const { app } = require("electron");
-const { createClient } = require("@supabase/supabase-js");
+const https = require("https");
+const http = require("http");
+const { URL } = require("url");
 const logger = require("../helpers/logger");
+const settingsUtils = require("../helpers/settingsUtils");
 
 /**
  * Resolve settings file path
@@ -137,60 +140,83 @@ async function getOrGenerateMachineId() {
 }
 
 /**
- * Get Supabase configuration
+ * Get sync service URL from settings or environment
  */
-async function getSupabaseConfig() {
-  const settings = await loadSettings();
-
-  if (!settings.activation) {
-    settings.activation = {};
-  }
-
-  // Check environment variables first, then settings
-  // Priority: SUPABASE_URL (main process) > VITE_SUPABASE_URL (backward compat) > settings
-  const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL ||
-    settings.activation.supabase_url;
-
-  const supabaseAnonKey =
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    settings.activation.supabase_anon_key;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Supabase URL atau API key belum dikonfigurasi. Silakan atur SUPABASE_URL dan SUPABASE_ANON_KEY (atau VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY) di file .env",
-    );
-  }
-
-  return { supabaseUrl, supabaseAnonKey };
+async function getSyncServiceUrl() {
+  const settings = await settingsUtils.loadSettings();
+  
+  // Check environment variable first, then settings
+  const syncServiceUrl = 
+    process.env.SYNC_SERVICE_URL || 
+    settings.sync?.service_url || 
+    'http://localhost:3001';
+  
+  return syncServiceUrl;
 }
 
 /**
- * Create Supabase client
+ * Make HTTP request to sync service
  */
-async function createSupabaseClient() {
-  const { supabaseUrl, supabaseAnonKey } = await getSupabaseConfig();
-  return createClient(supabaseUrl, supabaseAnonKey);
+function makeRequest(url, method = 'GET', data = null) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const isHttps = urlObj.protocol === 'https:';
+    const client = isHttps ? https : http;
+    
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (isHttps ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (data) {
+      const jsonData = JSON.stringify(data);
+      options.headers['Content-Length'] = Buffer.byteLength(jsonData);
+    }
+
+    const req = client.request(options, (res) => {
+      let responseData = '';
+
+      res.on('data', (chunk) => {
+        responseData += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(responseData);
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parsed);
+          } else {
+            reject(new Error(parsed.error || `HTTP ${res.statusCode}: ${responseData}`));
+          }
+        } catch (error) {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(responseData);
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+          }
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (data) {
+      req.write(JSON.stringify(data));
+    }
+
+    req.end();
+  });
 }
 
 /**
- * Parse is_active value from various data types
- * Handles boolean, integer (1/0), and string ("true"/"false"/"1"/"0")
- */
-function parseIsActive(value) {
-  if (value === null || value === undefined) return false;
-  if (typeof value === "boolean") return value === true;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") {
-    return value.toLowerCase() === "true" || value === "1";
-  }
-  return false;
-}
-
-/**
- * Check activation status from Supabase
+ * Check activation status from sync service
  */
 async function checkActivationStatus(forceRefresh = false) {
   const now = Date.now();
@@ -206,63 +232,57 @@ async function checkActivationStatus(forceRefresh = false) {
 
   try {
     const machineId = await getOrGenerateMachineId();
-    const supabase = await createSupabaseClient();
     const trimmedMachineId = machineId.trim();
+    const syncServiceUrl = await getSyncServiceUrl();
+    const url = `${syncServiceUrl}/api/sync/activation/check`;
 
-    const { data, error } = await supabase
-      .from("activations")
-      .select("is_active")
-      .eq("machine_id", trimmedMachineId)
-      .single();
+    const result = await makeRequest(url, 'POST', {
+      machineId: trimmedMachineId
+    });
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        logger.warn(`Activation not found: ${trimmedMachineId}`);
-        cachedStatus = {
-          isActive: false,
-          machineId: trimmedMachineId,
-          error: "activation_not_found",
-        };
-        cacheTimestamp = now;
-        return cachedStatus;
-      }
-      throw error;
+    if (result.success) {
+      cachedStatus = {
+        isActive: result.isActive || false,
+        machineId: result.machineId || trimmedMachineId,
+        error: result.error || null,
+      };
+      cacheTimestamp = now;
+      logger.info(
+        `Activation: ${cachedStatus.isActive ? "ACTIVE" : "INACTIVE"} (${trimmedMachineId})`,
+      );
+      return cachedStatus;
+    } else {
+      cachedStatus = {
+        isActive: false,
+        machineId: trimmedMachineId,
+        error: result.error || "activation_check_failed",
+      };
+      cacheTimestamp = now;
+      return cachedStatus;
     }
-
-    const isActive = parseIsActive(data.is_active);
-    cachedStatus = { isActive, machineId: trimmedMachineId };
-    cacheTimestamp = now;
-    logger.info(
-      `Activation: ${isActive ? "ACTIVE" : "INACTIVE"} (${trimmedMachineId})`,
-    );
-    return cachedStatus;
   } catch (error) {
     logger.error("Error checking activation status:", error);
 
     const machineId = await getOrGenerateMachineId().catch(() => null);
-    const isConfigError =
-      error.message?.includes("belum dikonfigurasi") ||
-      error.message?.includes("Supabase URL") ||
-      error.message?.includes("API key");
+    const trimmedMachineId = machineId?.trim() || null;
 
-    if (isConfigError) {
-      logger.warn("Supabase configuration missing");
-      return {
-        isActive: false,
-        machineId,
-        error: error.message,
-        offline: true,
-      };
-    }
+    // Check if it's a connection error (sync service not available)
+    const isConnectionError =
+      error.message?.includes("ECONNREFUSED") ||
+      error.message?.includes("ENOTFOUND") ||
+      error.message?.includes("timeout");
 
-    if (cachedStatus?.isActive) {
-      logger.warn("Using cached active status");
-      return { ...cachedStatus, offline: true, error: error.message };
+    if (isConnectionError) {
+      logger.warn("Sync service not available, using cached status if available");
+      if (cachedStatus?.isActive) {
+        logger.warn("Using cached active status");
+        return { ...cachedStatus, offline: true, error: error.message };
+      }
     }
 
     return {
       isActive: false,
-      machineId,
+      machineId: trimmedMachineId,
       error: error.message,
       offline: true,
     };
@@ -275,36 +295,18 @@ async function checkActivationStatus(forceRefresh = false) {
 async function verifyActivation() {
   try {
     const machineId = (await getOrGenerateMachineId()).trim();
-    const supabase = await createSupabaseClient();
+    const syncServiceUrl = await getSyncServiceUrl();
+    const url = `${syncServiceUrl}/api/sync/activation/verify`;
 
-    const { data, error } = await supabase
-      .from("activations")
-      .select("is_active")
-      .eq("machine_id", machineId)
-      .single();
+    const result = await makeRequest(url, 'POST', {
+      machineId: machineId
+    });
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return {
-          success: false,
-          error: "activation_not_found",
-          message: "Aktivasi tidak ditemukan",
-        };
-      }
-      throw error;
+    if (result.success) {
+      clearCache();
     }
 
-    const isActive = parseIsActive(data.is_active);
-    if (!isActive) {
-      return {
-        success: false,
-        error: "activation_inactive",
-        message: "Aktivasi tidak aktif",
-      };
-    }
-
-    clearCache();
-    return { success: true, message: "Aktivasi berhasil diverifikasi" };
+    return result;
   } catch (error) {
     logger.error("Error verifying activation:", error);
     return {
@@ -360,7 +362,6 @@ module.exports = {
   startPeriodicCheck,
   stopPeriodicCheck,
   generateMachineId,
-  getSupabaseConfig,
   clearCache,
 };
 

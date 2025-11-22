@@ -12,5 +12,9 @@
   },
   "companyName": "RIMS",
   "address": "",
-  "phone": "08123456789"
+  "phone": "08123456789",
+  "sync": {
+    "autoSyncEnabled": true,
+    "autoSyncInterval": 60000
+  }
 }

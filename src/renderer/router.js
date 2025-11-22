@@ -20,6 +20,7 @@ import SettingsPage from "./views/settings/SettingsPage.vue";
 import ReceiptSettingsPage from "./views/settings/ReceiptSettingsPage.vue";
 import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
+import SyncServiceView from "./views/settings/SyncServiceView.vue";
 import UserProfileView from "./views/UserProfileView.vue";
 import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
 import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
@@ -72,6 +73,7 @@ const routePermissions = {
   "/settings/receipt": "settings.view",
   "/settings/backup-history": "settings.backup.view",
   "/settings/activity-logs": "settings.activity-logs.view",
+  "/settings/sync-service": "settings.view",
   // Reports
   "/reports/executive": "reports.transactions.view",
   "/reports/finance": "reports.transactions.view",
@@ -210,6 +212,11 @@ const routes = [
     path: "/settings/activity-logs",
     name: "settings-activity",
     component: ActivityLogsView,
+  },
+  {
+    path: "/settings/sync-service",
+    name: "settings-sync-service",
+    component: SyncServiceView,
   },
   {
     path: "/profile",

@@ -123,14 +123,16 @@ async function runMigrations(providedDb = null) {
       console.log(`Running migration: ${file.displayName}`);
       
       // Execute SQL file with proper error handling
+      // allowDuplicateColumn: true allows ALTER TABLE ADD COLUMN to skip if column already exists
+      // allowMissingTable: false ensures tables must exist (for ALTER TABLE migrations)
       await executeSqlFile(
         dbOps,
         file.fullPath,
         {
           maxRetries: 5,
           skipEmpty: true,
-          allowDuplicateColumn: false, // All migrations are now CREATE TABLE, no duplicates expected
-          allowMissingTable: false, // All migrations create tables, tables should not exist
+          allowDuplicateColumn: true, // Allow skipping if column already exists (for ALTER TABLE migrations)
+          allowMissingTable: false, // Tables must exist (for ALTER TABLE migrations)
         },
       );
 

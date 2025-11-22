@@ -42,7 +42,6 @@
     "wait-on": "^9.0.1"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
     "canvas": "^3.2.0",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
