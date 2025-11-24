@@ -41,6 +41,41 @@ function setupItemHandlers() {
     }
   });
 
+  // Get item by code/barcode
+  ipcMain.handle("items:getByCode", async (event, code) => {
+    try {
+      if (!code || typeof code !== "string") {
+        return null;
+      }
+      
+      const normalizedCode = normalizeCode(code.trim());
+      const item = await database.queryOne(
+        `
+        SELECT
+          i.*,
+          c.name AS category_name,
+          s.name AS size_name,
+          s.code AS size_code,
+          dg.name AS discount_group_name,
+          dg.discount_percentage,
+          dg.discount_amount
+        FROM items i
+        LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        WHERE i.code = ? OR UPPER(i.code) = UPPER(?)
+        LIMIT 1
+      `,
+        [normalizedCode, code.trim()],
+      );
+      
+      return item || null;
+    } catch (error) {
+      logger.error("Error fetching item by code:", error);
+      throw error;
+    }
+  });
+
   // Get next item code based on type
   ipcMain.handle("items:getNextCode", async (event, type) => {
     try {

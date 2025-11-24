@@ -245,6 +245,8 @@ import { TRANSACTION_TYPE } from "@shared/constants";
 import { ipcRenderer } from "@/services/ipc";
 import { useNotification } from "@/composables/useNotification";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { useBarcodeScanner } from "@/composables/useBarcodeScanner";
+import { useItemStore } from "@/store/items";
 import { toDateInput } from "@/utils/dateUtils";
 
 const createDefaultForm = () => ({
@@ -272,6 +274,7 @@ export default {
   setup() {
     const router = useRouter();
     const transactionStore = useTransactionStore();
+    const itemStore = useItemStore();
     const { showSuccess, showError } = useNotification();
     const form = ref(createDefaultForm());
     const customers = ref([]);
@@ -288,6 +291,77 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value || 0);
+
+    // Barcode scanner handler
+    const handleBarcodeScan = async (barcode) => {
+      try {
+        // Cari item berdasarkan barcode/code
+        let item = itemStore.getItemByCode(barcode);
+        
+        // Jika tidak ditemukan di store, cari di database
+        if (!item) {
+          item = await itemStore.searchItemByCode(barcode);
+        }
+
+        if (!item) {
+          showError(`Item dengan kode "${barcode}" tidak ditemukan`);
+          return;
+        }
+
+        // Cek apakah item sesuai untuk transaksi penjualan
+        if (item.status !== "AVAILABLE") {
+          showError(`Item "${item.name}" tidak tersedia untuk dijual`);
+          return;
+        }
+
+        // Cek apakah item sudah ada di form
+        const existingItemIndex = form.value.items.findIndex(
+          (i) => i.id === item.id
+        );
+
+        if (existingItemIndex >= 0) {
+          // Item sudah ada, tambah quantity
+          const existingItem = form.value.items[existingItemIndex];
+          const currentQuantity = existingItem.quantity || 1;
+          
+          // Cek stok jika restrictStock aktif
+          const availableStock = item.available_quantity || 0;
+          if (currentQuantity >= availableStock) {
+            showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+          
+          form.value.items[existingItemIndex].quantity = currentQuantity + 1;
+        } else {
+          // Item baru, cek stok tersedia
+          const availableStock = item.available_quantity || 0;
+          if (availableStock < 1) {
+            showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+            return;
+          }
+
+          // Tambahkan item ke form
+          form.value.items.push({
+            ...item,
+            quantity: 1,
+          });
+        }
+
+        showSuccess(`Item "${item.name}" berhasil ditambahkan`);
+      } catch (error) {
+        console.error("Error handling barcode scan:", error);
+        showError("Gagal menambahkan item dari barcode: " + (error.message || "Unknown error"));
+      }
+    };
+
+    // Setup barcode scanner
+    useBarcodeScanner({
+      onScan: handleBarcodeScan,
+      minLength: 3,
+      maxLength: 50,
+      timeout: 100,
+      enabled: true,
+    });
 
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
@@ -703,6 +777,11 @@ export default {
       await loadSettings();
       // Initialize tax after settings are loaded
       form.value.tax = calculatedTax.value;
+      
+      // Load items untuk barcode scanner
+      if (!itemStore.items.length) {
+        await itemStore.fetchItems();
+      }
     });
 
     return {

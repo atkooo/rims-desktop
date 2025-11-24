@@ -9,17 +9,33 @@ const logger = require("./logger");
  * @param {string} filePath - Path to PDF file
  * @param {string} printerName - Name of printer
  * @param {boolean} silent - Silent print mode
+ * @param {object} thermalOptions - Thermal printer options (paperSize, autoCut, etc.)
  * @returns {Promise<{success: boolean, filePath: string, printer: string}>}
  */
-async function printPDF(filePath, printerName, silent = false) {
+async function printPDF(filePath, printerName, silent = false, thermalOptions = {}) {
   try {
     // Try using pdf-to-printer library first (better for direct printing)
     const ptp = require("pdf-to-printer");
 
-    await ptp.print(filePath, {
+    // Build print options
+    const printOptions = {
       printer: printerName,
       silent: silent,
-    });
+    };
+
+    // Add paper size if specified (for thermal printers)
+    // Note: pdf-to-printer uses the PDF's page size by default, but we can specify it
+    if (thermalOptions.paperSize) {
+      // Map paper size to standard sizes
+      // 58mm = ~2.28 inches, 80mm = ~3.15 inches
+      if (thermalOptions.paperSize === "58") {
+        printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
+      } else if (thermalOptions.paperSize === "80") {
+        printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
+      }
+    }
+
+    await ptp.print(filePath, printOptions);
 
     logger.info(`PDF printed to printer: ${printerName}`);
     return {

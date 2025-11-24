@@ -135,11 +135,39 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       [transactionId, normalizedTransactionType],
     );
 
-    // Calculate paper width in mm (default 80mm for thermal printer)
-    const paperWidth = settings.paperWidth || 80;
+    // Get thermal printer settings
+    const thermalPaperSize = settings.thermalPaperSize || "80";
+    const thermalFontSize = settings.thermalFontSize || "medium";
+    const thermalPrintDensity = settings.thermalPrintDensity || "normal";
+    
+    // Calculate paper width in mm based on thermal paper size
+    let paperWidth = settings.paperWidth || 80;
+    if (thermalPaperSize === "58") {
+      paperWidth = 58;
+    } else if (thermalPaperSize === "80") {
+      paperWidth = 80;
+    }
+    // If custom, use the paperWidth from settings
+    
     const paperWidthMM = paperWidth; // Already in mm
-    const margin = 5; // Small margin for thermal printer
+    
+    // Adjust margin based on paper size (smaller paper = smaller margin)
+    let margin = 5;
+    if (paperWidthMM <= 58) {
+      margin = 3; // Smaller margin for 58mm paper
+    } else {
+      margin = 5; // Standard margin for 80mm paper
+    }
+    
     const contentWidth = paperWidthMM - margin * 2;
+    
+    // Define font sizes based on thermal font size setting
+    const fontSizes = {
+      small: { normal: 7, medium: 8, large: 9, title: 10 },
+      medium: { normal: 9, medium: 10, large: 11, title: 12 },
+      large: { normal: 11, medium: 12, large: 13, title: 14 },
+    };
+    const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
 
     // Generate PDF with custom page size
     const doc = new jsPDF({
@@ -157,41 +185,67 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Helper function to format date (for receipt, use formatDateTime)
     const formatDate = formatDateTime;
 
-    // Helper to add centered text
-    const addCenteredText = (text, fontSize = 10, isBold = false) => {
-      doc.setFontSize(fontSize);
+    // Helper to add centered text (backward compatible: accepts size string or numeric fontSize)
+    const addCenteredText = (text, sizeOrFontSize = "medium", isBold = false) => {
+      let fontSizeValue;
+      if (typeof sizeOrFontSize === "number") {
+        // Backward compatibility: numeric fontSize
+        fontSizeValue = sizeOrFontSize;
+      } else {
+        // New: size string (small, medium, large, title)
+        fontSizeValue = fontSize[sizeOrFontSize] || fontSize.medium;
+      }
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", isBold ? "bold" : "normal");
       const textWidth = doc.getTextWidth(text);
       doc.text(text, (pageWidth - textWidth) / 2, yPos);
-      yPos += fontSize * 0.4;
+      yPos += fontSizeValue * 0.4;
     };
 
     // Helper to add centered text with wrapping
-    const addCenteredTextWrapped = (text, fontSize = 10, isBold = false, maxWidth = null) => {
-      doc.setFontSize(fontSize);
+    const addCenteredTextWrapped = (text, size = "medium", isBold = false, maxWidth = null) => {
+      const fontSizeValue = fontSize[size] || fontSize.medium;
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", isBold ? "bold" : "normal");
       const textWidth = maxWidth || (contentWidth * 0.9); // Use 90% of content width for wrapping
       const lines = doc.splitTextToSize(text, textWidth);
       lines.forEach((line) => {
         const lineWidth = doc.getTextWidth(line);
         doc.text(line, (pageWidth - lineWidth) / 2, yPos);
-        yPos += fontSize * 0.5; // Slightly more spacing between wrapped lines
+        yPos += fontSizeValue * 0.5; // Slightly more spacing between wrapped lines
       });
     };
 
-    // Helper to add left-aligned text
-    const addLeftText = (text, fontSize = 9) => {
-      doc.setFontSize(fontSize);
+    // Helper to add left-aligned text (backward compatible)
+    const addLeftText = (text, sizeOrFontSize = "normal") => {
+      let fontSizeValue;
+      if (typeof sizeOrFontSize === "number") {
+        // Backward compatibility: numeric fontSize
+        fontSizeValue = sizeOrFontSize;
+      } else {
+        // New: size string (small, medium, large, title)
+        fontSizeValue = fontSize[sizeOrFontSize] || fontSize.normal;
+      }
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", "normal");
       doc.text(text, margin, yPos);
-      yPos += fontSize * 0.4;
+      yPos += fontSizeValue * 0.4;
     };
 
     // Helper to add line
     const addLine = () => {
-      doc.setLineWidth(0.2);
+      // Adjust line width based on print density
+      let lineWidth = 0.2;
+      if (thermalPrintDensity === "dark") {
+        lineWidth = 0.3;
+      } else if (thermalPrintDensity === "light") {
+        lineWidth = 0.15;
+      }
+      doc.setLineWidth(lineWidth);
       doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 4; // Increased spacing after line from 3 to 4mm
+      // Adjust spacing based on paper size
+      const spacing = paperWidthMM <= 58 ? 3 : 4;
+      yPos += spacing;
     };
 
     // Helper to add logo (grayscale for thermal printer)
@@ -553,6 +607,11 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       throw new Error("jsPDF constructor not found.");
     }
 
+    // Get thermal printer settings from companySettings
+    const thermalPaperSize = companySettings?.thermalPaperSize || "80";
+    const thermalFontSize = companySettings?.thermalFontSize || "medium";
+    const thermalPrintDensity = companySettings?.thermalPrintDensity || "normal";
+    
     const settings = {
       companyName: companySettings?.companyName || "TOKO CONTOH",
       address: companySettings?.address || "Jl. Contoh No. 123, Jakarta",
@@ -578,9 +637,31 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       },
     };
 
-    const paperWidth = settings.paperWidth || 80;
-    const margin = 5;
+    // Calculate paper width based on thermal paper size
+    let paperWidth = settings.paperWidth || 80;
+    if (thermalPaperSize === "58") {
+      paperWidth = 58;
+    } else if (thermalPaperSize === "80") {
+      paperWidth = 80;
+    }
+    
+    // Adjust margin based on paper size
+    let margin = 5;
+    if (paperWidth <= 58) {
+      margin = 3;
+    } else {
+      margin = 5;
+    }
+    
     const contentWidth = paperWidth - margin * 2;
+    
+    // Define font sizes based on thermal font size setting
+    const fontSizes = {
+      small: { normal: 7, medium: 8, large: 9, title: 10 },
+      medium: { normal: 9, medium: 10, large: 11, title: 12 },
+      large: { normal: 11, medium: 12, large: 13, title: 14 },
+    };
+    const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
 
     const doc = new jsPDF({
       orientation: "portrait",
@@ -597,38 +678,65 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     // Use format helpers from imports at top
     const formatDate = formatDateTime;
 
-    const addCenteredText = (text, fontSize = 10, isBold = false) => {
-      doc.setFontSize(fontSize);
+    const addCenteredText = (text, sizeOrFontSize = "medium", isBold = false) => {
+      let fontSizeValue;
+      if (typeof sizeOrFontSize === "number") {
+        fontSizeValue = sizeOrFontSize;
+      } else {
+        fontSizeValue = fontSize[sizeOrFontSize] || fontSize.medium;
+      }
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", isBold ? "bold" : "normal");
       const textWidth = doc.getTextWidth(text);
       doc.text(text, (pageWidth - textWidth) / 2, yPos);
-      yPos += fontSize * 0.4;
+      yPos += fontSizeValue * 0.4;
     };
 
     // Helper to add centered text with wrapping
-    const addCenteredTextWrapped = (text, fontSize = 10, isBold = false, maxWidth = null) => {
-      doc.setFontSize(fontSize);
+    const addCenteredTextWrapped = (text, sizeOrFontSize = "medium", isBold = false, maxWidth = null) => {
+      let fontSizeValue;
+      if (typeof sizeOrFontSize === "number") {
+        fontSizeValue = sizeOrFontSize;
+      } else {
+        fontSizeValue = fontSize[sizeOrFontSize] || fontSize.medium;
+      }
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const textWidth = maxWidth || (contentWidth * 0.9); // Use 90% of content width for wrapping
+      const textWidth = maxWidth || (contentWidth * 0.9);
       const lines = doc.splitTextToSize(text, textWidth);
       lines.forEach((line) => {
         const lineWidth = doc.getTextWidth(line);
         doc.text(line, (pageWidth - lineWidth) / 2, yPos);
-        yPos += fontSize * 0.5; // Slightly more spacing between wrapped lines
+        yPos += fontSizeValue * 0.5;
       });
     };
 
-    const addLeftText = (text, fontSize = 9) => {
-      doc.setFontSize(fontSize);
+    const addLeftText = (text, sizeOrFontSize = "normal") => {
+      let fontSizeValue;
+      if (typeof sizeOrFontSize === "number") {
+        fontSizeValue = sizeOrFontSize;
+      } else {
+        fontSizeValue = fontSize[sizeOrFontSize] || fontSize.normal;
+      }
+      doc.setFontSize(fontSizeValue);
       doc.setFont("helvetica", "normal");
       doc.text(text, margin, yPos);
-      yPos += fontSize * 0.4;
+      yPos += fontSizeValue * 0.4;
     };
 
     const addLine = () => {
-      doc.setLineWidth(0.2);
+      // Adjust line width based on print density
+      let lineWidth = 0.2;
+      if (thermalPrintDensity === "dark") {
+        lineWidth = 0.3;
+      } else if (thermalPrintDensity === "light") {
+        lineWidth = 0.15;
+      }
+      doc.setLineWidth(lineWidth);
       doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 4; // Increased spacing after line from 3 to 4mm
+      // Adjust spacing based on paper size
+      const spacing = paperWidth <= 58 ? 3 : 4;
+      yPos += spacing;
     };
 
     // Helper to add logo (grayscale for thermal printer)
@@ -984,7 +1092,13 @@ function setupReceiptHandlers() {
 
         // If printer name is provided, print directly to that printer
         if (printerName) {
-          return await printPDF(result.filePath, printerName, silent);
+          // Get thermal printer settings for print options
+          const settings = await loadSettings();
+          const thermalOptions = {
+            paperSize: settings.thermalPaperSize || "80",
+            autoCut: settings.thermalAutoCut || false,
+          };
+          return await printPDF(result.filePath, printerName, silent, thermalOptions);
         } else {
           // No printer specified, open PDF in default viewer
           return await openPDF(result.filePath);

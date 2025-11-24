@@ -53,13 +53,69 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Lebar Kertas (mm)</label>
+              <label>Jenis Kertas Thermal</label>
+              <select
+                v-model="settings.thermalPaperSize"
+                class="form-select"
+                @change="onPaperSizeChange"
+              >
+                <option value="58">58mm (Lebar 48mm)</option>
+                <option value="80">80mm (Lebar 72mm)</option>
+                <option value="custom">Custom</option>
+              </select>
+              <small class="form-hint">
+                Pilih ukuran kertas thermal yang sesuai dengan printer Anda
+              </small>
+            </div>
+            <div class="form-group" v-if="settings.thermalPaperSize === 'custom'">
+              <label>Lebar Kertas Custom (mm)</label>
               <input
                 type="number"
                 v-model.number="settings.paperWidth"
                 class="form-input"
+                min="40"
+                max="120"
                 @change="updatePreview"
               />
+            </div>
+            <div class="form-group">
+              <label>Ukuran Font</label>
+              <select
+                v-model="settings.thermalFontSize"
+                class="form-select"
+                @change="updatePreview"
+              >
+                <option value="small">Kecil (8pt)</option>
+                <option value="medium">Sedang (10pt)</option>
+                <option value="large">Besar (12pt)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Kepadatan Cetak</label>
+              <select
+                v-model="settings.thermalPrintDensity"
+                class="form-select"
+                @change="updatePreview"
+              >
+                <option value="light">Ringan</option>
+                <option value="normal">Normal</option>
+                <option value="dark">Gelap</option>
+              </select>
+              <small class="form-hint">
+                Mengatur ketebalan/kepadatan hasil cetak
+              </small>
+            </div>
+            <div class="checkbox-wrapper">
+              <label class="checkbox-item">
+                <input
+                  type="checkbox"
+                  v-model="settings.thermalAutoCut"
+                />
+                <span>Auto-cut setelah cetak</span>
+              </label>
+              <small class="form-hint">
+                Potong kertas otomatis setelah selesai cetak (jika printer mendukung)
+              </small>
             </div>
             <div class="checkbox-wrapper">
               <label class="checkbox-item">
@@ -325,6 +381,10 @@ export default {
       phone: "",
       printer: "",
       paperWidth: 80,
+      thermalPaperSize: "80", // 58, 80, or custom
+      thermalFontSize: "medium", // small, medium, large
+      thermalPrintDensity: "normal", // light, normal, dark
+      thermalAutoCut: false,
       autoPrint: true,
       receiptSettings: {
         showCompanyName: true,
@@ -345,6 +405,17 @@ export default {
         showFooter: true,
       },
     });
+
+    // Handle paper size change
+    const onPaperSizeChange = () => {
+      if (settings.value.thermalPaperSize === "58") {
+        settings.value.paperWidth = 58;
+      } else if (settings.value.thermalPaperSize === "80") {
+        settings.value.paperWidth = 80;
+      }
+      // If custom, keep current paperWidth value
+      updatePreview();
+    };
 
     // Load settings
     const loadSettings = async () => {
@@ -388,6 +459,10 @@ export default {
           phone: String(settings.value.phone || ""),
           paperWidth: Number(settings.value.paperWidth || 80),
           logoPath: String(settings.value.logoPath || ""),
+          thermalPaperSize: String(settings.value.thermalPaperSize || "80"),
+          thermalFontSize: String(settings.value.thermalFontSize || "medium"),
+          thermalPrintDensity: String(settings.value.thermalPrintDensity || "normal"),
+          thermalAutoCut: Boolean(settings.value.thermalAutoCut || false),
         };
 
         // Deep clone receiptSettings to plain object
@@ -441,6 +516,10 @@ export default {
         await ipcRenderer.invoke("settings:save", {
           printer: settings.value.printer,
           paperWidth: settings.value.paperWidth,
+          thermalPaperSize: settings.value.thermalPaperSize,
+          thermalFontSize: settings.value.thermalFontSize,
+          thermalPrintDensity: settings.value.thermalPrintDensity,
+          thermalAutoCut: settings.value.thermalAutoCut,
           autoPrint: settings.value.autoPrint,
           receiptSettings: settings.value.receiptSettings,
         });
@@ -477,6 +556,9 @@ export default {
         settings.value.phone,
         settings.value.paperWidth,
         settings.value.printer,
+        settings.value.thermalPaperSize,
+        settings.value.thermalFontSize,
+        settings.value.thermalPrintDensity,
       ],
       debouncedUpdatePreview,
     );
@@ -506,6 +588,7 @@ export default {
       previewUrl,
       saveAllSettings,
       updatePreview,
+      onPaperSizeChange,
     };
   },
 };
@@ -625,6 +708,14 @@ export default {
 
 .form-select {
   cursor: pointer;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
 .checkbox-wrapper {

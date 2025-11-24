@@ -25,6 +25,17 @@ export const useItemStore = defineStore("items", {
     availableItems: (state) => {
       return state.items.filter((item) => item.status === "AVAILABLE");
     },
+
+    // Get item by code/barcode
+    getItemByCode: (state) => (code) => {
+      if (!code) return null;
+      const normalizedCode = code.trim().toUpperCase();
+      return state.items.find(
+        (item) =>
+          item.code?.toUpperCase() === normalizedCode ||
+          item.code === code.trim(),
+      );
+    },
   },
 
   actions: {
@@ -108,6 +119,17 @@ export const useItemStore = defineStore("items", {
         console.error("Gagal memuat data ukuran:", err);
       } finally {
         this.sizesLoading = false;
+      }
+    },
+
+    // Search item by code/barcode (from database)
+    async searchItemByCode(code) {
+      try {
+        const item = await ipcRenderer.invoke("items:getByCode", code);
+        return item;
+      } catch (err) {
+        console.error("Error searching item by code:", err);
+        return null;
       }
     },
   },

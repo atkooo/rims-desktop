@@ -22,6 +22,10 @@ async function loadSettings() {
         phone: "",
         printer: "",
         paperWidth: 80,
+        thermalPaperSize: "80", // 58, 80, or custom
+        thermalFontSize: "medium", // small, medium, large
+        thermalPrintDensity: "normal", // light, normal, dark
+        thermalAutoCut: false,
         autoPrint: true,
         taxPercentage: 0,
         receiptSettings: {
@@ -50,6 +54,10 @@ async function loadSettings() {
       address: "-",
       phone: "-",
       paperWidth: 80,
+      thermalPaperSize: "80",
+      thermalFontSize: "medium",
+      thermalPrintDensity: "normal",
+      thermalAutoCut: false,
       receiptSettings: {
         showCompanyName: true,
         showAddress: true,
