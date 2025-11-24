@@ -124,7 +124,7 @@
         </div>
 
         <!-- Bundles Table - Full Width -->
-        <div class="cashier-items-wrapper cashier-items-wrapper-spaced">
+        <div ref="bundlesSectionRef" class="cashier-items-wrapper cashier-items-wrapper-spaced">
           <div class="cashier-section-header-minimal">
             <span class="cashier-section-title-minimal">Paket Sewa</span>
           </div>
@@ -231,14 +231,14 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
-import { fetchCustomers } from "@/services/masterData";
+import { fetchCustomers, fetchAccessoryByCode, fetchBundleByCode } from "@/services/masterData";
 import { getStoredUser, getCurrentUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
 import { getCurrentSession } from "@/services/cashier";
@@ -290,68 +290,107 @@ export default {
     const taxPercentage = ref(0);
     const showPaymentModal = ref(false);
     const savedTransactionId = ref(null);
+    const bundlesSectionRef = ref(null);
 
     const { formatCurrency } = useCurrency();
 
     // Barcode scanner handler
     const handleBarcodeScan = async (barcode) => {
       try {
-        // Cari item berdasarkan barcode/code
+        // Cari di items terlebih dahulu
         let item = itemStore.getItemByCode(barcode);
-        
-        // Jika tidak ditemukan di store, cari di database
         if (!item) {
           item = await itemStore.searchItemByCode(barcode);
         }
 
-        if (!item) {
-          showError(`Item dengan kode "${barcode}" tidak ditemukan`);
-          return;
-        }
-
-        // Cek apakah item sesuai untuk transaksi rental
-        if (item.status !== "AVAILABLE") {
-          showError(`Item "${item.name}" tidak tersedia untuk disewa`);
-          return;
-        }
-
-        // Cek apakah item sudah ada di form
-        const existingItemIndex = form.value.items.findIndex(
-          (i) => i.id === item.id
-        );
-
-        if (existingItemIndex >= 0) {
-          // Item sudah ada, tambah quantity
-          const existingItem = form.value.items[existingItemIndex];
-          const currentQuantity = existingItem.quantity || 1;
-          
-          // Cek stok jika restrictStock aktif
-          const availableStock = item.available_quantity || 0;
-          if (currentQuantity >= availableStock) {
-            showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
-            return;
-          }
-          
-          form.value.items[existingItemIndex].quantity = currentQuantity + 1;
-        } else {
-          // Item baru, cek stok tersedia
-          const availableStock = item.available_quantity || 0;
-          if (availableStock < 1) {
-            showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+        if (item) {
+          // Item ditemukan
+          if (item.status !== "AVAILABLE") {
+            showError(`Item "${item.name}" tidak tersedia untuk disewa`);
             return;
           }
 
-          // Tambahkan item ke form
-          form.value.items.push({
-            ...item,
-            quantity: 1,
-          });
+          const existingItemIndex = form.value.items.findIndex(
+            (i) => i.id === item.id
+          );
+
+          if (existingItemIndex >= 0) {
+            const existingItem = form.value.items[existingItemIndex];
+            const currentQuantity = existingItem.quantity || 1;
+            const availableStock = item.available_quantity || 0;
+            if (currentQuantity >= availableStock) {
+              showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+              return;
+            }
+            form.value.items[existingItemIndex].quantity = currentQuantity + 1;
+          } else {
+            const availableStock = item.available_quantity || 0;
+            if (availableStock < 1) {
+              showError(`Stok tidak mencukupi. Stok tersedia: ${availableStock}`);
+              return;
+            }
+            form.value.items.push({
+              ...item,
+              quantity: 1,
+            });
+          }
+          showSuccess(`Item "${item.name}" berhasil ditambahkan`);
+          return;
         }
 
-        showSuccess(`Item "${item.name}" berhasil ditambahkan`);
+        // Jika tidak ditemukan di items, cari di bundles
+        let bundle = null;
+        try {
+          bundle = await fetchBundleByCode(barcode);
+        } catch (bundleError) {
+          // Bundle not found
+          bundle = null;
+        }
+        
+        if (bundle) {
+            if (!bundle.is_active) {
+              showError(`Paket "${bundle.name}" tidak aktif`);
+              return;
+            }
+
+            // Cek apakah bundle sesuai untuk transaksi rental
+            if (bundle.bundle_type !== "rental" && bundle.bundle_type !== "both") {
+              showError(`Paket "${bundle.name}" tidak tersedia untuk sewa`);
+              return;
+            }
+
+            const existingBundleIndex = form.value.bundles.findIndex(
+              (b) => b.id === bundle.id
+            );
+
+            if (existingBundleIndex >= 0) {
+              const existingBundle = form.value.bundles[existingBundleIndex];
+              form.value.bundles[existingBundleIndex].quantity = (existingBundle.quantity || 1) + 1;
+            } else {
+              form.value.bundles.push({
+                ...bundle,
+                quantity: 1,
+              });
+            }
+            
+            // Scroll ke section paket setelah ditambahkan
+            await nextTick();
+            if (bundlesSectionRef.value) {
+              bundlesSectionRef.value.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+            }
+            
+            showSuccess(`Paket "${bundle.name}" berhasil ditambahkan`);
+            return;
+          }
+
+        // Jika tidak ditemukan di semua tempat
+        showError(`Kode "${barcode}" tidak ditemukan (item atau paket)`);
       } catch (error) {
         console.error("Error handling barcode scan:", error);
-        showError("Gagal menambahkan item dari barcode: " + (error.message || "Unknown error"));
+        showError("Gagal menambahkan dari barcode: " + (error.message || "Unknown error"));
       }
     };
 
@@ -682,6 +721,7 @@ export default {
       savedTransactionId,
       handlePaymentSuccess,
       handlePaymentModalClose,
+      bundlesSectionRef,
     };
   },
 };

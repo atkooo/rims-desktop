@@ -315,6 +315,27 @@ function setupBundleHandlers() {
     }
   });
 
+  ipcMain.handle("bundles:getByCode", async (_event, code) => {
+    try {
+      if (!code || typeof code !== "string") {
+        return null;
+      }
+      
+      const { normalizeCode } = require("../helpers/codeUtils");
+      const normalizedCode = normalizeCode(code.trim());
+      
+      const bundle = await database.queryOne(
+        `SELECT * FROM bundles WHERE code = ? OR UPPER(code) = UPPER(?) LIMIT 1`,
+        [normalizedCode, code.trim()],
+      );
+      
+      return bundle || null;
+    } catch (error) {
+      logger.error(`Error getting bundle by code ${code}:`, error);
+      throw error;
+    }
+  });
+
   ipcMain.handle("bundles:getById", async (_event, id) => {
     try {
       if (!id) {

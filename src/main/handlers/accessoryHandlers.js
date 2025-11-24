@@ -277,20 +277,19 @@ function setupAccessoryHandlers() {
 
   ipcMain.handle("accessories:getByCode", async (_event, code) => {
     try {
-      if (!code) {
-        throw new Error("Kode aksesoris tidak ditemukan");
+      if (!code || typeof code !== "string") {
+        return null;
       }
-
+      
+      const { normalizeCode } = require("../helpers/codeUtils");
+      const normalizedCode = normalizeCode(code.trim());
+      
       const accessory = await database.queryOne(
-        "SELECT * FROM accessories WHERE code = ?",
-        [code],
+        `SELECT * FROM accessories WHERE code = ? OR UPPER(code) = UPPER(?) LIMIT 1`,
+        [normalizedCode, code.trim()],
       );
-
-      if (!accessory) {
-        throw new Error("Aksesoris tidak ditemukan");
-      }
-
-      return accessory;
+      
+      return accessory || null;
     } catch (error) {
       logger.error(`Error getting accessory by code ${code}:`, error);
       throw error;

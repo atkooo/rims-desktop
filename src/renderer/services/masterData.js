@@ -49,6 +49,10 @@ export function fetchBundleById(id) {
   return ipcRenderer.invoke("bundles:getById", id);
 }
 
+export function fetchBundleByCode(code) {
+  return ipcRenderer.invoke("bundles:getByCode", code);
+}
+
 export function fetchBundleDetailsByBundle(bundleId) {
   return ipcRenderer.invoke("bundleDetails:getByBundle", bundleId);
 }
