@@ -4,8 +4,9 @@ const { ipcMain } = require("electron");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const validator = require("../helpers/validator");
+const { getDataDir } = require("../helpers/pathUtils");
 
-const DATA_DIR = path.join(__dirname, "../../..", "data");
+const DATA_DIR = getDataDir();
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads", "customers");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 

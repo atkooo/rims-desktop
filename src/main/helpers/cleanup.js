@@ -1,8 +1,9 @@
 const fs = require("fs").promises;
 const path = require("path");
 const logger = require("./logger");
+const { getDataDir } = require("./pathUtils");
 
-const TEMP_DIR = path.join(__dirname, "../../data/temp");
+const TEMP_DIR = path.join(getDataDir(), "temp");
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**

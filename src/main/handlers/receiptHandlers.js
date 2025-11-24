@@ -8,6 +8,190 @@ const { loadSettings } = require("../helpers/settingsUtils");
 const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
 const { getDataDir } = require("../helpers/pathUtils");
 
+// Helper function to calculate content height without creating PDF
+function calculateReceiptHeight(
+  settings,
+  transaction,
+  transactionDetails,
+  customer,
+  payments,
+  transactionType,
+  paperWidthMM,
+  margin,
+  contentWidth,
+  fontSize,
+  formatDate,
+) {
+  const jsPDFModule = require("jspdf");
+  const jsPDF = jsPDFModule.jsPDF;
+  
+  // Create temporary doc for calculations
+  const tempDoc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [paperWidthMM, 1000],
+  });
+  
+  let yPos = margin;
+  yPos += 1; // Top spacing (reduced for closer logo position)
+  
+  // Logo height (if shown)
+  if (settings.receiptSettings.showLogo && settings.logoPath) {
+    const logoWidth = 40;
+    const logoHeight = Math.min(logoWidth * 0.6, 20);
+    yPos += logoHeight + 3;
+  }
+  
+  // Company Name
+  if (settings.receiptSettings.showCompanyName && settings.companyName) {
+    tempDoc.setFontSize(fontSize.title || 12);
+    yPos += (fontSize.title || 12) * 0.4 + 2;
+  }
+  
+  // Company Address
+  if (settings.receiptSettings.showAddress && settings.address) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    const addressLines = tempDoc.splitTextToSize(settings.address, contentWidth * 0.9);
+    yPos += (fontSize.medium || 9) * 0.5 * addressLines.length + 1;
+  }
+  
+  // Company Phone
+  if (settings.receiptSettings.showPhone && settings.phone) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4 + 2;
+  }
+  
+  // Line
+  const lineSpacing = paperWidthMM <= 58 ? 3 : 4;
+  yPos += lineSpacing + 2; // Line + extra spacing
+  
+  // STRUK title
+  tempDoc.setFontSize(fontSize.title || 14);
+  yPos += (fontSize.title || 14) * 0.4 + 3;
+  
+  // Transaction Code
+  if (settings.receiptSettings.showTransactionCode) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4;
+  }
+  
+  // Date
+  if (settings.receiptSettings.showDate) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4;
+  }
+  
+  // Cashier
+  if (settings.receiptSettings.showCashier && transaction.user_name) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4;
+  }
+  
+  yPos += 2;
+  yPos += lineSpacing + 1; // Line + extra spacing
+  
+  // Customer Info
+  if (
+    settings.receiptSettings.showCustomerInfo &&
+    customer &&
+    customer.name
+  ) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4; // "Pelanggan:"
+    yPos += (fontSize.medium || 9) * 0.4; // Customer name
+    if (customer.phone) {
+      tempDoc.setFontSize(fontSize.normal || 8);
+      yPos += (fontSize.normal || 8) * 0.4;
+    }
+    if (customer.address) {
+      tempDoc.setFontSize(fontSize.normal || 8);
+      const addressLines = tempDoc.splitTextToSize(customer.address, contentWidth);
+      yPos += (fontSize.normal || 8) * 0.4 * addressLines.length;
+    }
+    yPos += 2;
+    yPos += lineSpacing + 1; // Line + extra spacing
+  }
+  
+  // Items Header
+  if (settings.receiptSettings.showItems) {
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += 4; // Header row
+    yPos += lineSpacing + 2; // Line + extra spacing
+    tempDoc.setFontSize(fontSize.normal || 8);
+    
+    // Items
+    for (const detail of transactionDetails) {
+      const itemName = detail.item_name || "-";
+      const nameLines = tempDoc.splitTextToSize(itemName, 30);
+      yPos += 3.5 * nameLines.length;
+    }
+    
+    yPos += 2;
+    yPos += lineSpacing + 1; // Line + extra spacing
+  }
+  
+  // Summary
+  tempDoc.setFontSize(fontSize.medium || 9);
+  
+  if (settings.receiptSettings.showSubtotal) {
+    yPos += 4;
+  }
+  
+  if (settings.receiptSettings.showDiscount && (transaction.discount || 0) > 0) {
+    yPos += 4;
+  }
+  
+  if (settings.receiptSettings.showTax && (transaction.tax || 0) > 0) {
+    yPos += 4;
+  }
+  
+  if (settings.receiptSettings.showTotal) {
+    yPos += 5;
+  }
+  
+  // Payment Info
+  if (settings.receiptSettings.showPaymentInfo) {
+    yPos += lineSpacing + 1; // Line + extra spacing
+    yPos += 4; // Dibayar
+    const remaining = (transaction.total_amount || 0) - (transaction.paid_amount || 0);
+    if (remaining > 0) {
+      yPos += 4; // Sisa
+    }
+    yPos += 4; // Status
+    
+    if (payments && payments.length > 0) {
+      tempDoc.setFontSize(fontSize.normal || 8);
+      yPos += 3 * payments.length;
+    }
+  }
+  
+  // Notes
+  if (settings.receiptSettings.showNotes && transaction.notes) {
+    yPos += 2;
+    yPos += lineSpacing; // Line
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += 4; // "Catatan:"
+    const noteLines = tempDoc.splitTextToSize(transaction.notes, contentWidth);
+    yPos += 3.5 * noteLines.length;
+  }
+  
+  // Footer
+  if (settings.receiptSettings.showFooter) {
+    yPos += 5;
+    yPos += lineSpacing; // Line
+    tempDoc.setFontSize(7);
+    yPos += 7 * 0.4 + 3; // "Dicetak:"
+    tempDoc.setFontSize(fontSize.medium || 9);
+    yPos += (fontSize.medium || 9) * 0.4; // "Terima Kasih"
+  }
+  
+  // Add bottom margin
+  const bottomMargin = 5;
+  const finalHeight = Math.max(yPos + bottomMargin, 50);
+  
+  return finalHeight;
+}
+
 // Function to generate receipt (struk) - compact format for thermal printer
 async function generateReceipt(transactionId, transactionType, options = {}) {
   try {
@@ -169,18 +353,33 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     };
     const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
 
-    // Generate PDF with custom page size
+    // Calculate content height first
+    const calculatedHeight = calculateReceiptHeight(
+      settings,
+      transaction,
+      transactionDetails,
+      customer,
+      payments,
+      transactionType,
+      paperWidthMM,
+      margin,
+      contentWidth,
+      fontSize,
+      formatDateTime,
+    );
+
+    // Generate PDF with custom page size based on calculated content height
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: [paperWidthMM, 297], // Standard receipt paper height
+      format: [paperWidthMM, calculatedHeight],
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
     
     // Add extra top spacing for better appearance
-    yPos += 3; // Add 3mm extra space at the top
+    yPos += 1; // Add 1mm extra space at the top (reduced for closer logo position)
 
     // Helper function to format date (for receipt, use formatDateTime)
     const formatDate = formatDateTime;
@@ -572,8 +771,19 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       addCenteredText("Terima Kasih", 9, true);
     }
 
+    // Remove extra pages if any (content should fit on one page for receipts)
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = totalPages; i > 1; i--) {
+      doc.deletePage(i);
+    }
+
+    // Note: We're keeping the large page height (1000mm) to ensure all content is visible
+    // Changing page height after content is added can cause content to be cut off
+    // The PDF will have a large height but content will be at the top
+
     // Save PDF to file
-    const receiptDir = path.join(__dirname, "../../data/exports/pdf");
+    // Use getDataDir() to ensure consistent path resolution in both dev and production
+    const receiptDir = path.join(getDataDir(), "exports", "pdf");
     await fs.mkdir(receiptDir, { recursive: true });
     const fileName = `struk_${transaction.transaction_code}_${Date.now()}.pdf`;
     const filePath = path.join(receiptDir, fileName);
@@ -663,17 +873,62 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     };
     const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
 
+    // Sample data
+    const sampleTransaction = {
+      transaction_code: "SLS-2025-0001",
+      sale_date: new Date().toISOString(),
+      user_name: "Kasir Contoh",
+      customer_name: "Budi Santoso",
+      customer_phone: "0812-3456-7890",
+      customer_address: "Jl. Contoh No. 456",
+      subtotal: 500000,
+      discount: 50000,
+      tax: 45000,
+      total_amount: 495000,
+      paid_amount: 500000,
+      payment_status: "paid",
+      notes: "Contoh catatan transaksi",
+    };
+
+    const sampleItems = [
+      { item_name: "Baju Pesta", quantity: 2, price: 200000, subtotal: 400000 },
+      { item_name: "Aksesoris", quantity: 1, price: 100000, subtotal: 100000 },
+    ];
+
+    const sampleCustomer = {
+      name: sampleTransaction.customer_name,
+      phone: sampleTransaction.customer_phone,
+      address: sampleTransaction.customer_address,
+    };
+
+    const samplePayments = [];
+
+    // Calculate content height first
+    const calculatedHeight = calculateReceiptHeight(
+      settings,
+      sampleTransaction,
+      sampleItems,
+      sampleCustomer,
+      samplePayments,
+      "sale",
+      paperWidth,
+      margin,
+      contentWidth,
+      fontSize,
+      formatDateTime,
+    );
+
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: [paperWidth, 297],
+      format: [paperWidth, calculatedHeight],
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
     
     // Add extra top spacing for better appearance
-    yPos += 3; // Add 3mm extra space at the top
+    yPos += 1; // Add 1mm extra space at the top (reduced for closer logo position)
 
     // Use format helpers from imports at top
     const formatDate = formatDateTime;
@@ -814,28 +1069,6 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         // Continue without logo if there's an error
       }
     };
-
-    // Sample data
-    const sampleTransaction = {
-      transaction_code: "SLS-2025-0001",
-      sale_date: new Date().toISOString(),
-      user_name: "Kasir Contoh",
-      customer_name: "Budi Santoso",
-      customer_phone: "0812-3456-7890",
-      customer_address: "Jl. Contoh No. 456",
-      subtotal: 500000,
-      discount: 50000,
-      tax: 45000,
-      total_amount: 495000,
-      paid_amount: 500000,
-      payment_status: "paid",
-      notes: "Contoh catatan transaksi",
-    };
-
-    const sampleItems = [
-      { item_name: "Baju Pesta", quantity: 2, price: 200000, subtotal: 400000 },
-      { item_name: "Aksesoris", quantity: 1, price: 100000, subtotal: 100000 },
-    ];
 
     // Header - Logo
     if (companySettings?.logoPath) {
@@ -1035,6 +1268,16 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       yPos += 3;
       addCenteredText("Terima Kasih", 9, true);
     }
+
+    // Remove extra pages if any (content should fit on one page for receipts)
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = totalPages; i > 1; i--) {
+      doc.deletePage(i);
+    }
+    
+    // Note: We're keeping the large page height (1000mm) to ensure all content is visible
+    // Changing page height after content is added can cause content to be cut off
+    // The PDF will have a large height but content will be at the top
 
     const pdfBase64 = doc.output("datauristring");
     return { success: true, pdfBase64 };

@@ -4,6 +4,7 @@ const logger = require("../helpers/logger");
 const fs = require("fs").promises;
 const path = require("path");
 const { printPDF, openPDF } = require("../helpers/printUtils");
+const { getDataDir } = require("../helpers/pathUtils");
 
 // Function to generate PDF invoice
 async function generateInvoicePDF(transactionId, transactionType) {
@@ -284,7 +285,8 @@ async function generateInvoicePDF(transactionId, transactionType) {
     );
 
     // Save PDF to file
-    const invoiceDir = path.join(__dirname, "../../data/exports/pdf");
+    // Use getDataDir() to ensure consistent path resolution in both dev and production
+    const invoiceDir = path.join(getDataDir(), "exports", "pdf");
     await fs.mkdir(invoiceDir, { recursive: true });
     const fileName = `invoice_${transaction.transaction_code}_${Date.now()}.pdf`;
     const filePath = path.join(invoiceDir, fileName);
