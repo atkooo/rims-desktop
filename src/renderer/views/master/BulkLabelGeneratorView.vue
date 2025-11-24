@@ -78,65 +78,64 @@
 
       <div v-else-if="error" class="error-banner">{{ error }}</div>
 
-      <div v-else class="table-container">
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th class="checkbox-col">
-                <input
-                  type="checkbox"
-                  :checked="allSelected"
-                  :indeterminate="someSelected"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th>Kode</th>
-              <th>Nama Item</th>
-              <th>Kategori</th>
-              <th>Ukuran</th>
-              <th>Tipe</th>
-              <th>Status</th>
-              <th>Harga</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in filteredItems"
-              :key="item.id"
-              :class="{ selected: isSelected(item.id) }"
-            >
-              <td class="checkbox-col">
-                <input
-                  type="checkbox"
-                  :checked="isSelected(item.id)"
-                  @change="toggleSelect(item.id)"
-                />
-              </td>
-              <td>
-                <span class="code-text">{{ item.code }}</span>
-              </td>
-              <td>
-                <span class="name-text">{{ item.name }}</span>
-              </td>
-              <td>{{ item.category_name || "-" }}</td>
-              <td>{{ item.size_name || "-" }}</td>
-              <td>
-                <span class="type-badge" :class="getTypeClass(item.type)">
-                  {{ item.type }}
-                </span>
-              </td>
-              <td>
-                <span class="status-badge" :class="getStatusClass(item.status)">
-                  {{ item.status }}
-                </span>
-              </td>
-              <td>{{ formatCurrency(item.price || 0) }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-else>
+        <AppTable
+          :columns="tableColumns"
+          :rows="filteredItems"
+          :loading="loading"
+          :show-search="true"
+          :searchable-keys="['code', 'name', 'category_name', 'size_name']"
+          :default-page-size="10"
+          :page-sizes="[5, 10, 20, 50, 100]"
+          row-key="id"
+        >
+          <template #cell-checkbox="{ row }">
+            <input
+              type="checkbox"
+              :checked="isSelected(row.id)"
+              @change="toggleSelect(row.id)"
+              class="table-checkbox"
+            />
+          </template>
+          <template #cell-code="{ row }">
+            <span class="code-text">{{ row.code }}</span>
+          </template>
+          <template #cell-name="{ row }">
+            <span class="name-text">{{ row.name }}</span>
+          </template>
+          <template #cell-category_name="{ row }">
+            {{ row.category_name || "-" }}
+          </template>
+          <template #cell-size_name="{ row }">
+            {{ row.size_name || "-" }}
+          </template>
+          <template #cell-type="{ row }">
+            <span class="type-badge" :class="getTypeClass(row.type)">
+              {{ row.type }}
+            </span>
+          </template>
+          <template #cell-status="{ row }">
+            <span class="status-badge" :class="getStatusClass(row.status)">
+              {{ row.status }}
+            </span>
+          </template>
+          <template #cell-price="{ row }">
+            {{ formatCurrency(row.price || 0) }}
+          </template>
+        </AppTable>
 
-        <div v-if="filteredItems.length === 0" class="empty-state">
-          <p>Tidak ada item yang ditemukan.</p>
+        <!-- Select All Controls -->
+        <div class="table-controls">
+          <div class="select-all-controls">
+            <input
+              type="checkbox"
+              :checked="allSelected"
+              :indeterminate="someSelected"
+              @change="toggleSelectAll"
+              class="select-all-checkbox"
+            />
+            <span class="select-all-label">Pilih Semua ({{ selectedItems.length }} dipilih)</span>
+          </div>
         </div>
       </div>
     </section>
@@ -152,6 +151,7 @@
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
 import LabelPreviewDialog from "@/components/modules/items/LabelPreviewDialog.vue";
 import { ipcRenderer } from "@/services/ipc";
@@ -162,7 +162,7 @@ import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "BulkLabelGeneratorView",
-  components: { AppButton, Icon, LabelPreviewDialog },
+  components: { AppButton, AppTable, Icon, LabelPreviewDialog },
   setup() {
     const itemStore = useItemStore();
     const { formatCurrency } = useCurrency();
@@ -306,6 +306,52 @@ export default {
       return statusMap[status] || "";
     };
 
+    // Table columns configuration
+    const tableColumns = computed(() => [
+      {
+        key: "checkbox",
+        label: "",
+        sortable: false,
+        align: "center",
+      },
+      {
+        key: "code",
+        label: "Kode",
+        sortable: true,
+      },
+      {
+        key: "name",
+        label: "Nama Item",
+        sortable: true,
+      },
+      {
+        key: "category_name",
+        label: "Kategori",
+        sortable: true,
+      },
+      {
+        key: "size_name",
+        label: "Ukuran",
+        sortable: true,
+      },
+      {
+        key: "type",
+        label: "Tipe",
+        sortable: true,
+      },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+      },
+      {
+        key: "price",
+        label: "Harga",
+        sortable: true,
+        align: "right",
+      },
+    ]);
+
     // Watch for dialog close to deselect items
     watch(showPreviewDialog, (newVal) => {
       if (!newVal) {
@@ -340,6 +386,7 @@ export default {
       someSelected,
       getTypeClass,
       getStatusClass,
+      tableColumns,
       loadItems,
     };
   },
@@ -414,55 +461,6 @@ export default {
   margin-bottom: 1rem;
 }
 
-.table-container {
-  overflow-x: auto;
-}
-
-.items-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.items-table thead {
-  background: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.items-table th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.items-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.9rem;
-}
-
-.items-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-.items-table tbody tr.selected {
-  background: #eff6ff;
-}
-
-.checkbox-col {
-  width: 50px;
-  text-align: center;
-}
-
-.checkbox-col input[type="checkbox"] {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
-}
-
 .code-text {
   font-family: monospace;
   font-weight: 600;
@@ -512,6 +510,39 @@ export default {
 .status-badge.maintenance {
   background-color: #fef3c7;
   color: #92400e;
+}
+
+.table-controls {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.select-all-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.select-all-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.select-all-label {
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.table-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
 }
 </style>
 
