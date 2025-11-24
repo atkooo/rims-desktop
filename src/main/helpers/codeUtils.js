@@ -7,19 +7,24 @@
  * @param {string} value - The code value to normalize
  * @param {string} fallbackName - Name to use for code generation if value is empty
  * @param {string} prefix - Prefix for generated codes (default: 'ITM')
- * @returns {string} Normalized code
+ * @returns {string} Normalized code (huruf dan angka saja, tanpa tanda hubung)
  */
 function normalizeCode(value, fallbackName = "", prefix = "ITM") {
   let code = (value ?? "").toString().trim();
-  if (code) return code.toUpperCase();
-  if (!fallbackName) return `${prefix}-${Date.now()}`;
+  if (code) {
+    // Hapus semua karakter selain huruf dan angka, lalu uppercase
+    return code.replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+  }
+  if (!fallbackName) {
+    // Fallback: prefix + timestamp (angka saja)
+    return `${prefix}${Date.now()}`;
+  }
+  // Sanitize: hanya huruf dan angka
   const sanitized = fallbackName
     .toUpperCase()
-    .replace(/[^0-9A-Z]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-")
+    .replace(/[^0-9A-Z]/g, "")
     .slice(0, 20);
-  return `${prefix}-${sanitized || Date.now()}`;
+  return `${prefix}${sanitized || Date.now()}`;
 }
 
 /**
@@ -76,28 +81,33 @@ function getItemCodePrefix(type) {
 }
 
 /**
- * Generate sequential code with prefix
+ * Generate sequential code with prefix (huruf dan angka saja, tanpa tanda hubung)
  * @param {Object} db - Database instance
  * @param {string} tableName - Table name to query
  * @param {string} prefix - Prefix for code (e.g., 'RENT', 'ITM', 'PAKET')
  * @returns {Promise<string>} Generated code
  */
 async function generateSequentialCode(db, tableName, prefix) {
-  // Get all codes with this prefix
+  // Get all codes that start with this prefix (support both old format with - and new format without -)
   const codes = await db.query(
     `SELECT code FROM ${tableName} 
-     WHERE code LIKE ? 
+     WHERE code LIKE ? OR code LIKE ?
      ORDER BY id DESC`,
-    [`${prefix}-%`]
+    [`${prefix}%`, `${prefix}-%`]
   );
 
   let nextNumber = 1;
   
   if (codes && codes.length > 0) {
-    // Find the highest number
+    // Find the highest number (support both formats: PREFIX001 and PREFIX-001)
     let maxNumber = 0;
     for (const row of codes) {
-      const match = row.code.match(new RegExp(`^${prefix}-(\\d+)$`));
+      // Try new format first (PREFIX001)
+      let match = row.code.match(new RegExp(`^${prefix}(\\d+)$`));
+      if (!match) {
+        // Try old format (PREFIX-001)
+        match = row.code.match(new RegExp(`^${prefix}-(\\d+)$`));
+      }
       if (match) {
         const num = parseInt(match[1], 10);
         if (num > maxNumber) {
@@ -108,8 +118,8 @@ async function generateSequentialCode(db, tableName, prefix) {
     nextNumber = maxNumber + 1;
   }
 
-  // Format with leading zeros (001, 002, etc.)
-  return `${prefix}-${nextNumber.toString().padStart(3, "0")}`;
+  // Format with leading zeros, tanpa tanda hubung (PREFIX001, PREFIX002, etc.)
+  return `${prefix}${nextNumber.toString().padStart(3, "0")}`;
 }
 
 /**
@@ -125,18 +135,18 @@ async function generateItemCode(db, type) {
 }
 
 /**
- * Generate bundle code with sequential number
+ * Generate bundle code with sequential number (huruf dan angka saja)
  * @param {Object} db - Database instance
- * @returns {Promise<string>} Generated code (PAKET-001, PAKET-002, etc.)
+ * @returns {Promise<string>} Generated code (PAKET001, PAKET002, etc.)
  */
 async function generateBundleCode(db) {
   return generateSequentialCode(db, "bundles", "PAKET");
 }
 
 /**
- * Generate accessory code with sequential number
+ * Generate accessory code with sequential number (huruf dan angka saja)
  * @param {Object} db - Database instance
- * @returns {Promise<string>} Generated code (ACC-001, ACC-002, etc.)
+ * @returns {Promise<string>} Generated code (ACC001, ACC002, etc.)
  */
 async function generateAccessoryCode(db) {
   return generateSequentialCode(db, "accessories", "ACC");

@@ -141,21 +141,26 @@ function mapCustomerRow(row) {
 }
 
 /**
- * Generate customer code automatically
- * Format: CUS-001, CUS-002, etc.
+ * Generate customer code automatically (huruf dan angka saja, tanpa tanda hubung)
+ * Format: CUS001, CUS002, etc.
  */
 async function generateCustomerCode() {
   try {
-    // Get all customer codes that match pattern CUS-XXX
+    // Get all customer codes that start with CUS (support both old format CUS-XXX and new format CUSXXX)
     const customers = await database.query(
-      `SELECT code FROM customers WHERE code LIKE 'CUS-%' ORDER BY code DESC`,
+      `SELECT code FROM customers WHERE code LIKE 'CUS%' ORDER BY code DESC`,
     );
 
     if (customers && customers.length > 0) {
-      // Find the highest number
+      // Find the highest number (support both formats: CUS001 and CUS-001)
       let maxNumber = 0;
       for (const customer of customers) {
-        const match = customer.code.match(/CUS-(\d+)/);
+        // Try new format first (CUS001)
+        let match = customer.code.match(/^CUS(\d+)$/);
+        if (!match) {
+          // Try old format (CUS-001)
+          match = customer.code.match(/^CUS-(\d+)$/);
+        }
         if (match && match[1]) {
           const number = parseInt(match[1], 10);
           if (number > maxNumber) {
@@ -166,17 +171,17 @@ async function generateCustomerCode() {
 
       if (maxNumber > 0) {
         const nextNumber = maxNumber + 1;
-        return `CUS-${nextNumber.toString().padStart(3, "0")}`;
+        return `CUS${nextNumber.toString().padStart(3, "0")}`;
       }
     }
 
-    // If no existing code found, start from CUS-001
-    return "CUS-001";
+    // If no existing code found, start from CUS001
+    return "CUS001";
   } catch (error) {
     logger.error("Error generating customer code:", error);
     // Fallback: use timestamp-based code
     const timestamp = Date.now().toString().slice(-6);
-    return `CUS-${timestamp}`;
+    return `CUS${timestamp}`;
   }
 }
 
@@ -234,11 +239,14 @@ function setupCustomerHandlers() {
             break;
           }
 
-          // Code exists, generate a new one
-          const match = code.match(/CUS-(\d+)/);
+          // Code exists, generate a new one (support both old format CUS-XXX and new format CUSXXX)
+          let match = code.match(/^CUS(\d+)$/);
+          if (!match) {
+            match = code.match(/^CUS-(\d+)$/);
+          }
           if (match && match[1]) {
             const number = parseInt(match[1], 10) + 1;
-            code = `CUS-${number.toString().padStart(3, "0")}`;
+            code = `CUS${number.toString().padStart(3, "0")}`;
           } else {
             // Fallback: regenerate completely
             code = await generateCustomerCode();
@@ -247,8 +255,8 @@ function setupCustomerHandlers() {
         }
 
         if (attempts >= maxAttempts) {
-          // Final fallback: use timestamp-based code
-          code = `CUS-${Date.now().toString().slice(-6)}`;
+          // Final fallback: use timestamp-based code (huruf dan angka saja)
+          code = `CUS${Date.now().toString().slice(-6)}`;
         }
       }
 

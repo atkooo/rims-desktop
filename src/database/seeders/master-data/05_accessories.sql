@@ -26,7 +26,7 @@ INSERT INTO accessories (
 ) VALUES
 -- Mahkota dan Tiara
 (
-    'ACC-001',
+    'ACC001',
     'Mahkota Pengantin Emas',
     'Mahkota pengantin dengan payet emas dan kristal, sangat elegan.',
     850000.00,
@@ -43,7 +43,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-002',
+    'ACC002',
     'Tiara Princess',
     'Tiara princess dengan batu kristal, cocok untuk anak-anak atau pesta tema.',
     200000.00,
@@ -60,7 +60,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-003',
+    'ACC003',
     'Siger Lampung',
     'Siger tradisional Lampung dengan hiasan emas dan manik-manik.',
     600000.00,
@@ -78,7 +78,7 @@ INSERT INTO accessories (
 ),
 -- Kalung dan Perhiasan
 (
-    'ACC-004',
+    'ACC004',
     'Kalung Mutiara Putih',
     'Kalung mutiara putih panjang, cocok untuk gaun formal dan pernikahan.',
     450000.00,
@@ -95,7 +95,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-005',
+    'ACC005',
     'Kalung Emas Antik',
     'Kalung emas dengan desain antik, cocok untuk kebaya tradisional.',
     1200000.00,
@@ -112,7 +112,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-006',
+    'ACC006',
     'Gelang Emas',
     'Gelang emas dengan ukiran tradisional.',
     350000.00,
@@ -129,7 +129,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-007',
+    'ACC007',
     'Anting Emas Bulat',
     'Anting emas dengan batu bulat, cocok untuk berbagai acara formal.',
     250000.00,
@@ -147,7 +147,7 @@ INSERT INTO accessories (
 ),
 -- Sepatu
 (
-    'ACC-008',
+    'ACC008',
     'Sepatu High Heels Putih',
     'Sepatu high heels putih untuk pengantin atau acara formal.',
     500000.00,
@@ -164,7 +164,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-009',
+    'ACC009',
     'Sepatu Flats Emas',
     'Sepatu flats warna emas, nyaman untuk acara panjang.',
     300000.00,
@@ -181,7 +181,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-010',
+    'ACC010',
     'Sandals Wanita Emas',
     'Sandals wanita dengan hiasan emas, elegan dan nyaman.',
     200000.00,
@@ -198,7 +198,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-011',
+    'ACC011',
     'Sepatu Pantofel Hitam',
     'Sepatu pantofel hitam formal untuk pria.',
     400000.00,
@@ -216,7 +216,7 @@ INSERT INTO accessories (
 ),
 -- Selendang dan Kain
 (
-    'ACC-012',
+    'ACC012',
     'Selendang Sutra Merah',
     'Selendang sutra warna merah, cocok untuk kebaya.',
     150000.00,
@@ -233,7 +233,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-013',
+    'ACC013',
     'Selendang Batik',
     'Selendang batik dengan motif klasik.',
     120000.00,
@@ -250,7 +250,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-014',
+    'ACC014',
     'Kain Songket Emas',
     'Kain songket dengan benang emas, untuk acara adat.',
     800000.00,
@@ -268,7 +268,7 @@ INSERT INTO accessories (
 ),
 -- Aksesoris Tambahan
 (
-    'ACC-015',
+    'ACC015',
     'Tas Clutch Emas',
     'Tas clutch warna emas, cocok untuk pesta atau pernikahan.',
     250000.00,
@@ -285,7 +285,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-016',
+    'ACC016',
     'Dasi Kupu-kupu Hitam',
     'Dasi kupu-kupu hitam untuk jas formal pria.',
     75000.00,
@@ -302,7 +302,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-017',
+    'ACC017',
     'Sanggul Pengantin',
     'Sanggul pengantin dengan hiasan bunga dan payet.',
     300000.00,
@@ -319,7 +319,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-018',
+    'ACC018',
     'Kerudung Modern',
     'Kerudung modern dengan warna matching, untuk hijab style.',
     100000.00,
@@ -336,7 +336,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-019',
+    'ACC019',
     'Tasbih Mutiara',
     'Tasbih mutiara untuk pelengkap busana muslim.',
     150000.00,
@@ -353,7 +353,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
 ),
 (
-    'ACC-020',
+    'ACC020',
     'Bros Emas',
     'Bros emas dengan ukiran tradisional, untuk hiasan kebaya.',
     180000.00,

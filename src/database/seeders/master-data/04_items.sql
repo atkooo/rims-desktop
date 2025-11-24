@@ -32,7 +32,7 @@ INSERT INTO items (
 ) VALUES
 -- Pakaian Adat
 (
-    'RENT-001',
+    'RENT001',
     'Kebaya Jawa Putih',
     (SELECT id FROM categories WHERE name = 'Pakaian Adat'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -55,7 +55,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-002',
+    'RENT002',
     'Baju Bodo Sulawesi',
     (SELECT id FROM categories WHERE name = 'Pakaian Adat'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -78,7 +78,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-003',
+    'RENT003',
     'Kebaya Bali Modern',
     (SELECT id FROM categories WHERE name = 'Pakaian Adat'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -101,7 +101,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-004',
+    'RENT004',
     'Baju Batik Papua',
     (SELECT id FROM categories WHERE name = 'Pakaian Adat'),
     (SELECT id FROM item_sizes WHERE code = 'XL'),
@@ -125,7 +125,7 @@ INSERT INTO items (
 ),
 -- Pakaian Pernikahan
 (
-    'RENT-005',
+    'RENT005',
     'Gaun Pengantin Putih',
     (SELECT id FROM categories WHERE name = 'Pakaian Pernikahan'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -148,7 +148,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-006',
+    'RENT006',
     'Kebaya Pengantin Emas',
     (SELECT id FROM categories WHERE name = 'Pakaian Pernikahan'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -171,7 +171,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-007',
+    'RENT007',
     'Jas Pengantin Hitam',
     (SELECT id FROM categories WHERE name = 'Pakaian Pernikahan'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -194,7 +194,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-008',
+    'RENT008',
     'Gaun Pengantin Modern',
     (SELECT id FROM categories WHERE name = 'Pakaian Pernikahan'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -218,7 +218,7 @@ INSERT INTO items (
 ),
 -- Pakaian Acara / Formal
 (
-    'RENT-009',
+    'RENT009',
     'Gaun Wisuda Biru Navy',
     (SELECT id FROM categories WHERE name = 'Pakaian Acara / Formal'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -241,7 +241,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-010',
+    'RENT010',
     'Dress Pesta Hitam',
     (SELECT id FROM categories WHERE name = 'Pakaian Acara / Formal'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -264,7 +264,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-011',
+    'RENT011',
     'Batik Formal Coklat',
     (SELECT id FROM categories WHERE name = 'Pakaian Acara / Formal'),
     (SELECT id FROM item_sizes WHERE code = 'XL'),
@@ -288,7 +288,7 @@ INSERT INTO items (
 ),
 -- Pakaian Anak-anak
 (
-    'RENT-012',
+    'RENT012',
     'Kostum Princess Anak',
     (SELECT id FROM categories WHERE name = 'Pakaian Anak-anak'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -311,7 +311,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-013',
+    'RENT013',
     'Kostum Superhero Anak',
     (SELECT id FROM categories WHERE name = 'Pakaian Anak-anak'),
     (SELECT id FROM item_sizes WHERE code = 'ONE-SIZE'),
@@ -335,7 +335,7 @@ INSERT INTO items (
 ),
 -- Pakaian Casual / Modern
 (
-    'RENT-014',
+    'RENT014',
     'Dress Kekinian Floral',
     (SELECT id FROM categories WHERE name = 'Pakaian Casual / Modern'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -358,7 +358,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'RENT-015',
+    'RENT015',
     'Batik Modern Warna Pastel',
     (SELECT id FROM categories WHERE name = 'Pakaian Casual / Modern'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -382,7 +382,7 @@ INSERT INTO items (
 ),
 -- Item Penjualan
 (
-    'ITM-001',
+    'ITM001',
     'Batik Modern Ready Stock',
     (SELECT id FROM categories WHERE name = 'Penjualan Item Baru'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -405,7 +405,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'ITM-002',
+    'ITM002',
     'Dress Kekinian New Arrival',
     (SELECT id FROM categories WHERE name = 'Penjualan Item Baru'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -428,7 +428,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'ITM-003',
+    'ITM003',
     'Kemeja Batik Premium',
     (SELECT id FROM categories WHERE name = 'Penjualan Item Baru'),
     (SELECT id FROM item_sizes WHERE code = 'XL'),
@@ -451,7 +451,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'ITM-004',
+    'ITM004',
     'Kostum Party Anak Premium',
     (SELECT id FROM categories WHERE name = 'Penjualan Item Baru'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -474,7 +474,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
 ),
 (
-    'ITM-005',
+    'ITM005',
     'Baju Casual Modern Collection',
     (SELECT id FROM categories WHERE name = 'Penjualan Item Baru'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
