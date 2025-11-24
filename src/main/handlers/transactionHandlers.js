@@ -633,9 +633,9 @@ function setupTransactionHandlers() {
             [TRANSACTION_STATUS.PENDING]: "active",
           };
           const dbStatus = statusMap[status] || "active";
-          // Update rental transaction status
+          // Update rental transaction status and reset is_sync to allow re-sync with new status
           await database.execute(
-            "UPDATE rental_transactions SET status = ? WHERE id = ?",
+            "UPDATE rental_transactions SET status = ?, is_sync = 0 WHERE id = ?",
             [dbStatus, transactionId],
           );
 
@@ -944,9 +944,9 @@ function setupTransactionHandlers() {
             }
           }
 
-          // Update status to cancelled
+          // Update status to cancelled and reset is_sync to allow re-sync with new status
           await database.execute(
-            "UPDATE rental_transactions SET status = 'cancelled' WHERE id = ?",
+            "UPDATE rental_transactions SET status = 'cancelled', is_sync = 0 WHERE id = ?",
             [id],
           );
         } else {
@@ -1005,7 +1005,7 @@ function setupTransactionHandlers() {
 
           // Update status to cancelled
           await database.execute(
-            "UPDATE sales_transactions SET status = 'cancelled' WHERE id = ?",
+            "UPDATE sales_transactions SET status = 'cancelled', is_sync = 0 WHERE id = ?",
             [id],
           );
         }
@@ -1150,14 +1150,16 @@ function setupTransactionHandlers() {
         // Update actual_return_date and status if all items are returned
         if (remainingItems.count === 0) {
           const returnDate = actualReturnDate || new Date().toISOString().split("T")[0];
+          // Update status to returned and reset is_sync to allow re-sync with new status
           await database.execute(
-            "UPDATE rental_transactions SET actual_return_date = ?, status = 'returned' WHERE id = ?",
+            "UPDATE rental_transactions SET actual_return_date = ?, status = 'returned', is_sync = 0 WHERE id = ?",
             [returnDate, rentalTransactionId],
           );
         } else if (actualReturnDate) {
           // Update return date even if not all items are returned yet
+          // Also reset is_sync in case status changes
           await database.execute(
-            "UPDATE rental_transactions SET actual_return_date = ? WHERE id = ?",
+            "UPDATE rental_transactions SET actual_return_date = ?, is_sync = 0 WHERE id = ?",
             [actualReturnDate, rentalTransactionId],
           );
         }
@@ -1245,8 +1247,9 @@ function setupPaymentHandlers() {
         );
 
         if (rental && rental.status === "pending" && rental.total_paid > 0) {
+          // Update status to active and reset is_sync to allow re-sync with new status
           await database.execute(
-            `UPDATE rental_transactions SET status = 'active' WHERE id = ?`,
+            `UPDATE rental_transactions SET status = 'active', is_sync = 0 WHERE id = ?`,
             [paymentData.transactionId],
           );
         }
