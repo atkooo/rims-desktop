@@ -6,6 +6,7 @@ const path = require("path");
 const { printPDF, openPDF } = require("../helpers/printUtils");
 const { loadSettings } = require("../helpers/settingsUtils");
 const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
+const { getDataDir } = require("../helpers/pathUtils");
 
 // Function to generate receipt (struk) - compact format for thermal printer
 async function generateReceipt(transactionId, transactionType, options = {}) {
@@ -23,12 +24,26 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Get receipt display settings
     const settings = await loadSettings();
 
+    // Ensure receiptSettings exists
+    if (!settings.receiptSettings) {
+      settings.receiptSettings = {};
+    }
+    
+    // Ensure showLogo has a default value (default to true)
+    if (settings.receiptSettings.showLogo === undefined) {
+      settings.receiptSettings.showLogo = true;
+    }
+
     // Override with options if provided
     if (options.receiptSettings) {
       settings.receiptSettings = {
         ...settings.receiptSettings,
         ...options.receiptSettings,
       };
+      // Ensure showLogo is still set after override
+      if (settings.receiptSettings.showLogo === undefined) {
+        settings.receiptSettings.showLogo = true;
+      }
     }
 
     let transaction;
@@ -109,13 +124,15 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     }
 
     // Get payment history for this transaction
+    // Normalize transaction type: ensure it matches database format ('sale' or 'rental')
+    const normalizedTransactionType = transactionType === "sale" ? "sale" : "rental";
     const payments = await database.query(
       `SELECT p.*, u.full_name AS user_name
        FROM payments p
        LEFT JOIN users u ON p.user_id = u.id
        WHERE p.transaction_id = ? AND p.transaction_type = ?
        ORDER BY p.payment_date DESC`,
-      [transactionId, transactionType],
+      [transactionId, normalizedTransactionType],
     );
 
     // Calculate paper width in mm (default 80mm for thermal printer)
@@ -133,6 +150,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
+    
+    // Add extra top spacing for better appearance
+    yPos += 3; // Add 3mm extra space at the top
 
     // Helper function to format date (for receipt, use formatDateTime)
     const formatDate = formatDateTime;
@@ -144,6 +164,19 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       const textWidth = doc.getTextWidth(text);
       doc.text(text, (pageWidth - textWidth) / 2, yPos);
       yPos += fontSize * 0.4;
+    };
+
+    // Helper to add centered text with wrapping
+    const addCenteredTextWrapped = (text, fontSize = 10, isBold = false, maxWidth = null) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      const textWidth = maxWidth || (contentWidth * 0.9); // Use 90% of content width for wrapping
+      const lines = doc.splitTextToSize(text, textWidth);
+      lines.forEach((line) => {
+        const lineWidth = doc.getTextWidth(line);
+        doc.text(line, (pageWidth - lineWidth) / 2, yPos);
+        yPos += fontSize * 0.5; // Slightly more spacing between wrapped lines
+      });
     };
 
     // Helper to add left-aligned text
@@ -158,8 +191,92 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     const addLine = () => {
       doc.setLineWidth(0.2);
       doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 3;
+      yPos += 4; // Increased spacing after line from 3 to 4mm
     };
+
+    // Helper to add logo (grayscale for thermal printer)
+    const addLogo = async (logoPath) => {
+      // Ensure receiptSettings exists and showLogo has a default
+      if (!settings.receiptSettings) {
+        settings.receiptSettings = {};
+      }
+      const showLogo = settings.receiptSettings.showLogo !== false; // Default to true
+      
+      if (!logoPath) {
+        logger.warn("addLogo called but logoPath is empty");
+        return;
+      }
+      
+      if (!showLogo) {
+        logger.info("Logo disabled in receipt settings");
+        return;
+      }
+      
+      try {
+        // Use getDataDir() to ensure consistent path resolution
+        const DATA_DIR = getDataDir();
+        const logoFilePath = path.join(DATA_DIR, logoPath);
+        
+        logger.info("Attempting to load logo from:", logoFilePath);
+        
+        // Check if file exists
+        try {
+          await fs.access(logoFilePath);
+          logger.info("Logo file found, reading...");
+        } catch (accessError) {
+          logger.warn("Logo file not found:", logoFilePath, accessError.message);
+          return;
+        }
+
+        // Read logo file as base64
+        const logoBuffer = await fs.readFile(logoFilePath);
+        logger.info("Logo file read successfully, size:", logoBuffer.length, "bytes");
+        
+        const base64 = logoBuffer.toString("base64");
+        const ext = path.extname(logoPath).toLowerCase();
+        let mimeType = "image/png";
+        if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+        if (ext === ".webp") mimeType = "image/webp";
+        
+        const logoDataUrl = `data:${mimeType};base64,${base64}`;
+        
+        // Logo dimensions (max width 40mm for 80mm paper, centered)
+        const logoWidth = 40; // mm
+        const logoHeight = Math.min(logoWidth * 0.6, 20); // Maintain aspect ratio, max height 20mm
+        
+        logger.info("Adding logo to PDF at position:", yPos, "size:", logoWidth, "x", logoHeight);
+        
+        // Add logo at top, centered
+        doc.addImage(
+          logoDataUrl,
+          "PNG", // jsPDF will handle conversion
+          (pageWidth - logoWidth) / 2, // Center horizontally
+          yPos,
+          logoWidth,
+          logoHeight,
+          undefined,
+          "FAST", // Fast rendering for thermal printer
+          0 // Rotation
+        );
+        
+        logger.info("Logo added successfully to receipt");
+        yPos += logoHeight + 3; // Move down after logo
+      } catch (error) {
+        logger.error("Error adding logo to receipt:", error);
+        logger.error("Error stack:", error.stack);
+        // Continue without logo if there's an error
+      }
+    };
+
+    // Header - Logo
+    // Debug: Log logo path and showLogo setting
+    logger.info("Receipt logo check - logoPath:", settings.logoPath, "showLogo:", settings.receiptSettings?.showLogo);
+    
+    if (settings.logoPath) {
+      await addLogo(settings.logoPath);
+    } else {
+      logger.warn("No logo path found in settings");
+    }
 
     // Header - Company Name
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
@@ -169,7 +286,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     // Company Address
     if (settings.receiptSettings.showAddress && settings.address) {
-      addCenteredText(settings.address, 9);
+      addCenteredTextWrapped(settings.address, 9);
       yPos += 1;
     }
 
@@ -180,6 +297,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     }
 
     addLine();
+    yPos += 2; // Extra spacing after line before STRUK title
 
     // Title: STRUK
     addCenteredText("STRUK", 14, true);
@@ -206,6 +324,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     yPos += 2;
     addLine();
+    yPos += 1; // Extra spacing after line before customer info
 
     // Customer Info
     if (
@@ -231,6 +350,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       }
       yPos += 2;
       addLine();
+      yPos += 1; // Extra spacing after line before items header
     }
 
     // Items Header
@@ -243,6 +363,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       doc.text("Subtotal", margin + 75, yPos);
       yPos += 4;
       addLine();
+      yPos += 2; // Extra spacing after line before items list
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
 
@@ -275,6 +396,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
       yPos += 2;
       addLine();
+      yPos += 1; // Extra spacing after line before summary
     }
 
     // Summary
@@ -282,7 +404,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     const discount = transaction.discount || 0;
     const tax = transaction.tax || 0;
     const total = transaction.total_amount || 0;
-    const paid = transaction.paid_amount || 0;
+    // Calculate total paid from payments history for accuracy
+    const totalPaidFromPayments = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const paid = totalPaidFromPayments > 0 ? totalPaidFromPayments : (transaction.paid_amount || 0);
     const remaining = total - paid;
 
     doc.setFontSize(9);
@@ -325,6 +449,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     if (settings.receiptSettings.showPaymentInfo) {
       addLine();
+      yPos += 1; // Extra spacing after line before payment info
       doc.text("Dibayar:", margin, yPos);
       doc.text(formatCurrency(paid), pageWidth - margin, yPos, {
         align: "right",
@@ -339,12 +464,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         yPos += 4;
       }
 
-      // Payment status
-      const paymentStatus = transaction.payment_status || "unpaid";
-      const statusText =
-        paymentStatus === "paid"
-          ? "LUNAS"
-          : "BELUM DIBAYAR";
+      // Payment status - Calculate based on actual payment amount
+      const isFullyPaid = paid >= total && total > 0;
+      const statusText = isFullyPaid ? "LUNAS" : "BELUM DIBAYAR";
       doc.setFont("helvetica", "bold");
       doc.text(`Status: ${statusText}`, margin, yPos);
       yPos += 4;
@@ -440,6 +562,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         showCompanyName: true,
         showAddress: true,
         showPhone: true,
+        showLogo: true,
         showCustomerInfo: true,
         showTransactionCode: true,
         showDate: true,
@@ -467,6 +590,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
+    
+    // Add extra top spacing for better appearance
+    yPos += 3; // Add 3mm extra space at the top
 
     // Use format helpers from imports at top
     const formatDate = formatDateTime;
@@ -479,6 +605,19 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       yPos += fontSize * 0.4;
     };
 
+    // Helper to add centered text with wrapping
+    const addCenteredTextWrapped = (text, fontSize = 10, isBold = false, maxWidth = null) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      const textWidth = maxWidth || (contentWidth * 0.9); // Use 90% of content width for wrapping
+      const lines = doc.splitTextToSize(text, textWidth);
+      lines.forEach((line) => {
+        const lineWidth = doc.getTextWidth(line);
+        doc.text(line, (pageWidth - lineWidth) / 2, yPos);
+        yPos += fontSize * 0.5; // Slightly more spacing between wrapped lines
+      });
+    };
+
     const addLeftText = (text, fontSize = 9) => {
       doc.setFontSize(fontSize);
       doc.setFont("helvetica", "normal");
@@ -489,7 +628,83 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     const addLine = () => {
       doc.setLineWidth(0.2);
       doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 3;
+      yPos += 4; // Increased spacing after line from 3 to 4mm
+    };
+
+    // Helper to add logo (grayscale for thermal printer)
+    const addLogo = async (logoPath) => {
+      // Ensure receiptSettings exists and showLogo has a default
+      if (!settings.receiptSettings) {
+        settings.receiptSettings = {};
+      }
+      const showLogo = settings.receiptSettings.showLogo !== false; // Default to true
+      
+      if (!logoPath) {
+        logger.warn("addLogo called but logoPath is empty");
+        return;
+      }
+      
+      if (!showLogo) {
+        logger.info("Logo disabled in receipt settings");
+        return;
+      }
+      
+      try {
+        // Use getDataDir() to ensure consistent path resolution
+        const DATA_DIR = getDataDir();
+        const logoFilePath = path.join(DATA_DIR, logoPath);
+        
+        logger.info("Attempting to load logo from:", logoFilePath);
+        logger.info("Logo path from settings:", logoPath);
+        logger.info("DATA_DIR:", DATA_DIR);
+        
+        // Check if file exists
+        try {
+          await fs.access(logoFilePath);
+          logger.info("Logo file found, reading...");
+        } catch (accessError) {
+          logger.warn("Logo file not found:", logoFilePath, "Error:", accessError.message);
+          return;
+        }
+
+        // Read logo file as base64
+        const logoBuffer = await fs.readFile(logoFilePath);
+        logger.info("Logo file read successfully, size:", logoBuffer.length, "bytes");
+        
+        const base64 = logoBuffer.toString("base64");
+        const ext = path.extname(logoPath).toLowerCase();
+        let mimeType = "image/png";
+        if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+        if (ext === ".webp") mimeType = "image/webp";
+        
+        const logoDataUrl = `data:${mimeType};base64,${base64}`;
+        
+        // Logo dimensions (max width 40mm for 80mm paper, centered)
+        const logoWidth = 40; // mm
+        const logoHeight = Math.min(logoWidth * 0.6, 20); // Maintain aspect ratio, max height 20mm
+        
+        logger.info("Adding logo to PDF at position:", yPos, "size:", logoWidth, "x", logoHeight);
+        
+        // Add logo at top, centered
+        doc.addImage(
+          logoDataUrl,
+          "PNG", // jsPDF will handle conversion
+          (pageWidth - logoWidth) / 2, // Center horizontally
+          yPos,
+          logoWidth,
+          logoHeight,
+          undefined,
+          "FAST", // Fast rendering for thermal printer
+          0 // Rotation
+        );
+        
+        logger.info("Logo added successfully to receipt");
+        yPos += logoHeight + 3; // Move down after logo
+      } catch (error) {
+        logger.error("Error adding logo to receipt:", error);
+        logger.error("Error stack:", error.stack);
+        // Continue without logo if there's an error
+      }
     };
 
     // Sample data
@@ -514,6 +729,11 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       { item_name: "Aksesoris", quantity: 1, price: 100000, subtotal: 100000 },
     ];
 
+    // Header - Logo
+    if (companySettings?.logoPath) {
+      await addLogo(companySettings.logoPath);
+    }
+
     // Header
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
       addCenteredText(settings.companyName, 12, true);
@@ -521,7 +741,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     }
 
     if (settings.receiptSettings.showAddress && settings.address) {
-      addCenteredText(settings.address, 9);
+      addCenteredTextWrapped(settings.address, 9);
       yPos += 1;
     }
 
@@ -531,6 +751,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     }
 
     addLine();
+    yPos += 2; // Extra spacing after line before STRUK title
 
     // Title
     addCenteredText("STRUK", 14, true);
@@ -551,6 +772,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     yPos += 2;
     addLine();
+    yPos += 1; // Extra spacing after line before customer info
 
     // Customer Info
     if (settings.receiptSettings.showCustomerInfo) {
@@ -572,6 +794,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       }
       yPos += 2;
       addLine();
+      yPos += 1; // Extra spacing after line before items header
     }
 
     // Items
@@ -584,6 +807,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       doc.text("Subtotal", margin + 75, yPos);
       yPos += 4;
       addLine();
+      yPos += 2; // Extra spacing after line before items list
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
 
@@ -602,6 +826,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
       yPos += 2;
       addLine();
+      yPos += 1; // Extra spacing after line before summary
     }
 
     // Summary
@@ -660,6 +885,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     if (settings.receiptSettings.showPaymentInfo) {
       addLine();
+      yPos += 1; // Extra spacing after line before payment info
       doc.text("Dibayar:", margin, yPos);
       doc.text(
         formatCurrency(sampleTransaction.paid_amount),

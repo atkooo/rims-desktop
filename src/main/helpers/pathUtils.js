@@ -78,11 +78,52 @@ function getBackupsDir() {
   return cachedBackupsPath;
 }
 
+/**
+ * Resolve data directory path
+ * In production (packaged app), use userData directory
+ * In development, use project data folder
+ */
+function resolveDataDir() {
+  try {
+    // If app is packaged, use userData directory (same as database and logs)
+    if (app && typeof app.getPath === "function" && app.isPackaged) {
+      const userDataPath = app.getPath("userData");
+      // Ensure directory exists
+      fsSync.mkdirSync(userDataPath, { recursive: true });
+      return userDataPath;
+    }
+  } catch (error) {
+    // Fall back to project data folder if app.getPath fails
+    logger.warn(
+      "Error resolving userData path for data directory, using project path:",
+      error,
+    );
+  }
+
+  // Development: use project data folder
+  const projectDataPath = path.join(__dirname, "../../../data");
+  fsSync.mkdirSync(projectDataPath, { recursive: true });
+  return projectDataPath;
+}
+
+// Cache for data directory path
+let cachedDataDir = null;
+
+function getDataDir() {
+  if (!cachedDataDir) {
+    cachedDataDir = resolveDataDir();
+    logger.info(`Data directory resolved: ${cachedDataDir}`);
+  }
+  return cachedDataDir;
+}
+
 module.exports = {
   resolveSettingsPath,
   resolveBackupsPath,
+  resolveDataDir,
   getSettingsFile,
   getBackupsDir,
+  getDataDir,
 };
 
 

@@ -5,7 +5,10 @@
     :show-footer="false"
   >
     <div v-if="bundle" class="detail-editor">
-      <form class="detail-form" @submit.prevent="handleSubmit">
+      <form class="detail-form" :class="{ 'editing-mode': editingDetail }" @submit.prevent="handleSubmit">
+        <div v-if="editingDetail" class="edit-indicator">
+          <span>📝 Mengedit: {{ selectedReference?.name || 'Detail Paket' }}</span>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Jenis</label>
@@ -215,7 +218,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
@@ -423,7 +426,8 @@ export default {
       if (!form.value.type) {
         validationErrors.type = "Jenis wajib dipilih";
       }
-      if (!form.value.referenceId) {
+      const refId = form.value.referenceId;
+      if (!refId || (typeof refId === 'number' && refId <= 0) || (typeof refId === 'string' && !refId.trim())) {
         validationErrors.referenceId = "Pilih data terlebih dahulu";
       }
       const quantity = Number(form.value.quantity);
@@ -440,12 +444,17 @@ export default {
         quantity: Number(form.value.quantity),
         notes: form.value.notes?.trim() ?? "",
       };
+      // Ensure referenceId is converted to number
+      const referenceId = typeof form.value.referenceId === 'string' 
+        ? parseInt(form.value.referenceId, 10) 
+        : Number(form.value.referenceId);
+      
       if (form.value.type === "item") {
-        payload.item_id = form.value.referenceId;
+        payload.item_id = referenceId;
         payload.accessory_id = null;
       } else {
         payload.item_id = null;
-        payload.accessory_id = form.value.referenceId;
+        payload.accessory_id = referenceId;
       }
       return payload;
     };
@@ -473,62 +482,85 @@ export default {
     };
 
     const startEdit = async (detail) => {
-      editingDetail.value = detail;
-      form.value = {
-        type: detail.item_id ? "item" : "accessory",
-        referenceId: detail.item_id || detail.accessory_id || "",
-        quantity: detail.quantity,
-        notes: detail.notes || "",
-      };
-      
-      // Set active tab sesuai jenis detail
-      activeTab.value = detail.item_id ? "items" : "accessories";
-      
-      // Load selected reference untuk ditampilkan
-      if (detail.item_id) {
-        const item = itemStore.items.find((i) => i.id === detail.item_id);
-        if (item) {
-          selectedReference.value = {
-            id: item.id,
-            name: item.name,
-            code: item.code,
-          };
-        } else {
-          // Jika item tidak ada di store, fetch dulu
-          await itemStore.fetchItems();
-          const foundItem = itemStore.items.find((i) => i.id === detail.item_id);
-          if (foundItem) {
+      try {
+        editingDetail.value = detail;
+        
+        // Set active tab sesuai jenis detail
+        activeTab.value = detail.item_id ? "items" : "accessories";
+        
+        // Ensure dependencies are loaded
+        await ensureDependencies();
+        
+        // Load selected reference untuk ditampilkan
+        if (detail.item_id) {
+          const item = itemStore.items.find((i) => i.id === detail.item_id);
+          if (item) {
             selectedReference.value = {
-              id: foundItem.id,
-              name: foundItem.name,
-              code: foundItem.code,
+              id: item.id,
+              name: item.name,
+              code: item.code,
             };
+          } else {
+            // Jika item tidak ada di store, fetch dulu
+            await itemStore.fetchItems();
+            const foundItem = itemStore.items.find((i) => i.id === detail.item_id);
+            if (foundItem) {
+              selectedReference.value = {
+                id: foundItem.id,
+                name: foundItem.name,
+                code: foundItem.code,
+              };
+            } else {
+              throw new Error("Item tidak ditemukan");
+            }
+          }
+        } else if (detail.accessory_id) {
+          const accessory = accessories.value.find((a) => a.id === detail.accessory_id);
+          if (accessory) {
+            selectedReference.value = {
+              id: accessory.id,
+              name: accessory.name,
+              code: accessory.code,
+            };
+          } else {
+            // Jika accessory tidak ada, load dulu
+            await loadAccessories();
+            const foundAccessory = accessories.value.find((a) => a.id === detail.accessory_id);
+            if (foundAccessory) {
+              selectedReference.value = {
+                id: foundAccessory.id,
+                name: foundAccessory.name,
+                code: foundAccessory.code,
+              };
+            } else {
+              throw new Error("Aksesoris tidak ditemukan");
+            }
           }
         }
-      } else if (detail.accessory_id) {
-        const accessory = accessories.value.find((a) => a.id === detail.accessory_id);
-        if (accessory) {
-          selectedReference.value = {
-            id: accessory.id,
-            name: accessory.name,
-            code: accessory.code,
-          };
-        } else {
-          // Jika accessory tidak ada, load dulu
-          await loadAccessories();
-          const foundAccessory = accessories.value.find((a) => a.id === detail.accessory_id);
-          if (foundAccessory) {
-            selectedReference.value = {
-              id: foundAccessory.id,
-              name: foundAccessory.name,
-              code: foundAccessory.code,
-            };
+        
+        // Set form values after reference is loaded
+        form.value = {
+          type: detail.item_id ? "item" : "accessory",
+          referenceId: detail.item_id || detail.accessory_id || "",
+          quantity: detail.quantity,
+          notes: detail.notes || "",
+        };
+        
+        errors.value = {};
+        formError.value = "";
+        
+        // Scroll form into view after a short delay to ensure DOM is updated
+        await nextTick();
+        setTimeout(() => {
+          const formElement = document.querySelector('.detail-form');
+          if (formElement) {
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
-        }
+        }, 100);
+      } catch (error) {
+        formError.value = error.message || "Gagal memuat data untuk edit.";
+        console.error("Error in startEdit:", error);
       }
-      
-      errors.value = {};
-      formError.value = "";
     };
 
     const handleTypeChange = () => {
@@ -656,6 +688,21 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   background: #f9fafb;
+}
+
+.detail-form.editing-mode {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+
+.edit-indicator {
+  padding: 0.5rem 0.75rem;
+  background: #4f46e5;
+  color: white;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
 }
 
 .form-row {

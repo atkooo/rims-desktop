@@ -106,6 +106,14 @@
                     />
                     <span>Telepon</span>
                   </label>
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      v-model="settings.receiptSettings.showLogo"
+                      @change="updatePreview"
+                    />
+                    <span>Logo</span>
+                  </label>
                 </div>
               </div>
 
@@ -322,6 +330,7 @@ export default {
         showCompanyName: true,
         showAddress: true,
         showPhone: true,
+        showLogo: true,
         showCustomerInfo: true,
         showTransactionCode: true,
         showDate: true,
@@ -378,6 +387,7 @@ export default {
           address: String(settings.value.address || ""),
           phone: String(settings.value.phone || ""),
           paperWidth: Number(settings.value.paperWidth || 80),
+          logoPath: String(settings.value.logoPath || ""),
         };
 
         // Deep clone receiptSettings to plain object

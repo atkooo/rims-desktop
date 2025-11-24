@@ -58,6 +58,45 @@
             placeholder="Masukkan nomor telepon"
           />
         </div>
+        
+        <!-- Logo Upload -->
+        <div class="logo-upload-section">
+          <label class="form-label">Logo Toko</label>
+          <p class="form-hint">
+            Format yang didukung: JPG, PNG, WebP. Ukuran maksimal 2MB. Logo akan muncul di struk dalam hitam putih.
+          </p>
+          
+          <div v-if="logoPreview || existingLogoPath" class="logo-preview">
+            <img :src="logoPreview || existingLogoDataUrl" alt="Logo toko" class="logo-preview-image" />
+            <div class="logo-actions">
+              <AppButton
+                type="button"
+                variant="danger"
+                size="small"
+                @click="deleteLogo"
+                :loading="logoDeleting"
+              >
+                Hapus Logo
+              </AppButton>
+            </div>
+          </div>
+          
+          <div v-else class="file-input-wrapper">
+            <input
+              ref="logoFileInput"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/jpg"
+              @change="handleLogoSelect"
+              style="display: none"
+            />
+            <AppButton type="button" variant="secondary" @click="triggerFileInput">
+              <Icon name="upload" :size="16" /> Upload Logo
+            </AppButton>
+          </div>
+          
+          <p v-if="logoError" class="error-message">{{ logoError }}</p>
+        </div>
+        
         <div class="card-actions">
           <AppButton
             variant="primary"
@@ -369,7 +408,16 @@ export default {
       address: "",
       phone: "",
       taxPercentage: 0,
+      logoPath: "",
     });
+
+    const logoPreview = ref("");
+    const existingLogoPath = ref("");
+    const existingLogoDataUrl = ref("");
+    const logoDeleting = ref(false);
+    const logoError = ref("");
+    const logoPayload = ref(null);
+    const logoFileInput = ref(null);
 
     // Clear messages after 5 seconds
     const clearMessages = () => {
@@ -383,6 +431,15 @@ export default {
         const savedSettings = await ipcRenderer.invoke("settings:get");
         if (savedSettings) {
           settings.value = { ...settings.value, ...savedSettings };
+          
+          // Load existing logo if available
+          if (savedSettings.logoPath) {
+            existingLogoPath.value = savedSettings.logoPath;
+            await loadExistingLogo(savedSettings.logoPath);
+          } else {
+            existingLogoPath.value = "";
+            existingLogoDataUrl.value = "";
+          }
         }
 
         // Load backup files
@@ -398,6 +455,145 @@ export default {
         console.error("Error loading settings:", error);
         showError("Gagal memuat pengaturan");
         clearMessages();
+      }
+    };
+
+    // Load existing logo as data URL
+    const loadExistingLogo = async (logoPath) => {
+      try {
+        const logoData = await ipcRenderer.invoke("settings:getLogo", logoPath);
+        if (logoData && logoData.dataUrl) {
+          existingLogoDataUrl.value = logoData.dataUrl;
+        }
+      } catch (error) {
+        console.error("Error loading logo:", error);
+        existingLogoDataUrl.value = "";
+      }
+    };
+
+    // Trigger file input click
+    const triggerFileInput = () => {
+      if (logoFileInput.value) {
+        logoFileInput.value.click();
+      }
+    };
+
+    // Handle logo file selection
+    const handleLogoSelect = async (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+
+      if (!file) return;
+
+      logoError.value = "";
+
+      // Validate file type
+      const acceptedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!acceptedTypes.includes(file.type)) {
+        logoError.value = "Format file harus JPG, PNG, atau WebP";
+        return;
+      }
+
+      // Validate file size (2MB)
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        logoError.value = "Ukuran file melebihi 2MB";
+        return;
+      }
+
+      try {
+        // Read file as data URL for preview
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const dataUrl = e.target.result;
+          logoPreview.value = dataUrl;
+
+          // Extract base64 data (remove data:image/...;base64, prefix)
+          const base64Data = typeof dataUrl === 'string' && dataUrl.includes(',') 
+            ? dataUrl.split(",")[1] 
+            : null;
+          
+          if (!base64Data) {
+            logoError.value = "Gagal membaca data file";
+            return;
+          }
+
+          // Prepare payload for upload - ensure all values are primitives
+          logoPayload.value = {
+            name: String(file.name || ""),
+            mimeType: String(file.type || ""),
+            size: Number(file.size || 0),
+            data: String(base64Data),
+            encoding: "base64",
+          };
+
+          // Auto-upload logo
+          await uploadLogo();
+        };
+        reader.onerror = () => {
+          logoError.value = "Gagal membaca file. Silakan coba lagi.";
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error processing logo:", error);
+        logoError.value = "Gagal memproses file. Silakan coba lagi.";
+      }
+    };
+
+    // Upload logo
+    const uploadLogo = async () => {
+      if (!logoPayload.value) return;
+
+      try {
+        // Create a plain object that can be cloned/serialized
+        const payloadToSend = {
+          name: String(logoPayload.value.name || ""),
+          mimeType: String(logoPayload.value.mimeType || ""),
+          size: Number(logoPayload.value.size || 0),
+          data: String(logoPayload.value.data || ""),
+          encoding: String(logoPayload.value.encoding || "base64"),
+        };
+        
+        // Ensure the payload is serializable by deep cloning
+        const serializedPayload = JSON.parse(JSON.stringify(payloadToSend));
+        
+        const result = await ipcRenderer.invoke("settings:uploadLogo", serializedPayload);
+        if (result && result.success) {
+          settings.value.logoPath = result.logoPath;
+          existingLogoPath.value = result.logoPath;
+          existingLogoDataUrl.value = logoPreview.value;
+          logoPayload.value = null;
+          showSuccess("Logo berhasil diunggah");
+          clearMessages();
+        }
+      } catch (error) {
+        console.error("Error uploading logo:", error);
+        logoError.value = error.message || "Gagal mengunggah logo";
+        logoPreview.value = "";
+        logoPayload.value = null;
+      }
+    };
+
+    // Delete logo
+    const deleteLogo = async () => {
+      if (!confirm("Apakah Anda yakin ingin menghapus logo?")) return;
+
+      logoDeleting.value = true;
+      logoError.value = "";
+      try {
+        await ipcRenderer.invoke("settings:deleteLogo");
+        logoPreview.value = "";
+        existingLogoPath.value = "";
+        existingLogoDataUrl.value = "";
+        settings.value.logoPath = "";
+        logoPayload.value = null;
+        showSuccess("Logo berhasil dihapus");
+        clearMessages();
+      } catch (error) {
+        console.error("Error deleting logo:", error);
+        logoError.value = error.message || "Gagal menghapus logo";
+      } finally {
+        logoDeleting.value = false;
       }
     };
 
@@ -644,6 +840,15 @@ export default {
       backupFiles,
       selectedBackup,
       lastBackupDate,
+      logoPreview,
+      existingLogoPath,
+      existingLogoDataUrl,
+      logoDeleting,
+      logoError,
+      logoFileInput,
+      triggerFileInput,
+      handleLogoSelect,
+      deleteLogo,
       saveCompanyProfile,
       saveTaxSettings,
       createBackup,
@@ -1077,6 +1282,63 @@ export default {
 .close-btn:hover {
   opacity: 1;
   background: rgba(0, 0, 0, 0.1);
+}
+
+.logo-upload-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.logo-upload-section .form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.logo-upload-section .form-hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.logo-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.logo-preview-image {
+  max-width: 150px;
+  max-height: 100px;
+  object-fit: contain;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  padding: 0.5rem;
+}
+
+.logo-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.file-input-button {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.logo-upload-section .error-message {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #dc2626;
 }
 
 @keyframes slideDown {

@@ -1,13 +1,76 @@
 const { ipcMain } = require("electron");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
 const database = require("../helpers/database");
 const logger = require("../helpers/logger");
 const { cleanupTempFiles, cleanupAllTempFiles } = require("../helpers/cleanup");
-const { getSettingsFile, getBackupsDir } = require("../helpers/pathUtils");
+const { getSettingsFile, getBackupsDir, getDataDir } = require("../helpers/pathUtils");
 const { loadSettings } = require("../helpers/settingsUtils");
 const { createBackup } = require("../helpers/backupUtils");
 const dbConfig = require("../config/database");
+
+// Use getDataDir() for consistent path resolution (will be set after require)
+let DATA_DIR = null;
+let LOGO_DIR = null;
+
+function getDataDirectory() {
+  if (!DATA_DIR) {
+    DATA_DIR = getDataDir();
+    LOGO_DIR = path.join(DATA_DIR, "uploads", "company");
+  }
+  return DATA_DIR;
+}
+
+function getLogoDirectory() {
+  if (!LOGO_DIR) {
+    getDataDirectory();
+  }
+  return LOGO_DIR;
+}
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2 MB
+
+const mimeExtensions = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
+
+function ensureLogoDir() {
+  const logoDir = getLogoDirectory();
+  if (!fsSync.existsSync(logoDir)) {
+    fsSync.mkdirSync(logoDir, { recursive: true });
+  }
+}
+
+function normalizeExtension(originalName, mimeType) {
+  const ext = (path.extname(originalName) || "").toLowerCase();
+  if (ext) return ext;
+  if (mimeType && mimeExtensions[mimeType]) {
+    return mimeExtensions[mimeType];
+  }
+  return ".png";
+}
+
+function decodeFilePayload(filePayload) {
+  if (!filePayload || !filePayload.data) {
+    return null;
+  }
+
+  const encoding = filePayload.encoding || "base64";
+
+  try {
+    if (encoding === "base64") {
+      return Buffer.from(filePayload.data, "base64");
+    }
+  } catch (error) {
+    logger.error("Failed to decode logo payload:", error);
+    throw new Error("Logo tidak dapat diproses");
+  }
+
+  throw new Error(`Encoding logo tidak didukung: ${encoding}`);
+}
 
 function setupSettingsHandlers() {
   // Get settings
@@ -369,6 +432,148 @@ function setupSettingsHandlers() {
       return { success: true, deletedCount };
     } catch (error) {
       logger.error("Error cleaning up all temp files:", error);
+      throw error;
+    }
+  });
+
+  // Upload company logo
+  ipcMain.handle("settings:uploadLogo", async (event, filePayload) => {
+    try {
+      if (!filePayload || !filePayload.data) {
+        throw new Error("File logo tidak ditemukan");
+      }
+
+      // Validate file type
+      if (!mimeExtensions[filePayload.mimeType]) {
+        throw new Error("Format logo harus JPG, PNG, atau WebP");
+      }
+
+      // Decode and validate file size
+      const buffer = decodeFilePayload(filePayload);
+      if (!buffer) {
+        throw new Error("Logo tidak dapat diproses");
+      }
+
+      if (buffer.length > MAX_LOGO_SIZE) {
+        throw new Error("Ukuran logo melebihi batas 2MB");
+      }
+
+      ensureLogoDir();
+
+      // Always use the same filename for logo (logo.png)
+      // This way we can easily replace it
+      const logoDir = getLogoDirectory();
+      const filename = "logo" + normalizeExtension(filePayload.name || "logo.png", filePayload.mimeType);
+      const logoPath = path.join(logoDir, filename);
+
+      // Save the logo
+      await fs.writeFile(logoPath, buffer);
+
+      // Get relative path from data directory
+      const dataDir = getDataDirectory();
+      const relativePath = path
+        .relative(dataDir, logoPath)
+        .split(path.sep)
+        .join("/");
+
+      // Update settings with logo path
+      const settingsFile = getSettingsFile();
+      let existingSettings = {};
+      try {
+        const data = await fs.readFile(settingsFile, "utf8");
+        existingSettings = JSON.parse(data);
+      } catch (error) {
+        if (error.code !== "ENOENT") {
+          logger.warn("Could not read existing settings");
+        }
+      }
+
+      existingSettings.logoPath = relativePath;
+
+      await fs.writeFile(
+        settingsFile,
+        JSON.stringify(existingSettings, null, 2),
+      );
+
+      logger.info("Logo uploaded successfully:", relativePath);
+      return { success: true, logoPath: relativePath };
+    } catch (error) {
+      logger.error("Error uploading logo:", error);
+      throw error;
+    }
+  });
+
+  // Get company logo
+  ipcMain.handle("settings:getLogo", async (event, logoPath) => {
+    try {
+      if (!logoPath) return null;
+
+      // Use getDataDir() to ensure consistent path resolution
+      const DATA_DIR = getDataDir();
+      const logoFilePath = path.join(DATA_DIR, logoPath);
+
+      // Check if file exists
+      try {
+        await fs.access(logoFilePath);
+      } catch {
+        return null;
+      }
+
+      // Read file as base64
+      const buffer = await fs.readFile(logoFilePath);
+      const base64 = buffer.toString("base64");
+      const mimeType = path.extname(logoPath).toLowerCase() === ".png" ? "image/png" : 
+                      path.extname(logoPath).toLowerCase() === ".jpg" || path.extname(logoPath).toLowerCase() === ".jpeg" ? "image/jpeg" : 
+                      "image/webp";
+      
+      return {
+        dataUrl: `data:${mimeType};base64,${base64}`,
+        path: logoPath,
+      };
+    } catch (error) {
+      logger.error("Error getting logo:", error);
+      return null;
+    }
+  });
+
+  // Delete company logo
+  ipcMain.handle("settings:deleteLogo", async () => {
+    try {
+      const settingsFile = getSettingsFile();
+      let existingSettings = {};
+      try {
+        const data = await fs.readFile(settingsFile, "utf8");
+        existingSettings = JSON.parse(data);
+      } catch (error) {
+        if (error.code !== "ENOENT") {
+          logger.warn("Could not read existing settings");
+        }
+      }
+
+      // Delete logo file if exists
+      if (existingSettings.logoPath) {
+        const logoPath = path.join(DATA_DIR, existingSettings.logoPath);
+        try {
+          await fs.unlink(logoPath);
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            logger.warn("Could not delete logo file:", error);
+          }
+        }
+      }
+
+      // Remove logo path from settings
+      delete existingSettings.logoPath;
+
+      await fs.writeFile(
+        settingsFile,
+        JSON.stringify(existingSettings, null, 2),
+      );
+
+      logger.info("Logo deleted successfully");
+      return { success: true };
+    } catch (error) {
+      logger.error("Error deleting logo:", error);
       throw error;
     }
   });

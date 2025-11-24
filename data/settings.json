@@ -9,10 +9,11 @@
     "check_interval": 3600000
   },
   "companyName": "RIMS",
-  "address": "",
+  "address": "Jl. Swadaya No.14",
   "phone": "08123456789",
   "sync": {
     "autoSyncEnabled": true,
     "autoSyncInterval": 60000
-  }
+  },
+  "logoPath": "uploads/company/logo.png"
 }
