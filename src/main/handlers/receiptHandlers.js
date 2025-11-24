@@ -114,6 +114,9 @@ function calculateReceiptHeight(
   
   // Items Header
   if (settings.receiptSettings.showItems) {
+    // Calculate dynamic item name width based on paper width
+    const itemNameWidth = paperWidthMM <= 58 ? 18 : 30;
+    
     tempDoc.setFontSize(fontSize.medium || 9);
     yPos += 4; // Header row
     yPos += lineSpacing + 2; // Line + extra spacing
@@ -122,7 +125,7 @@ function calculateReceiptHeight(
     // Items
     for (const detail of transactionDetails) {
       const itemName = detail.item_name || "-";
-      const nameLines = tempDoc.splitTextToSize(itemName, 30);
+      const nameLines = tempDoc.splitTextToSize(itemName, itemNameWidth);
       yPos += 3.5 * nameLines.length;
     }
     
@@ -321,7 +324,6 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     // Get thermal printer settings
     const thermalPaperSize = settings.thermalPaperSize || "80";
-    const thermalFontSize = settings.thermalFontSize || "medium";
     const thermalPrintDensity = settings.thermalPrintDensity || "normal";
     
     // Calculate paper width in mm based on thermal paper size
@@ -331,7 +333,6 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     } else if (thermalPaperSize === "80") {
       paperWidth = 80;
     }
-    // If custom, use the paperWidth from settings
     
     const paperWidthMM = paperWidth; // Already in mm
     
@@ -345,13 +346,17 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     
     const contentWidth = paperWidthMM - margin * 2;
     
-    // Define font sizes based on thermal font size setting
+    // Auto-calculate font size based on paper width
+    // 58mm = small, 80mm = medium
+    const autoFontSize = paperWidthMM <= 58 ? "small" : "medium";
+    
+    // Define font sizes
     const fontSizes = {
       small: { normal: 7, medium: 8, large: 9, title: 10 },
       medium: { normal: 9, medium: 10, large: 11, title: 12 },
       large: { normal: 11, medium: 12, large: 13, title: 14 },
     };
-    const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
+    const fontSize = fontSizes[autoFontSize] || fontSizes.medium;
 
     // Calculate content height first
     const calculatedHeight = calculateReceiptHeight(
@@ -608,17 +613,34 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
 
     // Items Header
     if (settings.receiptSettings.showItems) {
+      // Calculate dynamic column positions based on paper width
+      let itemNameWidth, qtyPos, hargaPos;
+      if (paperWidthMM <= 58) {
+        // For 58mm paper: optimize for narrow width
+        itemNameWidth = 20; // More space for item name
+        qtyPos = margin + 22;
+        hargaPos = pageWidth - margin; // Right align
+      } else {
+        // For 80mm paper: distribute space evenly
+        // margin=5, contentWidth=70mm
+        // Item: 0-40mm (35mm width)
+        // Qty: 42mm (3mm width)
+        // Harga: 45-75mm (30mm width, right align)
+        itemNameWidth = 35;
+        qtyPos = margin + 42;
+        hargaPos = pageWidth - margin; // Right align
+      }
+      
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
       doc.text("Item", margin, yPos);
-      doc.text("Qty", margin + 35, yPos);
-      doc.text("Harga", margin + 50, yPos);
-      doc.text("Subtotal", margin + 75, yPos);
+      doc.text("Qty", qtyPos, yPos);
+      doc.text("Harga", hargaPos, yPos, { align: "right" });
       yPos += 4;
       addLine();
       yPos += 2; // Extra spacing after line before items list
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(fontSize.normal);
 
       // Items
       for (const detail of transactionDetails) {
@@ -626,7 +648,6 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         const quantity = detail.quantity || 0;
         const price =
           transactionType === "sale" ? detail.sale_price : detail.rental_price;
-        const subtotal = detail.subtotal || 0;
 
         // Check if we need a new page
         if (yPos > 280) {
@@ -635,13 +656,12 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         }
 
         // Item name (may wrap)
-        const nameLines = doc.splitTextToSize(itemName, 30);
+        const nameLines = doc.splitTextToSize(itemName, itemNameWidth);
         nameLines.forEach((line, idx) => {
           doc.text(line, margin, yPos);
           if (idx === 0) {
-            doc.text(quantity.toString(), margin + 35, yPos);
-            doc.text(formatCurrency(price), margin + 50, yPos);
-            doc.text(formatCurrency(subtotal), margin + 75, yPos);
+            doc.text(quantity.toString(), qtyPos, yPos);
+            doc.text(formatCurrency(price), hargaPos, yPos, { align: "right" });
           }
           yPos += 3.5;
         });
@@ -652,7 +672,10 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       yPos += 1; // Extra spacing after line before summary
     }
 
-    // Summary
+    // Summary - Adjust spacing based on paper width
+    const summarySpacing = paperWidthMM <= 58 ? 3 : 4;
+    const totalSpacing = paperWidthMM <= 58 ? 4 : 5;
+    
     const subtotal = transaction.subtotal || 0;
     const discount = transaction.discount || 0;
     const tax = transaction.tax || 0;
@@ -662,14 +685,14 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     const paid = totalPaidFromPayments > 0 ? totalPaidFromPayments : (transaction.paid_amount || 0);
     const remaining = total - paid;
 
-    doc.setFontSize(9);
+    doc.setFontSize(fontSize.medium);
 
     if (settings.receiptSettings.showSubtotal) {
       doc.text("Subtotal:", margin, yPos);
       doc.text(formatCurrency(subtotal), pageWidth - margin, yPos, {
         align: "right",
       });
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (settings.receiptSettings.showDiscount && discount > 0) {
@@ -677,7 +700,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       doc.text(`- ${formatCurrency(discount)}`, pageWidth - margin, yPos, {
         align: "right",
       });
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (settings.receiptSettings.showTax && tax > 0) {
@@ -685,19 +708,19 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       doc.text(`+ ${formatCurrency(tax)}`, pageWidth - margin, yPos, {
         align: "right",
       });
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (settings.receiptSettings.showTotal) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(fontSize.large);
       doc.text("TOTAL:", margin, yPos);
       doc.text(formatCurrency(total), pageWidth - margin, yPos, {
         align: "right",
       });
-      yPos += 5;
+      yPos += totalSpacing;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
     }
 
     if (settings.receiptSettings.showPaymentInfo) {
@@ -707,14 +730,14 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       doc.text(formatCurrency(paid), pageWidth - margin, yPos, {
         align: "right",
       });
-      yPos += 4;
+      yPos += summarySpacing;
 
       if (remaining > 0) {
         doc.text("Sisa:", margin, yPos);
         doc.text(formatCurrency(remaining), pageWidth - margin, yPos, {
           align: "right",
         });
-        yPos += 4;
+        yPos += summarySpacing;
       }
 
       // Payment status - Calculate based on actual payment amount
@@ -722,12 +745,12 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       const statusText = isFullyPaid ? "LUNAS" : "BELUM DIBAYAR";
       doc.setFont("helvetica", "bold");
       doc.text(`Status: ${statusText}`, margin, yPos);
-      yPos += 4;
+      yPos += summarySpacing;
 
       // Payment methods if any
       if (payments.length > 0) {
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
+        doc.setFontSize(fontSize.normal);
         payments.forEach((payment) => {
           const methodLabels = {
             cash: "Tunai",
@@ -741,34 +764,34 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
             margin,
             yPos,
           );
-          yPos += 3;
+          yPos += 2.5;
         });
       }
     }
 
     // Notes
     if (settings.receiptSettings.showNotes && transaction.notes) {
-      yPos += 2;
+      yPos += paperWidthMM <= 58 ? 1 : 2;
       addLine();
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
       doc.text("Catatan:", margin, yPos);
-      yPos += 4;
+      yPos += summarySpacing;
       const noteLines = doc.splitTextToSize(transaction.notes, contentWidth);
       noteLines.forEach((line) => {
         doc.text(line, margin, yPos);
-        yPos += 3.5;
+        yPos += paperWidthMM <= 58 ? 3 : 3.5;
       });
     }
 
     // Footer
     if (settings.receiptSettings.showFooter) {
-      yPos += 5;
+      yPos += paperWidthMM <= 58 ? 3 : 5;
       addLine();
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
       addCenteredText(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 7);
-      yPos += 3;
-      addCenteredText("Terima Kasih", 9, true);
+      yPos += paperWidthMM <= 58 ? 2 : 3;
+      addCenteredText("Terima Kasih", fontSize.medium, true);
     }
 
     // Remove extra pages if any (content should fit on one page for receipts)
@@ -819,7 +842,6 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     // Get thermal printer settings from companySettings
     const thermalPaperSize = companySettings?.thermalPaperSize || "80";
-    const thermalFontSize = companySettings?.thermalFontSize || "medium";
     const thermalPrintDensity = companySettings?.thermalPrintDensity || "normal";
     
     const settings = {
@@ -865,13 +887,17 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     
     const contentWidth = paperWidth - margin * 2;
     
-    // Define font sizes based on thermal font size setting
+    // Auto-calculate font size based on paper width
+    // 58mm = small, 80mm = medium
+    const autoFontSize = paperWidth <= 58 ? "small" : "medium";
+    
+    // Define font sizes
     const fontSizes = {
       small: { normal: 7, medium: 8, large: 9, title: 10 },
       medium: { normal: 9, medium: 10, large: 11, title: 12 },
       large: { normal: 11, medium: 12, large: 13, title: 14 },
     };
-    const fontSize = fontSizes[thermalFontSize] || fontSizes.medium;
+    const fontSize = fontSizes[autoFontSize] || fontSizes.medium;
 
     // Sample data
     const sampleTransaction = {
@@ -1140,26 +1166,42 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     // Items
     if (settings.receiptSettings.showItems) {
+      // Calculate dynamic column positions based on paper width
+      let itemNameWidth, qtyPos, hargaPos;
+      if (paperWidth <= 58) {
+        // For 58mm paper: optimize for narrow width
+        itemNameWidth = 20; // More space for item name
+        qtyPos = margin + 22;
+        hargaPos = pageWidth - margin; // Right align
+      } else {
+        // For 80mm paper: distribute space evenly
+        // margin=5, contentWidth=70mm
+        // Item: 0-40mm (35mm width)
+        // Qty: 42mm (3mm width)
+        // Harga: 45-75mm (30mm width, right align)
+        itemNameWidth = 35;
+        qtyPos = margin + 42;
+        hargaPos = pageWidth - margin; // Right align
+      }
+      
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
       doc.text("Item", margin, yPos);
-      doc.text("Qty", margin + 35, yPos);
-      doc.text("Harga", margin + 50, yPos);
-      doc.text("Subtotal", margin + 75, yPos);
+      doc.text("Qty", qtyPos, yPos);
+      doc.text("Harga", hargaPos, yPos, { align: "right" });
       yPos += 4;
       addLine();
       yPos += 2; // Extra spacing after line before items list
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(fontSize.normal);
 
       sampleItems.forEach((item) => {
-        const nameLines = doc.splitTextToSize(item.item_name, 30);
+        const nameLines = doc.splitTextToSize(item.item_name, itemNameWidth);
         nameLines.forEach((line, idx) => {
           doc.text(line, margin, yPos);
           if (idx === 0) {
-            doc.text(item.quantity.toString(), margin + 35, yPos);
-            doc.text(formatCurrency(item.price), margin + 50, yPos);
-            doc.text(formatCurrency(item.subtotal), margin + 75, yPos);
+            doc.text(item.quantity.toString(), qtyPos, yPos);
+            doc.text(formatCurrency(item.price), hargaPos, yPos, { align: "right" });
           }
           yPos += 3.5;
         });
@@ -1170,8 +1212,11 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       yPos += 1; // Extra spacing after line before summary
     }
 
-    // Summary
-    doc.setFontSize(9);
+    // Summary - Adjust spacing based on paper width
+    const summarySpacing = paperWidth <= 58 ? 3 : 4;
+    const totalSpacing = paperWidth <= 58 ? 4 : 5;
+    
+    doc.setFontSize(fontSize.medium);
 
     if (settings.receiptSettings.showSubtotal) {
       doc.text("Subtotal:", margin, yPos);
@@ -1181,7 +1226,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         yPos,
         { align: "right" },
       );
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (
@@ -1195,7 +1240,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         yPos,
         { align: "right" },
       );
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (settings.receiptSettings.showTax && sampleTransaction.tax > 0) {
@@ -1206,12 +1251,12 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         yPos,
         { align: "right" },
       );
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     if (settings.receiptSettings.showTotal) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(fontSize.large);
       doc.text("TOTAL:", margin, yPos);
       doc.text(
         formatCurrency(sampleTransaction.total_amount),
@@ -1219,9 +1264,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         yPos,
         { align: "right" },
       );
-      yPos += 5;
+      yPos += totalSpacing;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
     }
 
     if (settings.receiptSettings.showPaymentInfo) {
@@ -1234,39 +1279,39 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         yPos,
         { align: "right" },
       );
-      yPos += 4;
+      yPos += summarySpacing;
       doc.setFont("helvetica", "bold");
       doc.text(`Status: LUNAS`, margin, yPos);
-      yPos += 4;
+      yPos += summarySpacing;
     }
 
     // Notes
     if (settings.receiptSettings.showNotes && sampleTransaction.notes) {
-      yPos += 2;
+      yPos += paperWidth <= 58 ? 1 : 2;
       addLine();
-      doc.setFontSize(9);
+      doc.setFontSize(fontSize.medium);
       doc.setFont("helvetica", "normal");
       doc.text("Catatan:", margin, yPos);
-      yPos += 4;
+      yPos += summarySpacing;
       const noteLines = doc.splitTextToSize(
         sampleTransaction.notes,
         contentWidth,
       );
       noteLines.forEach((line) => {
         doc.text(line, margin, yPos);
-        yPos += 3.5;
+        yPos += paperWidth <= 58 ? 3 : 3.5;
       });
     }
 
     // Footer
     if (settings.receiptSettings.showFooter) {
-      yPos += 5;
+      yPos += paperWidth <= 58 ? 3 : 5;
       addLine();
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
       addCenteredText(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 7);
-      yPos += 3;
-      addCenteredText("Terima Kasih", 9, true);
+      yPos += paperWidth <= 58 ? 2 : 3;
+      addCenteredText("Terima Kasih", fontSize.medium, true);
     }
 
     // Remove extra pages if any (content should fit on one page for receipts)

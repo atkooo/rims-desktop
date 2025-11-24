@@ -1,5 +1,5 @@
 {
-  "printer": "Microsoft Print to PDF",
+  "printer": "DLC",
   "paperWidth": 80,
   "autoPrint": true,
   "taxPercentage": 0,
@@ -15,5 +15,27 @@
     "autoSyncEnabled": true,
     "autoSyncInterval": 60000
   },
-  "logoPath": "uploads/company/logo.png"
+  "logoPath": "uploads/company/logo.png",
+  "thermalPaperSize": "80",
+  "thermalFontSize": "small",
+  "thermalPrintDensity": "normal",
+  "thermalAutoCut": true,
+  "receiptSettings": {
+    "showCompanyName": true,
+    "showAddress": true,
+    "showPhone": true,
+    "showLogo": true,
+    "showCustomerInfo": true,
+    "showTransactionCode": true,
+    "showDate": true,
+    "showCashier": true,
+    "showItems": true,
+    "showSubtotal": true,
+    "showDiscount": true,
+    "showTax": true,
+    "showTotal": true,
+    "showPaymentInfo": true,
+    "showNotes": true,
+    "showFooter": true
+  }
 }

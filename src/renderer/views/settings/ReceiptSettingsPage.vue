@@ -59,36 +59,12 @@
                 class="form-select"
                 @change="onPaperSizeChange"
               >
-                <option value="58">58mm (Lebar 48mm)</option>
-                <option value="80">80mm (Lebar 72mm)</option>
-                <option value="custom">Custom</option>
+                <option value="58">58mm</option>
+                <option value="80">80mm</option>
               </select>
               <small class="form-hint">
-                Pilih ukuran kertas thermal yang sesuai dengan printer Anda
+                Pilih ukuran kertas thermal yang sesuai dengan printer Anda. Ukuran font akan disesuaikan otomatis.
               </small>
-            </div>
-            <div class="form-group" v-if="settings.thermalPaperSize === 'custom'">
-              <label>Lebar Kertas Custom (mm)</label>
-              <input
-                type="number"
-                v-model.number="settings.paperWidth"
-                class="form-input"
-                min="40"
-                max="120"
-                @change="updatePreview"
-              />
-            </div>
-            <div class="form-group">
-              <label>Ukuran Font</label>
-              <select
-                v-model="settings.thermalFontSize"
-                class="form-select"
-                @change="updatePreview"
-              >
-                <option value="small">Kecil (8pt)</option>
-                <option value="medium">Sedang (10pt)</option>
-                <option value="large">Besar (12pt)</option>
-              </select>
             </div>
             <div class="form-group">
               <label>Kepadatan Cetak</label>
@@ -381,8 +357,7 @@ export default {
       phone: "",
       printer: "",
       paperWidth: 80,
-      thermalPaperSize: "80", // 58, 80, or custom
-      thermalFontSize: "medium", // small, medium, large
+      thermalPaperSize: "80", // 58 or 80
       thermalPrintDensity: "normal", // light, normal, dark
       thermalAutoCut: false,
       autoPrint: true,
@@ -413,7 +388,6 @@ export default {
       } else if (settings.value.thermalPaperSize === "80") {
         settings.value.paperWidth = 80;
       }
-      // If custom, keep current paperWidth value
       updatePreview();
     };
 
@@ -460,7 +434,6 @@ export default {
           paperWidth: Number(settings.value.paperWidth || 80),
           logoPath: String(settings.value.logoPath || ""),
           thermalPaperSize: String(settings.value.thermalPaperSize || "80"),
-          thermalFontSize: String(settings.value.thermalFontSize || "medium"),
           thermalPrintDensity: String(settings.value.thermalPrintDensity || "normal"),
           thermalAutoCut: Boolean(settings.value.thermalAutoCut || false),
         };
@@ -513,15 +486,19 @@ export default {
     const saveAllSettings = async () => {
       loading.value = true;
       try {
+        // Deep clone receiptSettings to plain object to avoid IPC cloning errors
+        const receiptSettings = JSON.parse(
+          JSON.stringify(settings.value.receiptSettings),
+        );
+
         await ipcRenderer.invoke("settings:save", {
           printer: settings.value.printer,
           paperWidth: settings.value.paperWidth,
           thermalPaperSize: settings.value.thermalPaperSize,
-          thermalFontSize: settings.value.thermalFontSize,
           thermalPrintDensity: settings.value.thermalPrintDensity,
           thermalAutoCut: settings.value.thermalAutoCut,
           autoPrint: settings.value.autoPrint,
-          receiptSettings: settings.value.receiptSettings,
+          receiptSettings: receiptSettings,
         });
         // Update preview after saving
         await updatePreview();
@@ -557,7 +534,6 @@ export default {
         settings.value.paperWidth,
         settings.value.printer,
         settings.value.thermalPaperSize,
-        settings.value.thermalFontSize,
         settings.value.thermalPrintDensity,
       ],
       debouncedUpdatePreview,
@@ -813,6 +789,7 @@ export default {
   border: 1px solid #e5e7eb;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .preview-header {
@@ -822,6 +799,9 @@ export default {
   padding: 1rem 1.5rem;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
 .preview-header h4 {
@@ -855,6 +835,7 @@ export default {
   min-height: 500px;
   background: #f9fafb;
   position: relative;
+  overflow: auto;
 }
 
 .preview-loading,
