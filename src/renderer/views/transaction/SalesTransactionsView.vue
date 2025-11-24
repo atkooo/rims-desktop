@@ -211,7 +211,10 @@ export default {
     };
     const formatTransactionStatus = (value, row) => {
       if (isCancelled(row)) return "Dibatalkan";
-      return "Selesai";
+      // Check payment status - only show "Selesai" if payment is complete
+      const paymentStatus = (row.payment_status || row.paymentStatus || "").toString().toLowerCase();
+      if (paymentStatus === "paid") return "Selesai";
+      return "Belum Selesai";
     };
 
     const columns = [

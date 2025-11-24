@@ -296,12 +296,30 @@ function setupTransactionHandlers() {
           t.calculated_payment_status || t.payment_status || "unpaid",
       }));
 
-      const processedSalesTransactions = salesTransactions.map((t) => ({
-        ...t,
-        paid_amount: t.actual_paid_amount || 0,
-        payment_status:
-          t.calculated_payment_status || t.payment_status || "unpaid",
-      }));
+      const processedSalesTransactions = await Promise.all(
+        salesTransactions.map(async (t) => {
+          // Fix status inconsistency: if status is 'completed' but payment is not complete, update to 'pending'
+          const paymentStatus =
+            t.calculated_payment_status || t.payment_status || "unpaid";
+          if (
+            t.status === "completed" &&
+            paymentStatus === "unpaid" &&
+            (t.actual_paid_amount || 0) < (t.total_amount || 0)
+          ) {
+            // Fix the status in database
+            await database.execute(
+              `UPDATE sales_transactions SET status = 'pending', is_sync = 0 WHERE id = ?`,
+              [t.id],
+            );
+            t.status = "pending";
+          }
+          return {
+            ...t,
+            paid_amount: t.actual_paid_amount || 0,
+            payment_status: paymentStatus,
+          };
+        }),
+      );
 
       // Combine and sort both types of transactions
       const transactions = [
@@ -1255,6 +1273,67 @@ function setupPaymentHandlers() {
         }
       }
 
+      // Check if payment is complete and update transaction status accordingly
+      const updatedTransaction = await getTransactionPaymentStatus(
+        paymentData.transactionType,
+        paymentData.transactionId,
+      );
+
+      if (updatedTransaction) {
+        const totalPaid = Number(updatedTransaction.total_paid || 0);
+        const totalAmount = Number(updatedTransaction.total_amount || 0);
+        const isPaymentComplete = totalPaid >= totalAmount;
+
+        if (isPaymentComplete) {
+          if (paymentData.transactionType === "sale") {
+            // For sale transactions, update status to 'completed' when payment is complete
+            if (updatedTransaction.status === "pending") {
+              await database.execute(
+                `UPDATE sales_transactions SET status = 'completed', is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            } else if (updatedTransaction.status !== "completed") {
+              // If status is not completed, update it and reset is_sync
+              await database.execute(
+                `UPDATE sales_transactions SET status = 'completed', is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            } else {
+              // Status is already completed, but ensure is_sync is reset for re-sync
+              await database.execute(
+                `UPDATE sales_transactions SET is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            }
+          } else if (paymentData.transactionType === "rental") {
+            // For rental transactions, ensure status is 'active' when payment is complete
+            // (rental stays active until items are returned)
+            if (updatedTransaction.status === "pending") {
+              await database.execute(
+                `UPDATE rental_transactions SET status = 'active', is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            } else if (updatedTransaction.status === "active") {
+              // Status is already active, but ensure is_sync is reset for re-sync
+              await database.execute(
+                `UPDATE rental_transactions SET is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            }
+          }
+        } else {
+          // Payment is not complete - ensure status is 'pending' for sales transactions
+          if (paymentData.transactionType === "sale") {
+            if (updatedTransaction.status === "completed") {
+              await database.execute(
+                `UPDATE sales_transactions SET status = 'pending', is_sync = 0 WHERE id = ?`,
+                [paymentData.transactionId],
+              );
+            }
+          }
+        }
+      }
+
       const newPayment = await database.queryOne(
         `SELECT p.*, u.full_name AS user_name
          FROM payments p
@@ -1273,6 +1352,12 @@ function setupPaymentHandlers() {
   // Update payment
   ipcMain.handle("payments:update", async (event, id, paymentData) => {
     try {
+      // Get payment info before updating
+      const payment = await database.queryOne(
+        `SELECT transaction_type, transaction_id FROM payments WHERE id = ?`,
+        [id],
+      );
+
       const updateFields = [];
       const updateValues = [];
 
@@ -1305,6 +1390,38 @@ function setupPaymentHandlers() {
         );
       }
 
+      // Update transaction status based on payment status after update
+      if (payment && payment.transaction_type === "sale") {
+        const updatedTransaction = await getTransactionPaymentStatus(
+          payment.transaction_type,
+          payment.transaction_id,
+        );
+
+        if (updatedTransaction) {
+          const totalPaid = Number(updatedTransaction.total_paid || 0);
+          const totalAmount = Number(updatedTransaction.total_amount || 0);
+          const isPaymentComplete = totalPaid >= totalAmount;
+
+          if (isPaymentComplete) {
+            // Payment is complete, update status to 'completed' if not already
+            if (updatedTransaction.status !== "completed") {
+              await database.execute(
+                `UPDATE sales_transactions SET status = 'completed', is_sync = 0 WHERE id = ?`,
+                [payment.transaction_id],
+              );
+            }
+          } else {
+            // Payment is not complete, update status to 'pending' if it was 'completed'
+            if (updatedTransaction.status === "completed") {
+              await database.execute(
+                `UPDATE sales_transactions SET status = 'pending', is_sync = 0 WHERE id = ?`,
+                [payment.transaction_id],
+              );
+            }
+          }
+        }
+      }
+
       const updatedPayment = await database.queryOne(
         `SELECT p.*, u.full_name AS user_name
          FROM payments p
@@ -1323,7 +1440,35 @@ function setupPaymentHandlers() {
   // Delete payment
   ipcMain.handle("payments:delete", async (event, id) => {
     try {
+      // Get payment info before deleting
+      const payment = await database.queryOne(
+        `SELECT transaction_type, transaction_id FROM payments WHERE id = ?`,
+        [id],
+      );
+
       await database.execute("DELETE FROM payments WHERE id = ?", [id]);
+
+      // Update transaction status if payment deletion makes it unpaid
+      if (payment && payment.transaction_type === "sale") {
+        const updatedTransaction = await getTransactionPaymentStatus(
+          payment.transaction_type,
+          payment.transaction_id,
+        );
+
+        if (updatedTransaction) {
+          const totalPaid = Number(updatedTransaction.total_paid || 0);
+          const totalAmount = Number(updatedTransaction.total_amount || 0);
+          const isPaymentComplete = totalPaid >= totalAmount;
+
+          // If payment is not complete and status is 'completed', change it back to 'pending'
+          if (!isPaymentComplete && updatedTransaction.status === "completed") {
+            await database.execute(
+              `UPDATE sales_transactions SET status = 'pending', is_sync = 0 WHERE id = ?`,
+              [payment.transaction_id],
+            );
+          }
+        }
+      }
 
       return true;
     } catch (error) {
