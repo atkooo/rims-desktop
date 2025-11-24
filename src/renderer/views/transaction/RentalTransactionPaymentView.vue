@@ -111,9 +111,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="payment in paymentHistory" :key="payment.id">
+            <tr v-for="payment in paymentHistory" :key="payment.id" :class="{ 'refund-row': Number(payment.amount) < 0 }">
               <td>{{ formatDate(payment.payment_date) }}</td>
-              <td>{{ formatCurrency(payment.amount) }}</td>
+              <td>
+                <span :class="{ 'refund-amount': Number(payment.amount) < 0 }">
+                  {{ Number(payment.amount) < 0 ? '-' : '' }}{{ formatCurrency(Math.abs(payment.amount)) }}
+                </span>
+              </td>
               <td>{{ getPaymentMethodLabel(payment.payment_method) }}</td>
               <td>{{ payment.reference_number || "-" }}</td>
               <td>{{ payment.user_name || "-" }}</td>
@@ -779,5 +783,14 @@ export default {
   display: flex;
   gap: 1rem;
   justify-content: center;
+}
+
+.refund-row {
+  background-color: #fff3cd;
+}
+
+.refund-amount {
+  color: #dc3545;
+  font-weight: bold;
 }
 </style>

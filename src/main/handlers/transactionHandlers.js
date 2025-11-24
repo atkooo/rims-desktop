@@ -1054,9 +1054,9 @@ function setupTransactionHandlers() {
         throw new Error("Data tidak valid");
       }
 
-      // Validate rental transaction exists
+      // Validate rental transaction exists and get deposit info
       const rental = await database.queryOne(
-        "SELECT id, user_id, transaction_code, status FROM rental_transactions WHERE id = ?",
+        "SELECT id, user_id, transaction_code, status, deposit FROM rental_transactions WHERE id = ?",
         [rentalTransactionId],
       );
 
@@ -1173,6 +1173,60 @@ function setupTransactionHandlers() {
             "UPDATE rental_transactions SET actual_return_date = ?, status = 'returned', is_sync = 0 WHERE id = ?",
             [returnDate, rentalTransactionId],
           );
+
+          // Check if deposit has already been refunded
+          const existingRefund = await database.queryOne(
+            `SELECT COUNT(*) as count FROM payments 
+             WHERE transaction_type = 'rental' AND transaction_id = ? 
+             AND (notes LIKE '%Deposit Refund%' OR notes LIKE '%Pengembalian Deposit%' OR amount < 0)`,
+            [rentalTransactionId],
+          );
+
+          // Refund deposit if deposit exists and hasn't been refunded yet
+          const depositAmount = Number(rental.deposit || 0);
+          if (depositAmount > 0 && (!existingRefund || existingRefund.count === 0)) {
+            // Check for lost or damaged items - if any item is lost or damaged, don't refund deposit
+            const lostItemsResult = await database.queryOne(
+              `SELECT COUNT(*) as count FROM rental_transaction_details 
+               WHERE rental_transaction_id = ? AND is_returned = 1 AND return_condition = 'lost'`,
+              [rentalTransactionId],
+            );
+
+            const damagedItemsResult = await database.queryOne(
+              `SELECT COUNT(*) as count FROM rental_transaction_details 
+               WHERE rental_transaction_id = ? AND is_returned = 1 AND return_condition = 'damaged'`,
+              [rentalTransactionId],
+            );
+
+            // Only refund deposit if all items are returned in good condition
+            // If any item is lost or damaged, deposit is not refunded (hangus)
+            const hasLostItems = lostItemsResult && lostItemsResult.count > 0;
+            const hasDamagedItems = damagedItemsResult && damagedItemsResult.count > 0;
+            
+            if (!hasLostItems && !hasDamagedItems) {
+              // All items returned in good condition - refund full deposit
+              // Validate cashier session for cash refunds
+              await validateCashierSession(returnUserId);
+              
+              await database.execute(
+                `INSERT INTO payments (
+                  transaction_type, transaction_id, payment_date, amount,
+                  payment_method, reference_number, user_id, notes, is_sync
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+                [
+                  "rental",
+                  rentalTransactionId,
+                  new Date().toISOString(),
+                  -depositAmount, // Negative amount for refund
+                  "cash", // Default to cash refund
+                  null,
+                  returnUserId,
+                  `Deposit Refund - Pengembalian Deposit untuk ${rental.transaction_code}`,
+                ],
+              );
+            }
+            // If has lost or damaged items, deposit is not refunded (hangus)
+          }
         } else if (actualReturnDate) {
           // Update return date even if not all items are returned yet
           // Also reset is_sync in case status changes
