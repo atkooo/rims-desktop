@@ -286,6 +286,7 @@ export default {
 
 .table-wrapper {
   overflow: auto;
+  margin-bottom: 3rem;
 }
 
 .table {
@@ -329,11 +330,20 @@ th.sortable {
   white-space: nowrap;
 }
 
+/* Pastikan cell aksi punya tinggi dan ikut menyatu dengan garis table */
 .actions-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: table-cell !important;
+  vertical-align: middle;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
 }
+
+/* Agar tombol di dalamnya tidak membuat cell menyusut */
+.actions-cell > * {
+  display: inline-flex;
+  align-items: center;
+}
+
 
 .empty {
   text-align: center;
