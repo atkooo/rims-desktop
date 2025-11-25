@@ -324,6 +324,40 @@ export default {
       ),
     );
 
+    // Normalize items, bundles, and accessories for API
+    const normalizedItems = computed(() =>
+      form.value.items.map((item) => {
+        const quantity = item.quantity || 1;
+        const price = calculateItemPrice(item);
+        return {
+          itemId: item.id,
+          quantity,
+          rentalPrice: 0,
+          salePrice: price,
+          subtotal: price * quantity,
+        };
+      }),
+    );
+
+    const normalizedBundles = computed(() =>
+      form.value.bundles.map((bundle) => ({
+        bundleId: bundle.id,
+        quantity: Math.max(1, Number(bundle.quantity) || 1),
+      })),
+    );
+
+    const normalizedAccessories = computed(() => {
+      return form.value.accessories.map((accessory) => {
+        const price = calculateAccessoryPrice(accessory);
+        return {
+          accessoryId: accessory.id,
+          quantity: accessory.quantity || 1,
+          salePrice: price,
+          subtotal: price * (accessory.quantity || 1),
+        };
+      });
+    });
+
     const isDiscountReadonly = computed(() => {
       if (form.value.customerId) {
         const customer = customers.value.find(
@@ -550,7 +584,13 @@ export default {
           customerId: form.value.customerId || null,
           saleDate: form.value.saleDate,
           totalAmount: Number(totalAmount.value),
+          subtotal: subtotal.value,
+          discount: Number(form.value.discount) || 0,
+          tax: Number(form.value.tax) || 0,
           notes: form.value.notes,
+          items: normalizedItems.value,
+          bundles: normalizedBundles.value,
+          accessories: normalizedAccessories.value,
         });
 
         showSuccess("Transaksi berhasil diperbarui.");
@@ -596,6 +636,9 @@ export default {
       accessorySubtotal,
       isDiscountReadonly,
       calculatedTax,
+      normalizedItems,
+      normalizedBundles,
+      normalizedAccessories,
       handleSubmit,
       goBack,
     };

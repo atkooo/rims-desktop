@@ -147,16 +147,15 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
         throw printError;
       }
   } catch (electronPrintError) {
-      logger.error(
-        "Electron print method also failed:",
-        electronPrintError,
-      );
-      // Final fallback: open PDF viewer
-      await shell.openPath(filePath);
-      throw new Error(
-        `Gagal mencetak ke printer ${printerName}. PDF dibuka di viewer untuk print manual.`,
-      );
-    }
+    logger.error(
+      "Electron print method also failed:",
+      electronPrintError,
+    );
+    // Final fallback: open PDF viewer
+    await shell.openPath(filePath);
+    throw new Error(
+      `Gagal mencetak ke printer ${printerName}. PDF dibuka di viewer untuk print manual.`,
+    );
   }
 }
 

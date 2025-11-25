@@ -86,6 +86,7 @@ async function validateAccessoryStock(accessoryId, requiredQuantity) {
  */
 async function createStockMovement({
   itemId,
+  accessoryId,
   movementType,
   referenceType,
   referenceId,
@@ -97,11 +98,12 @@ async function createStockMovement({
 }) {
   await database.execute(
     `INSERT INTO stock_movements (
-      item_id, movement_type, reference_type, reference_id,
+      item_id, accessory_id, movement_type, reference_type, reference_id,
       quantity, stock_before, stock_after, user_id, notes, is_sync
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     [
-      itemId,
+      itemId || null,
+      accessoryId || null,
       movementType,
       referenceType,
       referenceId,
@@ -814,6 +816,18 @@ function setupTransactionHandlers() {
             updateFields.push("sale_date = ?");
             updateValues.push(transactionData.saleDate);
           }
+          if (transactionData.subtotal !== undefined) {
+            updateFields.push("subtotal = ?");
+            updateValues.push(transactionData.subtotal);
+          }
+          if (transactionData.discount !== undefined) {
+            updateFields.push("discount = ?");
+            updateValues.push(transactionData.discount);
+          }
+          if (transactionData.tax !== undefined) {
+            updateFields.push("tax = ?");
+            updateValues.push(transactionData.tax);
+          }
           if (transactionData.totalAmount !== undefined) {
             updateFields.push("total_amount = ?");
             updateValues.push(transactionData.totalAmount);
@@ -829,6 +843,208 @@ function setupTransactionHandlers() {
               `UPDATE sales_transactions SET ${updateFields.join(", ")} WHERE id = ?`,
               updateValues,
             );
+          }
+
+          // Update transaction details if provided
+          if (
+            transactionData.items !== undefined ||
+            transactionData.bundles !== undefined ||
+            transactionData.accessories !== undefined
+          ) {
+            // Get existing transaction details for stock return
+            const existingDetails = await database.query(
+              `SELECT id, item_id, accessory_id, quantity 
+               FROM sales_transaction_details 
+               WHERE sales_transaction_id = ?`,
+              [id],
+            );
+
+            // Get transaction code for stock movement notes
+            const transactionRecord = await database.queryOne(
+              "SELECT transaction_code FROM sales_transactions WHERE id = ?",
+              [id],
+            );
+            const transactionCode = transactionRecord?.transaction_code || "";
+
+            // Return stock for existing items
+            for (const detail of existingDetails) {
+              if (detail.item_id) {
+                const quantity = detail.quantity || 0;
+                const itemBefore = await database.queryOne(
+                  "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+                  [detail.item_id],
+                );
+                const stockBefore = itemBefore?.available_quantity || 0;
+
+                // Return stock
+                await database.execute(
+                  "UPDATE items SET available_quantity = available_quantity + ?, stock_quantity = stock_quantity + ? WHERE id = ?",
+                  [quantity, quantity, detail.item_id],
+                );
+
+                const stockAfter = stockBefore + quantity;
+
+                // Create stock movement record for return
+                await createStockMovement({
+                  itemId: detail.item_id,
+                  movementType: "IN",
+                  referenceType: "sales_transaction_update",
+                  referenceId: id,
+                  quantity,
+                  stockBefore,
+                  stockAfter,
+                  userId: transaction.user_id || 1,
+                  notes: `Sales transaction update (return): ${transactionCode}`,
+                });
+              } else if (detail.accessory_id) {
+                const quantity = detail.quantity || 0;
+                const accessoryBefore = await database.queryOne(
+                  "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+                  [detail.accessory_id],
+                );
+                const stockBefore = accessoryBefore?.available_quantity || 0;
+
+                // Return stock
+                await database.execute(
+                  "UPDATE accessories SET available_quantity = available_quantity + ?, stock_quantity = stock_quantity + ? WHERE id = ?",
+                  [quantity, quantity, detail.accessory_id],
+                );
+
+                const stockAfter = stockBefore + quantity;
+
+                // Create stock movement record for return
+                await createStockMovement({
+                  accessoryId: detail.accessory_id,
+                  movementType: "IN",
+                  referenceType: "sales_transaction_update",
+                  referenceId: id,
+                  quantity,
+                  stockBefore,
+                  stockAfter,
+                  userId: transaction.user_id || 1,
+                  notes: `Sales transaction update (return): ${transactionCode}`,
+                });
+              }
+            }
+
+            // Delete existing transaction details
+            await database.execute(
+              "DELETE FROM sales_transaction_details WHERE sales_transaction_id = ?",
+              [id],
+            );
+
+            // Process new items, bundles, and accessories
+            const saleItems = Array.isArray(transactionData.items)
+              ? transactionData.items
+              : [];
+            const hasBundles =
+              Array.isArray(transactionData.bundles) &&
+              transactionData.bundles.length > 0;
+            const bundleLines = hasBundles
+              ? await expandBundleSelections(transactionData.bundles)
+              : [];
+            const saleLines = [...saleItems, ...bundleLines];
+            const accessories = Array.isArray(transactionData.accessories)
+              ? transactionData.accessories
+              : [];
+
+            // Validate stock before processing
+            for (const line of saleLines) {
+              const quantity = Math.max(1, Number(line.quantity) || 0);
+              await validateStock(line.itemId, quantity);
+            }
+
+            // Validate accessory stock
+            for (const accessory of accessories) {
+              const quantity = Math.max(1, Number(accessory.quantity) || 1);
+              await validateAccessoryStock(accessory.accessoryId, quantity);
+            }
+
+            // Process items and bundles
+            for (const line of saleLines) {
+              const quantity = Math.max(1, Number(line.quantity) || 0);
+              const salePrice = Number(line.salePrice) || 0;
+              const lineSubtotal = Number(line.subtotal) || salePrice * quantity;
+
+              // Get current stock before update
+              const itemBefore = await database.queryOne(
+                "SELECT available_quantity, stock_quantity FROM items WHERE id = ?",
+                [line.itemId],
+              );
+              const stockBefore = itemBefore?.available_quantity || 0;
+
+              await database.execute(
+                `INSERT INTO sales_transaction_details (
+                  sales_transaction_id, item_id, accessory_id, quantity,
+                  sale_price, subtotal, is_sync
+                ) VALUES (?, ?, ?, ?, ?, ?, 0)`,
+                [id, line.itemId, null, quantity, salePrice, lineSubtotal],
+              );
+
+              // Update available quantity and stock quantity for the item
+              await database.execute(
+                "UPDATE items SET available_quantity = available_quantity - ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+                [quantity, quantity, line.itemId],
+              );
+
+              const stockAfter = stockBefore - quantity;
+
+              // Create stock movement record
+              await createStockMovement({
+                itemId: line.itemId,
+                movementType: "OUT",
+                referenceType: "sales_transaction_update",
+                referenceId: id,
+                quantity,
+                stockBefore,
+                stockAfter,
+                userId: transaction.user_id || 1,
+                notes: `Sales transaction update: ${transactionCode}`,
+              });
+            }
+
+            // Process accessories
+            for (const accessory of accessories) {
+              const quantity = Math.max(1, Number(accessory.quantity) || 1);
+              const salePrice = Number(accessory.salePrice) || 0;
+              const lineSubtotal = Number(accessory.subtotal) || salePrice * quantity;
+
+              // Get current stock before update
+              const accessoryBefore = await database.queryOne(
+                "SELECT available_quantity, stock_quantity FROM accessories WHERE id = ?",
+                [accessory.accessoryId],
+              );
+              const stockBefore = accessoryBefore?.available_quantity || 0;
+
+              await database.execute(
+                `INSERT INTO sales_transaction_details (
+                  sales_transaction_id, item_id, accessory_id, quantity,
+                  sale_price, subtotal, is_sync
+                ) VALUES (?, ?, ?, ?, ?, ?, 0)`,
+                [id, null, accessory.accessoryId, quantity, salePrice, lineSubtotal],
+              );
+
+              // Update available quantity and stock quantity for the accessory
+              await database.execute(
+                "UPDATE accessories SET available_quantity = available_quantity - ?, stock_quantity = stock_quantity - ? WHERE id = ?",
+                [quantity, quantity, accessory.accessoryId],
+              );
+
+              const stockAfter = stockBefore - quantity;
+
+              // Create stock movement record
+              await createStockMovement({
+                accessoryId: accessory.accessoryId,
+                movementType: "OUT",
+                referenceType: "sales_transaction_update",
+                referenceId: id,
+                quantity,
+                stockBefore,
+                stockAfter,
+                userId: transaction.user_id || 1,
+                notes: `Sales transaction update: ${transactionCode}`,
+              });
+            }
           }
         }
 
