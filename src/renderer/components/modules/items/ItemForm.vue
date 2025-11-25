@@ -237,7 +237,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label for="deposit" class="form-label">Deposit</label>
+            <label for="deposit" class="form-label">Deposit <span class="label-optional">(Opsional)</span></label>
             <input
               id="deposit"
               :value="formatNumberInput(form.deposit)"
@@ -447,8 +447,7 @@ export default {
       if (form.value.type === "RENTAL" || form.value.type === "BOTH") {
         if (!form.value.dailyRate || form.value.dailyRate <= 0)
           e.dailyRate = "Harga per hari harus > 0";
-        if (!form.value.deposit || form.value.deposit <= 0)
-          e.deposit = "Deposit harus > 0";
+        // Deposit is optional, no validation needed
       }
       
       errors.value = e;
