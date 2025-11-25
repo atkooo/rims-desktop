@@ -72,22 +72,13 @@
       <div class="cashier-header-row">
         <div class="cashier-field-inline">
           <label for="customerId" class="cashier-label-inline">Customer:</label>
-          <select
+          <CustomerSelector
             id="customerId"
             v-model="form.customerId"
-            class="cashier-select-inline"
-            :class="{ error: errors.customerId }"
-          >
-            <option value="">Pilih Customer</option>
-            <option
-              v-for="customer in customers"
-              :key="customer.id"
-              :value="customer.id"
-            >
-              {{ customer.name }}
-              {{ customer.code ? `(${customer.code})` : "" }}
-            </option>
-          </select>
+            placeholder="Pilih Customer"
+            :error="errors.customerId"
+            class="cashier-customer-selector"
+          />
         </div>
         <div class="cashier-field-inline">
           <DatePicker
@@ -237,6 +228,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
+import CustomerSelector from "@/components/modules/customers/CustomerSelector.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import { fetchCustomers, fetchAccessoryByCode, fetchBundleByCode } from "@/services/masterData";
 import { getStoredUser, getCurrentUser } from "@/services/auth";
@@ -275,6 +267,7 @@ export default {
     DatePicker,
     ItemSelector,
     BundleSelector,
+    CustomerSelector,
     PaymentModal,
   },
   setup() {

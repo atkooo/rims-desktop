@@ -40,27 +40,13 @@
               Customer
               <span v-if="!isRental" class="optional-label">(Opsional)</span>
             </label>
-            <select
+            <CustomerSelector
               id="customerId"
               v-model="form.customerId"
-              :class="{ error: errors.customerId }"
-              class="form-select"
-            >
-              <option value="">
-                {{ isRental ? "Pilih Customer" : "Tanpa Customer" }}
-              </option>
-              <option
-                v-for="customer in customers"
-                :key="customer.id"
-                :value="customer.id"
-              >
-                {{ customer.name }}
-                {{ customer.code ? `(${customer.code})` : "" }}
-              </option>
-            </select>
-            <div v-if="errors.customerId" class="error-message">
-              {{ errors.customerId }}
-            </div>
+              :placeholder="isRental ? 'Pilih Customer' : 'Tanpa Customer'"
+              :error="errors.customerId"
+              :allow-clear="!isRental"
+            />
           </div>
         </div>
 
@@ -275,6 +261,7 @@ import { useItemStore } from "@/store/items";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
+import CustomerSelector from "@/components/modules/customers/CustomerSelector.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
@@ -331,6 +318,7 @@ export default {
     DatePicker,
     ItemSelector,
     BundleSelector,
+    CustomerSelector,
     AccessorySelector,
   },
   props: {

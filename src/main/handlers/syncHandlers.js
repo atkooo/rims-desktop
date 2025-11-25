@@ -258,7 +258,10 @@ function setupSyncHandlers() {
 
       // Update sync settings
       if (!settings.sync) {
-        settings.sync = {};
+        settings.sync = {
+          autoSyncEnabled: false,
+          autoSyncInterval: 300000, // Default: 5 minutes
+        };
       }
       
       if (enabled !== undefined) {

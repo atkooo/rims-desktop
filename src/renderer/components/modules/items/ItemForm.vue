@@ -35,6 +35,21 @@
         <!-- Harga & Status -->
         <div class="form-pair">
           <div class="form-group">
+            <label for="purchasePrice" class="form-label">Harga Beli</label>
+            <input
+              id="purchasePrice"
+              :value="formatNumberInput(form.purchase_price)"
+              @input="handlePurchasePriceInput"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.purchase_price }"
+            />
+            <div v-if="errors.purchase_price" class="error-message">
+              {{ errors.purchase_price }}
+            </div>
+          </div>
+
+          <div class="form-group">
             <label for="price" class="form-label">Harga Dasar</label>
             <input
               id="price"
@@ -49,7 +64,9 @@
               {{ errors.price }}
             </div>
           </div>
+        </div>
 
+        <div class="form-pair">
           <div class="form-group">
             <label class="form-label">Status</label>
             <select v-model="form.status" class="form-select" required>
@@ -258,6 +275,7 @@ import { useItemType } from "@/composables/useItemType";
 
 const defaultForm = () => ({
   name: "",
+  purchase_price: 0,
   price: 0,
   sale_price: 0,
   rental_price_per_day: 0,
@@ -321,6 +339,9 @@ export default {
     const { formatNumberInput, createInputHandler } = useNumberFormat();
 
     // Create input handlers for number fields
+    const handlePurchasePriceInput = createInputHandler(
+      (value) => (form.value.purchase_price = value)
+    );
     const handlePriceInput = createInputHandler(
       (value) => (form.value.price = value)
     );
@@ -366,6 +387,7 @@ export default {
             ...defaultForm(),
             ...props.editData,
             // Map database column to form field
+            purchase_price: props.editData.purchase_price ?? 0,
             sale_price: props.editData.sale_price ?? 0,
             rental_price_per_day:
               props.editData.rental_price_per_day ?? 0,
@@ -405,6 +427,8 @@ export default {
       const e = {};
       if (!form.value.name.trim()) e.name = "Nama item harus diisi";
       // Kode akan di-generate otomatis, tidak perlu validasi
+      if (form.value.purchase_price < 0)
+        e.purchase_price = "Harga beli tidak boleh negatif";
       if (!form.value.price || form.value.price <= 0)
         e.price = "Harga harus > 0";
       if (!form.value.type) e.type = "Tipe item wajib dipilih";
@@ -545,6 +569,7 @@ export default {
       discountGroups,
       formatCurrency,
       formatNumberInput,
+      handlePurchasePriceInput,
       handlePriceInput,
       handleSalePriceInput,
       handleDailyRateInput,

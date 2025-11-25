@@ -29,22 +29,14 @@
       <div class="cashier-header-row">
         <div class="cashier-field-inline">
           <label for="customerId" class="cashier-label-inline">Customer:</label>
-          <select
+          <CustomerSelector
             id="customerId"
             v-model="form.customerId"
-            class="cashier-select-inline"
-            :class="{ error: errors.customerId }"
-          >
-            <option value="">Tanpa Customer</option>
-            <option
-              v-for="customer in customers"
-              :key="customer.id"
-              :value="customer.id"
-            >
-              {{ customer.name }}
-              {{ customer.code ? `(${customer.code})` : "" }}
-            </option>
-          </select>
+            placeholder="Tanpa Customer"
+            :error="errors.customerId"
+            :allow-clear="true"
+            class="cashier-customer-selector"
+          />
         </div>
         <div class="cashier-field-inline">
           <DatePicker
@@ -179,6 +171,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import ItemSelector from "@/components/modules/items/ItemSelector.vue";
 import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
+import CustomerSelector from "@/components/modules/customers/CustomerSelector.vue";
 import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
 import { fetchCustomers } from "@/services/masterData";
 import { fetchSalesTransactions, fetchSalesDetails } from "@/services/transactions";
@@ -196,6 +189,7 @@ export default {
     ItemSelector,
     BundleSelector,
     AccessorySelector,
+    CustomerSelector,
   },
   setup() {
     const route = useRoute();

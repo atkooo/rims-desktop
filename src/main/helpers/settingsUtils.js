@@ -28,6 +28,10 @@ async function loadSettings() {
         thermalAutoCut: false,
         autoPrint: true,
         taxPercentage: 0,
+        sync: {
+          autoSyncEnabled: false,
+          autoSyncInterval: 300000, // Default: 5 minutes
+        },
         receiptSettings: {
           showCompanyName: true,
           showAddress: true,
@@ -58,6 +62,10 @@ async function loadSettings() {
       thermalFontSize: "medium",
       thermalPrintDensity: "normal",
       thermalAutoCut: false,
+      sync: {
+        autoSyncEnabled: false,
+        autoSyncInterval: 300000, // Default: 5 minutes
+      },
       receiptSettings: {
         showCompanyName: true,
         showAddress: true,
