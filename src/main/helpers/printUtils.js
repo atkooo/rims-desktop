@@ -13,46 +13,54 @@ const logger = require("./logger");
  * @returns {Promise<{success: boolean, filePath: string, printer: string}>}
  */
 async function printPDF(filePath, printerName, silent = false, thermalOptions = {}) {
-  try {
-    // Try using pdf-to-printer library first (better for direct printing)
-    const ptp = require("pdf-to-printer");
-
-    // Build print options
-    const printOptions = {
-      printer: printerName,
-      silent: silent,
-    };
-
-    // Add paper size if specified (for thermal printers)
-    // Note: pdf-to-printer uses the PDF's page size by default, but we can specify it
-    if (thermalOptions.paperSize) {
-      // Map paper size to standard sizes
-      // 58mm = ~2.28 inches, 80mm = ~3.15 inches
-      if (thermalOptions.paperSize === "58") {
-        printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
-      } else if (thermalOptions.paperSize === "80") {
-        printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
-      }
-    }
-
-    await ptp.print(filePath, printOptions);
-
-    logger.info(`PDF printed to printer: ${printerName}`);
-    return {
-      success: true,
-      filePath,
-      printer: printerName,
-    };
-  } catch (ptpError) {
-    // Fallback: Use Electron's webContents.print() method
-    logger.warn(
-      "pdf-to-printer failed, trying Electron print method:",
-      ptpError,
-    );
-
+  // For thermal printers, prefer Electron print API for better quality control
+  // pdf-to-printer may not handle grayscale/quality settings well for thermal printers
+  const isThermalPrinter = thermalOptions.paperSize || thermalOptions.printDensity;
+  
+  if (!isThermalPrinter) {
+    // For non-thermal printers, try pdf-to-printer first
     try {
-      // Create a hidden window to load and print the PDF
-      const printWindow = new BrowserWindow({
+      const ptp = require("pdf-to-printer");
+
+      // Build print options
+      const printOptions = {
+        printer: printerName,
+        silent: silent,
+      };
+
+      // Add paper size if specified
+      if (thermalOptions.paperSize) {
+        if (thermalOptions.paperSize === "58") {
+          printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
+        } else if (thermalOptions.paperSize === "80") {
+          printOptions.paperSize = "A4"; // Fallback, actual size comes from PDF
+        }
+      }
+
+      await ptp.print(filePath, printOptions);
+
+      logger.info(`PDF printed to printer: ${printerName}`);
+      return {
+        success: true,
+        filePath,
+        printer: printerName,
+      };
+    } catch (ptpError) {
+      logger.warn(
+        "pdf-to-printer failed, trying Electron print method:",
+        ptpError,
+      );
+    }
+  } else {
+    // For thermal printers, skip pdf-to-printer and use Electron print API directly
+    // This gives us better control over grayscale and quality settings
+    logger.info("Using Electron print API for thermal printer with quality optimization");
+  }
+
+  // Use Electron's webContents.print() method (primary for thermal, fallback for others)
+  try {
+    // Create a hidden window to load and print the PDF
+    const printWindow = new BrowserWindow({
         show: false,
         webPreferences: {
           nodeIntegration: false,
@@ -79,13 +87,33 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
         });
 
         // Print to specific printer using Electron's print API
+        // Configure print options for thermal printer quality
+        // For thermal printers, we need grayscale mode and optimized settings
+        const printOptions = {
+          silent: silent,
+          printBackground: true, // Important: print background graphics for better contrast
+          deviceName: printerName,
+          color: false, // CRITICAL: Use grayscale for thermal printer (produces sharper, darker output)
+          margins: {
+            marginType: "none", // No margins for thermal printer
+          },
+          // Additional settings for better quality
+          pagesPerSheet: 1,
+          collate: false,
+          copies: 1,
+        };
+
+        // Log print density setting for debugging
+        if (thermalOptions.printDensity) {
+          logger.info(`Printing with density: ${thermalOptions.printDensity}`);
+          // Note: Electron print API doesn't have direct density control,
+          // but using grayscale (color: false) and printBackground: true
+          // should produce better contrast for thermal printers
+        }
+
         return new Promise((resolve, reject) => {
           printWindow.webContents.print(
-            {
-              silent: silent,
-              printBackground: true,
-              deviceName: printerName,
-            },
+            printOptions,
             (success, errorType) => {
               // Close print window after printing
               setTimeout(() => {
@@ -118,7 +146,7 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
         }
         throw printError;
       }
-    } catch (electronPrintError) {
+  } catch (electronPrintError) {
       logger.error(
         "Electron print method also failed:",
         electronPrintError,

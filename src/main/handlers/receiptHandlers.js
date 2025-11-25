@@ -1385,6 +1385,7 @@ function setupReceiptHandlers() {
           const thermalOptions = {
             paperSize: settings.thermalPaperSize || "80",
             autoCut: settings.thermalAutoCut || false,
+            printDensity: settings.thermalPrintDensity || "normal", // Add print density
           };
           return await printPDF(result.filePath, printerName, silent, thermalOptions);
         } else {
