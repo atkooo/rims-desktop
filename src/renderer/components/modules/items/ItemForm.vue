@@ -606,6 +606,7 @@ export default {
   gap: 1rem 1.25rem;
   width: 100%;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Form pair */
@@ -618,6 +619,17 @@ export default {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  min-width: 0; /* Prevent grid overflow */
+}
+
+/* Ensure inputs and selects don't overflow their grid cells */
+.form-group .form-input,
+.form-group .form-select,
+.form-group .form-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* Prevent overflow in grid */
 }
 
 /* Textarea */
