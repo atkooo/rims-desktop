@@ -27,7 +27,7 @@ async function calculateExpectedBalance(session) {
     FROM sales_transactions st
     LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
     WHERE st.cashier_session_id = ?`,
-    [session.id],
+    [session.id]
   );
 
   const rentalResult = await database.queryOne(
@@ -36,7 +36,7 @@ async function calculateExpectedBalance(session) {
     FROM rental_transactions rt
     LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
     WHERE rt.cashier_session_id = ?`,
-    [session.id],
+    [session.id]
   );
 
   let cashSales = Number(salesResult?.cash_sales || 0);
@@ -52,7 +52,7 @@ async function calculateExpectedBalance(session) {
       WHERE st.user_id = ? 
         AND st.sale_date >= date(?) 
         AND st.sale_date <= date('now', '+1 day')`,
-      [session.user_id, session.opening_date],
+      [session.user_id, session.opening_date]
     );
 
     const rentalResultFallback = await database.queryOne(
@@ -63,7 +63,7 @@ async function calculateExpectedBalance(session) {
       WHERE rt.user_id = ? 
         AND rt.rental_date >= date(?) 
         AND rt.rental_date <= date('now', '+1 day')`,
-      [session.user_id, session.opening_date],
+      [session.user_id, session.opening_date]
     );
 
     cashSales = Number(salesResultFallback?.cash_sales || 0);
@@ -74,104 +74,86 @@ async function calculateExpectedBalance(session) {
 }
 
 function setupCashierHandlers() {
-  // Get current open session
-  ipcMain.handle("cashier:getCurrentSession", async (event, userId, userRole = null) => {
-    try {
-      if (!userId) {
-        // Return null if no userId provided (no active session)
-        return null;
-      }
+  const BASE_SELECT = `SELECT cs.*, u.username, u.full_name FROM cashier_sessions cs JOIN users u ON cs.user_id = u.id`;
 
-      // Check if table exists first
-      const tableExists = await database.tableExists("cashier_sessions");
-      if (!tableExists) {
-        throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
-        );
-      }
-
-      // If user is kasir, show only their own active session
-      // Otherwise (admin, manager, staff, etc), show the most recent active session from any user
-      // This allows all roles to see cashier status, but only kasir can open/close
-      let query, params;
-      
-      // Check if user is kasir - if so, only show their own session
-      // For all other roles (including null/undefined), show any active session
-      const normalizedRole = userRole ? String(userRole).toLowerCase().trim() : '';
-      const isKasir = normalizedRole === 'kasir';
-      
-      if (isKasir) {
-        // Kasir: only show their own active session
-        query = `SELECT 
-          cs.*,
-          u.username,
-          u.full_name
-        FROM cashier_sessions cs
-        JOIN users u ON cs.user_id = u.id
-        WHERE cs.user_id = ? AND cs.status = 'open'
-        ORDER BY cs.opening_date DESC
-        LIMIT 1`;
-        params = [userId];
-      } else {
-        // All other roles (admin, manager, staff, etc): show any active session
-        // This includes null/undefined userRole to handle edge cases
-        query = `SELECT 
-          cs.*,
-          u.username,
-          u.full_name
-        FROM cashier_sessions cs
-        JOIN users u ON cs.user_id = u.id
-        WHERE cs.status = 'open'
-        ORDER BY cs.opening_date DESC
-        LIMIT 1`;
-        params = [];
-      }
-      
-      logger.debug(`Getting cashier session - userId: ${userId}, userRole: ${userRole}, normalizedRole: ${normalizedRole}, isKasir: ${isKasir}`);
-
-      const session = await database.queryOne(query, params);
-
-      if (session) {
-        const expectedBalance = await calculateExpectedBalance(session);
-        return {
-          ...session,
-          expected_balance: expectedBalance,
-        };
-      }
-
-      return null;
-    } catch (error) {
-      logger.error("Error getting current cashier session:", error);
-      // Provide more user-friendly error messages
-      if (error.message && error.message.includes("no such table")) {
-        throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
-        );
-      }
-      throw error;
+  async function ensureTableExists() {
+    const tableExists = await database.tableExists("cashier_sessions");
+    if (!tableExists) {
+      throw new Error(
+        "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu."
+      );
     }
-  });
+  }
+
+  async function getOpenSessionForUser(userId) {
+    const q = `${BASE_SELECT} WHERE cs.user_id = ? AND cs.status = 'open' ORDER BY cs.opening_date DESC LIMIT 1`;
+    return database.queryOne(q, [userId]);
+  }
+
+  async function getAnyOpenSession() {
+    const q = `${BASE_SELECT} WHERE cs.status = 'open' ORDER BY cs.opening_date DESC LIMIT 1`;
+    return database.queryOne(q, []);
+  }
+
+  async function getSessionByIdQuery(id) {
+    const q = `${BASE_SELECT} WHERE cs.id = ?`;
+    return database.queryOne(q, [id]);
+  }
+
+  // Get current open session
+  ipcMain.handle(
+    "cashier:getCurrentSession",
+    async (event, userId, userRole = null) => {
+      try {
+        if (!userId) return null;
+
+        await ensureTableExists();
+
+        const normalizedRole = userRole
+          ? String(userRole).toLowerCase().trim()
+          : "";
+        const isKasir = normalizedRole === "kasir";
+
+        logger.debug(
+          `Getting cashier session - userId: ${userId}, userRole: ${userRole}, isKasir: ${isKasir}`
+        );
+
+        let session = null;
+
+        if (isKasir) {
+          session = await getOpenSessionForUser(userId);
+          if (!session) {
+            logger.debug(
+              `No personal open session found for user ${userId}, falling back to any open session`
+            );
+            session = await getAnyOpenSession();
+          }
+        } else {
+          session = await getAnyOpenSession();
+        }
+
+        if (!session) return null;
+
+        const expectedBalance = await calculateExpectedBalance(session);
+        return { ...session, expected_balance: expectedBalance };
+      } catch (error) {
+        logger.error("Error getting current cashier session:", error);
+        if (error.message && error.message.includes("no such table")) {
+          throw new Error(
+            "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu."
+          );
+        }
+        throw error;
+      }
+    }
+  );
 
   // Get all sessions
   ipcMain.handle("cashier:getAllSessions", async (event, filters = {}) => {
     try {
-      // Check if table exists first
-      const tableExists = await database.tableExists("cashier_sessions");
-      if (!tableExists) {
-        throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
-        );
-      }
+      await ensureTableExists();
 
-      let query = `
-        SELECT 
-          cs.*,
-          u.username,
-          u.full_name
-        FROM cashier_sessions cs
-        JOIN users u ON cs.user_id = u.id
-        WHERE 1=1
-      `;
+      let query = `${BASE_SELECT} WHERE 1=1`;
       const params = [];
 
       if (filters.userId) {
@@ -201,8 +183,7 @@ function setupCashierHandlers() {
         params.push(filters.limit);
       }
 
-      const sessions = await database.query(query, params);
-      return sessions;
+      return database.query(query, params);
     } catch (error) {
       logger.error("Error getting cashier sessions:", error);
       throw error;
@@ -212,55 +193,37 @@ function setupCashierHandlers() {
   // Open cashier session
   ipcMain.handle("cashier:openSession", async (event, sessionData) => {
     try {
-      // Check if table exists first
-      const tableExists = await database.tableExists("cashier_sessions");
-      if (!tableExists) {
+      await ensureTableExists();
+
+      const currentUser = getCurrentUserSafely();
+      if (!currentUser)
+        throw new Error("User tidak ditemukan. Silakan login ulang.");
+
+      if (currentUser.role !== "kasir") {
         throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
+          "Hanya user dengan role kasir yang dapat membuka sesi kasir."
         );
       }
 
-      // Get current user
-      const currentUser = getCurrentUserSafely();
-      if (!currentUser) {
-        throw new Error("User tidak ditemukan. Silakan login ulang.");
-      }
-
-      // Check if user has kasir role
-      if (currentUser.role !== "kasir") {
-        throw new Error("Hanya user dengan role kasir yang dapat membuka sesi kasir.");
-      }
-
       const { userId, openingBalance, notes } = sessionData;
-
-      if (!userId) {
-        throw new Error("User ID harus diisi");
-      }
-
-      // Verify that userId matches current user
-      if (currentUser.id !== userId) {
+      if (!userId) throw new Error("User ID harus diisi");
+      if (currentUser.id !== userId)
         throw new Error("User ID tidak sesuai dengan user yang sedang login.");
-      }
-
-      if (!validator.isPositiveNumber(openingBalance)) {
+      if (!validator.isPositiveNumber(openingBalance))
         throw new Error("Saldo awal harus berupa angka positif");
-      }
 
-      // Check if there is any open session globally
       const anyOpenSession = await database.queryOne(
-        "SELECT id, user_id, session_code FROM cashier_sessions WHERE status = 'open' LIMIT 1",
+        "SELECT id, user_id, session_code FROM cashier_sessions WHERE status = 'open' LIMIT 1"
       );
 
       if (anyOpenSession) {
-        // Check if it's the same user trying to open another session
         if (anyOpenSession.user_id === userId) {
           throw new Error(
-            "Anda masih memiliki sesi kasir yang terbuka. Tutup sesi sebelumnya terlebih dahulu.",
+            "Anda masih memiliki sesi kasir yang terbuka. Tutup sesi sebelumnya terlebih dahulu."
           );
         } else {
-          // Another user has an open session
           throw new Error(
-            "Tidak dapat membuka sesi kasir baru. Masih ada sesi kasir yang terbuka. Tutup sesi yang sedang aktif terlebih dahulu.",
+            "Tidak dapat membuka sesi kasir baru. Masih ada sesi kasir yang terbuka. Tutup sesi yang sedang aktif terlebih dahulu."
           );
         }
       }
@@ -269,10 +232,8 @@ function setupCashierHandlers() {
 
       const result = await database.transaction(async () => {
         const sessionResult = await database.execute(
-          `INSERT INTO cashier_sessions (
-            session_code, user_id, opening_balance, status, notes
-          ) VALUES (?, ?, ?, 'open', ?)`,
-          [sessionCode, userId, openingBalance, notes || null],
+          `INSERT INTO cashier_sessions (session_code, user_id, opening_balance, status, notes) VALUES (?, ?, ?, 'open', ?)`,
+          [sessionCode, userId, openingBalance, notes || null]
         );
 
         await logActivity({
@@ -285,18 +246,7 @@ function setupCashierHandlers() {
         return sessionResult;
       });
 
-      const newSession = await database.queryOne(
-        `SELECT 
-            cs.*,
-            u.username,
-            u.full_name
-          FROM cashier_sessions cs
-          JOIN users u ON cs.user_id = u.id
-          WHERE cs.id = ?`,
-        [result.id],
-      );
-
-      return newSession;
+      return getSessionByIdQuery(result.id);
     } catch (error) {
       logger.error("Error opening cashier session:", error);
       throw error;
@@ -306,65 +256,38 @@ function setupCashierHandlers() {
   // Close cashier session
   ipcMain.handle("cashier:closeSession", async (event, sessionData) => {
     try {
-      // Check if table exists first
-      const tableExists = await database.tableExists("cashier_sessions");
-      if (!tableExists) {
-        throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
-        );
-      }
+      await ensureTableExists();
 
-      // Get current user
       const currentUser = getCurrentUserSafely();
-      if (!currentUser) {
+      if (!currentUser)
         throw new Error("User tidak ditemukan. Silakan login ulang.");
-      }
-
-      // Check if user has kasir role
-      if (currentUser.role !== "kasir") {
-        throw new Error("Hanya user dengan role kasir yang dapat menutup sesi kasir.");
-      }
+      if (currentUser.role !== "kasir")
+        throw new Error(
+          "Hanya user dengan role kasir yang dapat menutup sesi kasir."
+        );
 
       const { sessionId, actualBalance, notes } = sessionData;
-
-      if (!sessionId) {
-        throw new Error("Session ID harus diisi");
-      }
-
-      if (!validator.isPositiveNumber(actualBalance)) {
+      if (!sessionId) throw new Error("Session ID harus diisi");
+      if (!validator.isPositiveNumber(actualBalance))
         throw new Error("Saldo akhir harus berupa angka positif");
-      }
 
-      // Get session
       const session = await database.queryOne(
         "SELECT * FROM cashier_sessions WHERE id = ? AND status = 'open'",
-        [sessionId],
+        [sessionId]
       );
-
-      if (!session) {
+      if (!session)
         throw new Error("Sesi kasir tidak ditemukan atau sudah ditutup");
-      }
-
-      // Verify that the session was opened by the current user
-      if (session.user_id !== currentUser.id) {
-        throw new Error("Hanya user yang membuka sesi kasir yang dapat menutup sesi tersebut.");
-      }
+      if (session.user_id !== currentUser.id)
+        throw new Error(
+          "Hanya user yang membuka sesi kasir yang dapat menutup sesi tersebut."
+        );
 
       const expectedBalance = await calculateExpectedBalance(session);
       const difference = Number(actualBalance) - expectedBalance;
 
       await database.transaction(async () => {
         await database.execute(
-          `UPDATE cashier_sessions SET
-            closing_date = CURRENT_TIMESTAMP,
-            closing_balance = ?,
-            expected_balance = ?,
-            actual_balance = ?,
-            difference = ?,
-            status = 'closed',
-            notes = ?,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?`,
+          `UPDATE cashier_sessions SET closing_date = CURRENT_TIMESTAMP, closing_balance = ?, expected_balance = ?, actual_balance = ?, difference = ?, status = 'closed', notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
           [
             actualBalance,
             expectedBalance,
@@ -372,7 +295,7 @@ function setupCashierHandlers() {
             difference,
             notes || session.notes,
             sessionId,
-          ],
+          ]
         );
 
         await logActivity({
@@ -383,27 +306,22 @@ function setupCashierHandlers() {
         });
       });
 
-      const closedSession = await database.queryOne(
-        `SELECT 
-          cs.*,
-          u.username,
-          u.full_name
-        FROM cashier_sessions cs
-        JOIN users u ON cs.user_id = u.id
-        WHERE cs.id = ?`,
-        [sessionId],
-      );
+      const closedSession = await getSessionByIdQuery(sessionId);
 
-      // Create automatic backup after closing cashier session
       try {
         logger.info("Creating automatic backup after cashier session close...");
         const backupResult = await createBackup("auto", session.user_id);
         if (backupResult.success) {
-          logger.info("Automatic backup created successfully after cashier close:", backupResult.backupFile);
+          logger.info(
+            "Automatic backup created successfully after cashier close:",
+            backupResult.backupFile
+          );
         }
       } catch (backupError) {
-        // Log error but don't fail the close session operation
-        logger.error("Failed to create automatic backup after cashier close:", backupError);
+        logger.error(
+          "Failed to create automatic backup after cashier close:",
+          backupError
+        );
       }
 
       return closedSession;
@@ -416,24 +334,9 @@ function setupCashierHandlers() {
   // Get session by ID
   ipcMain.handle("cashier:getSessionById", async (event, sessionId) => {
     try {
-      // Check if table exists first
-      const tableExists = await database.tableExists("cashier_sessions");
-      if (!tableExists) {
-        throw new Error(
-          "Tabel cashier_sessions belum dibuat. Silakan jalankan migrasi database terlebih dahulu.",
-        );
-      }
+      await ensureTableExists();
 
-      const session = await database.queryOne(
-        `SELECT 
-          cs.*,
-          u.username,
-          u.full_name
-        FROM cashier_sessions cs
-        JOIN users u ON cs.user_id = u.id
-        WHERE cs.id = ?`,
-        [sessionId],
-      );
+      const session = await getSessionByIdQuery(sessionId);
 
       if (!session) {
         throw new Error("Sesi kasir tidak ditemukan");

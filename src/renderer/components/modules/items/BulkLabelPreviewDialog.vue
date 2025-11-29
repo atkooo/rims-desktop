@@ -329,18 +329,11 @@ export default {
   color: #374151;
 }
 
+/* Using global utility class for form-select */
 .form-select {
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
   font-size: 0.9rem;
-  background: white;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
 }
 
 .preview-section h4 {

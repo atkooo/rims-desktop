@@ -187,9 +187,9 @@ export default {
   display: flex;
 }
 
+/* Using global utility class for error-message */
 .error-message {
   font-size: 0.875rem;
-  color: #dc2626;
   margin-top: 0.25rem;
 }
 </style>

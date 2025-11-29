@@ -986,11 +986,7 @@ export default {
   line-height: 1.5;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
+/* Using global utility class for form-grid */
 
 .checkbox-wrapper {
   display: flex;
@@ -1191,6 +1187,7 @@ export default {
   line-height: 1.5;
 }
 
+/* Using global utility classes for form-group, form-label, form-select */
 .select-group {
   display: flex;
   flex-direction: column;
@@ -1198,28 +1195,14 @@ export default {
 }
 
 .select-group label {
-  font-weight: 600;
-  color: #374151;
   font-size: 0.9rem;
 }
 
 .select-group .form-select {
-  width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
   font-size: 0.9rem;
-  background: white;
+  border-radius: 8px;
   cursor: pointer;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.select-group .form-select:focus {
-  outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 .help-text {

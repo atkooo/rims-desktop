@@ -679,33 +679,19 @@ export default {
   gap: 1.5rem;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
+/* Using global utility classes for form-grid */
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-select {
-  width: 100%;
-  padding: 0.6rem;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background-color: white;
-  font-size: 1rem;
-}
-
+/* Using global utility classes for form-select, error-message */
 .form-select.error {
   border-color: #dc2626;
 }
 
 .error-message {
-  color: #dc2626;
   font-size: 0.85rem;
 }
 

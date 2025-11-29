@@ -343,6 +343,7 @@ export default {
   align-items: flex-end;
 }
 
+/* Using global utility classes for form-group, form-label, form-input, form-select */
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -358,30 +359,18 @@ export default {
 .filter-group label {
   font-size: 0.875rem;
   color: #4b5563;
-  font-weight: 500;
 }
 
 .filter-select,
 .filter-input {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   font-size: 0.875rem;
-  background-color: white;
   cursor: pointer;
-  transition: border-color 0.2s;
 }
 
 .filter-select:hover,
 .filter-input:hover {
   border-color: #9ca3af;
-}
-
-.filter-select:focus,
-.filter-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .export-actions {

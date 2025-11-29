@@ -522,12 +522,11 @@ export default {
   font-weight: 600;
 }
 
+/* Using global badge utility classes */
 .type-badge {
-  display: inline-block;
   padding: 0.25rem 0.6rem;
   border-radius: 12px;
   font-size: 0.8rem;
-  font-weight: 500;
 }
 
 .type-badge.item {

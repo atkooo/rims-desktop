@@ -692,10 +692,10 @@ export default {
   color: #9ca3af;
 }
 
+/* Using global utility class for error-message */
 .error-message {
   margin: 0;
   font-size: 0.85rem;
-  color: #dc2626;
 }
 
 .loading-hint {

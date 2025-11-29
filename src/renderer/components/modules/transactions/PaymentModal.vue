@@ -547,36 +547,16 @@ export default {
   gap: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
+/* Using global utility classes for form-group, form-label, form-input, form-select, form-textarea, error-message */
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
 }
 
 .form-input,
 .form-select,
 .form-textarea {
-  width: 100%;
   padding: 0.6rem;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background-color: white;
   font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-input.error,
@@ -585,7 +565,6 @@ export default {
 }
 
 .error-message {
-  color: #dc2626;
   font-size: 0.85rem;
 }
 

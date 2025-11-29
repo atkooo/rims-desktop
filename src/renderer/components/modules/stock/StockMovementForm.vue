@@ -630,10 +630,8 @@ export default {
   color: #374151;
 }
 
+/* Using global utility classes for form-grid, form-select, error-message */
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
   margin-top: 1rem;
 }
 
@@ -651,21 +649,11 @@ export default {
   grid-column: 1 / -1;
 }
 
-.form-select {
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background-color: white;
-  font-size: 1rem;
-}
-
 .form-select.error {
   border-color: #dc2626;
 }
 
 .error-message {
-  color: #dc2626;
   font-size: 0.875rem;
 }
 

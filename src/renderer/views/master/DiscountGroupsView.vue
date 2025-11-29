@@ -422,30 +422,6 @@ export default {
 </script>
 
 <style scoped>
-.title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.title-wrap h1 {
-  margin: 0;
-}
-.subtitle {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-
 .form-group label .required {
   color: #dc2626;
 }
@@ -455,91 +431,6 @@ export default {
   margin-top: 4px;
   color: #6b7280;
   font-size: 0.85rem;
-}
-
-.form-group.inline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.form-group.inline > label {
-  margin: 0;
-}
-.check-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-.check-inline input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-}
-.check-text {
-  font-weight: 500;
-  color: #111827;
-}
-
-.form-group input,
-.form-group textarea,
-.form-select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.form-select {
-  background: white;
-  cursor: pointer;
-}
-
-.error-message {
-  padding: 10px;
-  background: #fee2e2;
-  color: #991b1b;
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-}
-
-.warning-text {
-  color: #dc2626;
-  font-size: 0.9rem;
-  margin-top: 10px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  background: #e9ecef;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn.primary {
-  background: #007bff;
-  color: white;
-}
-
-.btn.danger {
-  background: #dc3545;
-  color: white;
 }
 
 .discount-badge {
@@ -552,24 +443,9 @@ export default {
   font-size: 0.9rem;
 }
 
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 12px;
-}
-
-.badge-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge-muted {
-  background: #e5e7eb;
-  color: #374151;
-}
-
 .text-muted {
   color: #6b7280;
 }
+
+/* All other styles moved to global style.css utility classes */
 </style>

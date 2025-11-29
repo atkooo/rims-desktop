@@ -66,11 +66,9 @@ const setupItemHandlers = require("./handlers/itemHandlers");
 const setupAccessoryHandlers = require("./handlers/accessoryHandlers");
 const setupBundleHandlers = require("./handlers/bundleHandlers");
 const setupCustomerHandlers = require("./handlers/customerHandlers");
-const {
-  setupTransactionHandlers,
-  setupPaymentHandlers,
-  setupStockMovementHandlers,
-} = require("./handlers/transactionHandlers");
+const { setupTransactionHandlers } = require("./handlers/transactionHandlers");
+const { setupPaymentHandlers } = require("./handlers/paymentHandlers");
+const { setupStockMovementHandlers } = require("./handlers/stockMovementHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
 const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");

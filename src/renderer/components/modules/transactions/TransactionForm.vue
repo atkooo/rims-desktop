@@ -1025,10 +1025,8 @@ export default {
   padding-bottom: 0;
 }
 
+/* Using global utility classes for form-grid, form-select */
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
   margin-top: 1rem;
 }
 
@@ -1040,15 +1038,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-}
-
-.form-select {
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background-color: white;
-  font-size: 1rem;
 }
 
 .form-select.error {
@@ -1090,8 +1079,8 @@ export default {
   margin-top: 0.5rem;
 }
 
+/* Using global utility classes for error-message, form-label, form-input, form-hint */
 .error-message {
-  color: #dc2626;
   font-size: 0.85rem;
 }
 
@@ -1102,26 +1091,12 @@ export default {
 }
 
 .form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #374151;
   font-size: 0.875rem;
 }
 
 .form-input {
-  width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-input[readonly] {
@@ -1132,8 +1107,6 @@ export default {
 }
 
 .form-hint {
-  color: #6b7280;
-  font-size: 0.75rem;
   margin-top: 0.25rem;
 }
 </style>

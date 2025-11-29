@@ -363,32 +363,9 @@ export default {
   gap: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.form-label {
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: #374151;
-}
-
+/* Using global utility classes for form-group, form-label, form-textarea */
 .form-textarea {
-  width: 100%;
   min-height: 90px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 0.6rem;
-  font-size: 0.95rem;
-  resize: vertical;
-}
-
-.form-textarea:focus {
-  outline: none;
-  border-color: #4338ca;
-  box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
 }
 
 .form-switches {

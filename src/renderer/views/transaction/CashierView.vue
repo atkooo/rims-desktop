@@ -584,13 +584,14 @@ export default {
   margin: 0;
 }
 
+/* Using global badge utility classes */
 .status-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
 }
 
 .status-badge.open {
@@ -644,38 +645,11 @@ export default {
   margin: 0 0 1.5rem 0;
 }
 
+/* Using global utility classes for form-input, form-textarea, error-message */
 .cashier-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 600;
-  color: #374151;
-  font-size: 0.875rem;
-}
-
-.form-input,
-.form-textarea {
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-input.error {
@@ -683,7 +657,6 @@ export default {
 }
 
 .form-textarea {
-  resize: vertical;
   font-family: inherit;
 }
 
@@ -695,7 +668,6 @@ export default {
 }
 
 .error-message {
-  color: #ef4444;
   font-size: 12px;
 }
 

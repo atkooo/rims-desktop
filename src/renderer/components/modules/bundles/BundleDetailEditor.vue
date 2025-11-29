@@ -711,23 +711,17 @@ export default {
   gap: 0.75rem;
 }
 
+/* Using global utility classes for form-group, form-label, form-select, form-textarea */
 .form-group {
-  display: flex;
-  flex-direction: column;
   gap: 0.35rem;
 }
 
 .form-label {
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
 }
 
 .form-select,
 .form-textarea {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   padding: 0.55rem 0.65rem;
   font-size: 0.95rem;
 }

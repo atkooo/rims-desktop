@@ -343,30 +343,9 @@ export default {
   gap: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.form-label {
-  font-weight: 500;
-  color: #374151;
-  font-size: 0.9rem;
-}
-
-.form-select,
-.form-textarea {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 0.55rem 0.65rem;
-  font-size: 0.95rem;
-}
-
+/* Using global utility classes for form-group, form-label, form-select, form-textarea */
 .form-textarea {
   min-height: 90px;
-  resize: vertical;
 }
 
 .switch {

@@ -563,34 +563,7 @@ export default {
   gap: 1rem 1.25rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  font-weight: 500;
-  color: #374151;
-  font-size: 0.95rem;
-}
-
-.form-select,
-.form-textarea {
-  width: 100%;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  box-sizing: border-box;
-}
-
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
+/* Using global utility classes for form-group, form-label, form-select, form-textarea */
 
 .document-section {
   border-top: 1px solid #e5e7eb;
@@ -701,7 +674,6 @@ export default {
 
 .error-message {
   margin: 0;
-  color: #dc2626;
   font-size: 0.82rem;
 }
 

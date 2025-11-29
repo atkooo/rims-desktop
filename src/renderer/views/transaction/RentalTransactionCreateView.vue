@@ -865,34 +865,24 @@ export default {
   margin-bottom: 0;
 }
 
+/* Using global utility classes for form-label, form-input */
 .cashier-date-inline :deep(.form-label) {
   margin-bottom: 0.25rem;
   font-size: 0.875rem;
-  font-weight: 500;
 }
 
 .cashier-date-inline :deep(.form-input) {
-  width: 100%;
   padding: 0.4rem 0.6rem;
   font-size: 0.875rem;
-  border: 1px solid #d1d5db;
   border-radius: 4px;
 }
 
 .cashier-input-inline,
 .cashier-select-inline {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 0.9rem;
-  background-color: white;
   min-width: 150px;
-}
-
-.cashier-input-inline:focus,
-.cashier-select-inline:focus {
-  outline: none;
-  border-color: #3b82f6;
 }
 
 .cashier-input-inline.error,

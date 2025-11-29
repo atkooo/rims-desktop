@@ -251,19 +251,17 @@ export default {
   align-items: flex-start;
 }
 
+/* Using global utility classes for form-group, form-label */
 .picker-controls :deep(.form-group) {
   margin-bottom: 0;
 }
 
 .picker-controls > .form-group {
   margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .picker-controls :deep(.form-label),
 .picker-controls > .form-group > .form-label {
-  display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
   color: #374151;

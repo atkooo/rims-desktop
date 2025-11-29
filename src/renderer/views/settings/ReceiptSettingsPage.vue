@@ -649,37 +649,9 @@ export default {
   text-align: center;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
+/* Using global utility classes for form-group, form-label, form-select, form-input */
 .form-group label {
   font-size: 0.9rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-select,
-.form-input {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #111827;
-  background-color: #ffffff;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.form-select:focus,
-.form-input:focus {
-  outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 .form-select {

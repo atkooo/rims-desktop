@@ -425,19 +425,11 @@ export default {
   align-items: center;
 }
 
+/* Using global utility class for form-select */
 .filter-select {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   font-size: 0.9rem;
-  background: white;
   min-width: 150px;
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .filter-actions {
@@ -472,13 +464,12 @@ export default {
   color: #111827;
 }
 
+/* Using global badge utility classes */
 .type-badge,
 .status-badge {
-  display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.8rem;
-  font-weight: 500;
 }
 
 .type-badge.rental {

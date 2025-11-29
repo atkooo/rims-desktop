@@ -504,12 +504,11 @@ export default {
   color: #d97706;
 }
 
+/* Using global badge utility classes */
 .status-badge {
-  display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.85rem;
-  font-weight: 500;
 }
 
 .status-badge.active {
@@ -584,12 +583,11 @@ export default {
   }
 }
 
+/* Using global badge utility classes */
 .type-badge {
-  display: inline-block;
   padding: 0.25rem 0.6rem;
   border-radius: 12px;
   font-size: 0.8rem;
-  font-weight: 500;
 }
 
 .type-badge.item {

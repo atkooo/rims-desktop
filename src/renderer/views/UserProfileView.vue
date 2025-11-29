@@ -384,8 +384,8 @@ export default {
   line-height: 1.5;
 }
 
+/* Using global utility class for form-grid */
 .form-grid {
-  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
 }

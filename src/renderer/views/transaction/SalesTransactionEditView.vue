@@ -677,20 +677,13 @@ export default {
   white-space: nowrap;
 }
 
+/* Using global utility classes for form-input, form-select */
 .cashier-input-inline,
 .cashier-select-inline {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 0.9rem;
-  background-color: white;
   min-width: 150px;
-}
-
-.cashier-input-inline:focus,
-.cashier-select-inline:focus {
-  outline: none;
-  border-color: #3b82f6;
 }
 
 .cashier-input-inline.error,

@@ -613,50 +613,15 @@ export default {
   display: contents;
 }
 
-/* Form group */
+/* Form group - using global utility classes */
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-}
-
-/* Label */
-.form-label {
-  font-weight: 500;
-  color: #374151;
-  font-size: 0.9rem;
-}
-
-/* Input, select, textarea */
-.form-input,
-.form-select,
-.form-textarea {
-  width: 100%;
-  max-width: 100%;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-  box-sizing: border-box;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 /* Textarea */
 .form-textarea {
-  resize: vertical;
   min-height: 90px;
 }
 
@@ -666,9 +631,8 @@ export default {
 }
 
 .error-message {
-  color: #dc2626;
-  font-size: 0.8rem;
   margin-top: -0.2rem;
+  font-size: 0.8rem;
 }
 
 .form-hint {

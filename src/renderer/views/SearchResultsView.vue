@@ -858,19 +858,14 @@ export default {
   letter-spacing: -0.01em;
 }
 
+/* Using global badge utility class */
 .badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   min-width: 28px;
   height: 28px;
   padding: 0 10px;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 14px;
   margin-left: 4px;
+  font-size: 13px;
+  border-radius: 14px;
 }
 
 .table-container {

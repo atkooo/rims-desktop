@@ -775,13 +775,10 @@ export default {
   width: 100%;
 }
 
-/* Status badges */
+/* Using global badge utility classes */
 .status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
   font-size: 0.85rem;
-  font-weight: 500;
+  border-radius: 4px;
 }
 
 .status-badge.returned {
@@ -794,13 +791,9 @@ export default {
   color: #991b1b;
 }
 
-/* Condition badges */
 .condition-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
   font-size: 0.85rem;
-  font-weight: 500;
+  border-radius: 4px;
 }
 
 .condition-badge.good {
@@ -848,35 +841,6 @@ export default {
   font-weight: 600;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-input,
-.form-select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #1f2937;
-  background-color: white;
-  transition: border-color 0.2s;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
 
 .form-help {
   margin: 0;

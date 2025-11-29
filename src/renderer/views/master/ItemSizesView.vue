@@ -264,39 +264,10 @@ export default {
 };
 </script>
 <style scoped>
-.title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.title-wrap h1 {
-  margin: 0;
-}
-
-.subtitle {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
 .form {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-group input,
-.form-group textarea {
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
 }
 
 .form-row {
@@ -305,52 +276,5 @@ export default {
   align-items: center;
 }
 
-.check-inline {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  cursor: pointer;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #e5e7eb;
-}
-
-.btn.primary {
-  background: #4f46e5;
-  color: #fff;
-}
-
-.btn.danger {
-  background: #dc2626;
-  color: #fff;
-}
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge-muted {
-  background: #e5e7eb;
-  color: #374151;
-}
+/* All other styles moved to global style.css utility classes */
 </style>
