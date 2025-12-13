@@ -33,27 +33,12 @@ INSERT INTO categories (name, description, is_active) VALUES
     1
   ),
   (
-    'Aksesoris',
-    'Pelengkap pakaian seperti mahkota, kalung, sepatu, selendang, dan siger.',
-    1
-  ),
-  (
     'Peralatan Pendukung',
     'Perlengkapan non-pakaian yang dibutuhkan untuk rental (box, gantungan, cover, tas).',
     1
   ),
   (
-    'Paket / Bundling',
-    'Kombinasi barang dan aksesoris dalam satu paket lengkap.',
-    1
-  ),
-  (
     'Dekorasi / Properti',
     'Item tambahan untuk event seperti background, tirai, ornamen, dan bunga.',
-    1
-  ),
-  (
-    'Penjualan Item Baru',
-    'Barang yang dijual (bukan disewa), termasuk merchandise dan kostum baru.',
     1
   );
