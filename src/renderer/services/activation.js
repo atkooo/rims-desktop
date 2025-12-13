@@ -33,6 +33,8 @@ export async function checkActivationStatus(forceRefresh = false) {
   }
 
   try {
+    // Check if sync/activation is enabled via IPC
+    // The main process will handle the check and return appropriate status
     return await invoke("activation:checkStatus", forceRefresh);
   } catch (error) {
     console.error("Error checking activation status:", error);

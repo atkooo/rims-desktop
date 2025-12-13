@@ -400,11 +400,8 @@ const handleNotificationItemClick = (notification) => {
   if (notification.type === 'stock') {
     router.push('/stock/alerts');
   } else if (notification.type === 'payment' || notification.type === 'transaction') {
-    if (notification.transactionType === "RENTAL") {
-      router.push("/transactions/rentals");
-    } else {
-      router.push("/transactions/sales");
-    }
+    // Transactions are now handled in cashier template, redirect to dashboard
+    router.push("/");
   }
 };
 

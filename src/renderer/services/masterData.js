@@ -93,46 +93,6 @@ export function fetchCustomerDocument(path) {
   return ipcRenderer.invoke("customers:getDocument", path);
 }
 
-export function fetchRoles() {
-  return ipcRenderer.invoke("roles:getAll");
-}
-
-export function fetchRoleById(id) {
-  return ipcRenderer.invoke("roles:getById", id);
-}
-
-export function createRole(payload) {
-  return ipcRenderer.invoke("roles:create", payload);
-}
-
-export function updateRole(id, payload) {
-  return ipcRenderer.invoke("roles:update", id, payload);
-}
-
-export function deleteRole(id) {
-  return ipcRenderer.invoke("roles:delete", id);
-}
-
-export function fetchPermissions() {
-  return ipcRenderer.invoke("permissions:getAll");
-}
-
-export function fetchPermissionsByModule(module) {
-  return ipcRenderer.invoke("permissions:getByModule", module);
-}
-
-export function fetchPermissionById(id) {
-  return ipcRenderer.invoke("permissions:getById", id);
-}
-
-export function fetchRolePermissions(roleId) {
-  return ipcRenderer.invoke("roles:getPermissions", roleId);
-}
-
-export function updateRolePermissions(roleId, permissionIds) {
-  return ipcRenderer.invoke("roles:updatePermissions", roleId, permissionIds);
-}
-
 export function fetchUsers() {
   return ipcRenderer.invoke("master:getUsers");
 }

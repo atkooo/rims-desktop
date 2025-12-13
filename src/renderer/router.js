@@ -13,7 +13,6 @@ import BundleDetailPageView from "./views/master/BundleDetailPageView.vue";
 import ItemDetailView from "./views/master/ItemDetailView.vue";
 import CustomersView from "./views/master/CustomersView.vue";
 import DiscountGroupsView from "./views/master/DiscountGroupsView.vue";
-import RolesView from "./views/master/RolesView.vue";
 import UsersView from "./views/master/UsersView.vue";
 import UserRoleManagementView from "./views/master/UserRoleManagementView.vue";
 import SettingsPage from "./views/settings/SettingsPage.vue";
@@ -22,68 +21,51 @@ import BackupHistoryView from "./views/settings/BackupHistoryView.vue";
 import ActivityLogsView from "./views/settings/ActivityLogsView.vue";
 import SyncServiceView from "./views/settings/SyncServiceView.vue";
 import UserProfileView from "./views/UserProfileView.vue";
-import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
-import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
-import CashierView from "./views/transaction/CashierView.vue";
-import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
-import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
-import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
-import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
-import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
-import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
 import ReportExportView from "./views/reports/ReportExportView.vue";
 import StockAlertManagementView from "./views/stock/StockAlertManagementView.vue";
 import BulkLabelGeneratorView from "./views/master/BulkLabelGeneratorView.vue";
 import SearchResultsView from "./views/SearchResultsView.vue";
+import CashierLayout from "./components/cashier/CashierLayout.vue";
+import CashierHome from "./views/cashier/CashierHome.vue";
+import CashierSalePage from "./views/cashier/CashierSalePage.vue";
+import CashierRentalPage from "./views/cashier/CashierRentalPage.vue";
+import CashierSessionPage from "./views/cashier/CashierSessionPage.vue";
+import CashierCustomersPage from "./views/cashier/CashierCustomersPage.vue";
+import CashierSalesTransactionsView from "./views/cashier/CashierSalesTransactionsView.vue";
+import CashierRentalsTransactionsView from "./views/cashier/CashierRentalsTransactionsView.vue";
+import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
+import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
+import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
+import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
+import SaleTransactionPaymentView from "./views/transaction/SaleTransactionPaymentView.vue";
+import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
+import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
+import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
+import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
+import RentalTransactionPaymentView from "./views/transaction/RentalTransactionPaymentView.vue";
 import { getCurrentUser } from "./services/auth.js";
-import {
-  hasPermissionSync,
-  hasAnyPermissionSync,
-  initPermissions,
-} from "./composables/usePermissions.js";
 import { checkActivationStatus } from "./services/activation.js";
-
-// Route permission mapping
-const routePermissions = {
-  "/": "dashboard.view",
-  // Master Data
-  "/master/categories": "master.categories.view",
-  "/master/accessories": "master.accessories.view",
-  "/master/items": "master.items.view",
-  "/master/item-sizes": "master.item-sizes.view",
-  "/master/bundles": "master.bundles.view",
-  "/master/bundle-details": "master.bundles.view",
-  "/master/bulk-labels": "master.items.generate-barcode",
-  "/master/customers": "master.customers.view",
-  "/master/discount-groups": "master.discount-groups.view",
-  "/master/roles": "roles.view",
-  "/master/users": "users.view",
-  "/master/user-role-management": ["users.view", "roles.view"],
-  // Transactions
-  "/transactions/rentals": "transactions.rentals.view",
-  "/transactions/rentals/new": "transactions.rentals.create",
-  "/transactions/sales": "transactions.sales.view",
-  "/transactions/sales/new": "transactions.sales.create",
-  "/transactions/stock-movements": "transactions.stock-movements.view",
-  "/transactions/cashier": "transactions.cashier.manage",
-  "/stock/alerts": "transactions.stock-movements.view",
-  // Settings
-  "/settings/system": "settings.view",
-  "/settings/receipt": "settings.view",
-  "/settings/backup-history": "settings.backup.view",
-  "/settings/activity-logs": "settings.activity-logs.view",
-  "/settings/sync-service": "settings.view",
-  // Reports
-  "/reports/executive": "reports.transactions.view",
-  "/reports/finance": "reports.transactions.view",
-  "/reports/stock": "reports.stock.view",
-};
 
 const routes = [
   { path: "/", name: "dashboard", component: Dashboard },
   { path: "/login", name: "login", component: Login },
   { path: "/activation", name: "activation", component: Activation },
+  {
+    path: "/cashier",
+    component: CashierLayout,
+    children: [
+      { path: "", name: "cashier-home", component: CashierHome },
+      { path: "sale", name: "cashier-sale", component: CashierSalePage },
+      { path: "rental", name: "cashier-rental", component: CashierRentalPage },
+      { path: "transactions/sales", name: "cashier-transactions-sales", component: CashierSalesTransactionsView },
+      { path: "transactions/rentals", name: "cashier-transactions-rentals", component: CashierRentalsTransactionsView },
+      { path: "transactions/sales/:code", name: "cashier-transaction-sale-detail", component: SaleTransactionDetailView },
+      { path: "transactions/rentals/:code", name: "cashier-transaction-rental-detail", component: RentalTransactionDetailView },
+      { path: "customers", name: "cashier-customers", component: CashierCustomersPage },
+      { path: "session", name: "cashier-session", component: CashierSessionPage },
+    ],
+  },
   { path: "/search", name: "search-results", component: SearchResultsView },
   // Master Data
   { path: "/master/categories", name: "categories", component: Categories },
@@ -130,42 +112,27 @@ const routes = [
     name: "discount-groups",
     component: DiscountGroupsView,
   },
-  { path: "/master/roles", name: "roles", component: RolesView },
   { path: "/master/users", name: "users", component: UsersView },
   {
     path: "/master/user-role-management",
     name: "user-role-management",
     component: UserRoleManagementView,
   },
-  // Transactions (read-only views)
+  // Stock & Warehouse
   {
-    path: "/transactions/rentals",
-    name: "transactions-rentals",
-    component: RentalTransactionsView,
+    path: "/transactions/stock-movements",
+    name: "transactions-stock-movements",
+    component: StockMovementsView,
   },
-  {
-    path: "/transactions/rentals/new",
-    name: "transaction-rental-new",
-    component: RentalTransactionCreateView,
-  },
-  {
-    path: "/transactions/rentals/:code",
-    name: "transaction-rental-detail",
-    component: RentalTransactionDetailView,
-  },
-  {
-    path: "/transactions/rentals/:code/edit",
-    name: "transaction-rental-edit",
-    component: RentalTransactionEditView,
-  },
+  // Sales Transactions
   {
     path: "/transactions/sales",
     name: "transactions-sales",
     component: SalesTransactionsView,
   },
   {
-    path: "/transactions/sales/new",
-    name: "transaction-sale-new",
+    path: "/transactions/sales/create",
+    name: "transaction-sale-create",
     component: SalesTransactionCreateView,
   },
   {
@@ -179,14 +146,35 @@ const routes = [
     component: SalesTransactionEditView,
   },
   {
-    path: "/transactions/stock-movements",
-    name: "transactions-stock-movements",
-    component: StockMovementsView,
+    path: "/transactions/sales/:code/payment",
+    name: "transaction-sale-payment",
+    component: SaleTransactionPaymentView,
+  },
+  // Rental Transactions
+  {
+    path: "/transactions/rentals",
+    name: "transactions-rentals",
+    component: RentalTransactionsView,
   },
   {
-    path: "/transactions/cashier",
-    name: "transactions-cashier",
-    component: CashierView,
+    path: "/transactions/rentals/create",
+    name: "transaction-rental-create",
+    component: RentalTransactionCreateView,
+  },
+  {
+    path: "/transactions/rentals/:code",
+    name: "transaction-rental-detail",
+    component: RentalTransactionDetailView,
+  },
+  {
+    path: "/transactions/rentals/:code/edit",
+    name: "transaction-rental-edit",
+    component: RentalTransactionEditView,
+  },
+  {
+    path: "/transactions/rentals/:code/payment",
+    name: "transaction-rental-payment",
+    component: RentalTransactionPaymentView,
   },
   {
     path: "/stock/alerts",
@@ -296,136 +284,28 @@ router.beforeEach(async (to, from, next) => {
       return next({ path: "/login", query: { redirect: to.fullPath } });
     }
 
-    // Initialize permissions
-    try {
-      await initPermissions();
-    } catch (error) {
-      console.error("Error initializing permissions in router:", error);
-      // Continue anyway, permissions will be checked but may allow access if check fails
+    // Simple role-based access control
+    // Cashier users can ONLY access cashier pages
+    if (user.role === "kasir") {
+      if (to.path.startsWith("/cashier")) {
+        return next();
+      }
+      // Redirect cashier to cashier page if trying to access any other page
+      return next({ path: "/cashier" });
     }
 
-    // Admin has access to everything, skip permission check
+    // Admin has access to everything except cashier pages
     if (user.role === "admin") {
+      // Admin cannot access cashier pages
+      if (to.path.startsWith("/cashier")) {
+        return next({ path: "/" });
+      }
       return next();
     }
 
-    // Dashboard is accessible to all authenticated users
-    if (to.path === "/") {
-      return next();
-    }
-
-    // Check route permission
-    const requiredPermission = routePermissions[to.path];
-    if (requiredPermission) {
-      try {
-        let hasAccess;
-        // Support both single permission string and array of permissions
-        if (Array.isArray(requiredPermission)) {
-          hasAccess = hasAnyPermissionSync(requiredPermission);
-        } else {
-          hasAccess = hasPermissionSync(requiredPermission);
-        }
-        if (!hasAccess) {
-          // User doesn't have permission, redirect to dashboard
-          console.warn(
-            `Access denied: User doesn't have permission ${JSON.stringify(requiredPermission)} for ${to.path}`,
-          );
-          return next({ path: "/" });
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        // If permission check fails, allow access (graceful degradation)
-        return next();
-      }
-    }
-
-    // For dynamic routes, check parent route permission
-    // e.g., /transactions/rentals/:code should check transactions.rentals.view
-    // Edit routes require update permission
-    if (
-      to.path.startsWith("/transactions/rentals/") &&
-      to.path !== "/transactions/rentals/new"
-    ) {
-      try {
-        // Edit route requires update permission
-        if (to.path.endsWith("/edit")) {
-          const hasAccess = hasPermissionSync("transactions.rentals.update");
-          if (!hasAccess) {
-            return next({ path: "/" });
-          }
-        } else {
-          // Detail/view route requires view permission
-          const hasAccess = hasPermissionSync("transactions.rentals.view");
-          if (!hasAccess) {
-            return next({ path: "/" });
-          }
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        return next();
-      }
-    }
-    if (
-      to.path.startsWith("/transactions/sales/") &&
-      to.path !== "/transactions/sales/new"
-    ) {
-      try {
-        // Edit route requires update permission
-        if (to.path.endsWith("/edit")) {
-          const hasAccess = hasPermissionSync("transactions.sales.update");
-          if (!hasAccess) {
-            return next({ path: "/" });
-          }
-        } else {
-          // Detail/view route requires view permission
-          const hasAccess = hasPermissionSync("transactions.sales.view");
-          if (!hasAccess) {
-            return next({ path: "/" });
-          }
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        return next();
-      }
-    }
-    if (to.path.startsWith("/master/accessories/")) {
-      try {
-        const hasAccess = hasPermissionSync("master.accessories.view");
-        if (!hasAccess) {
-          return next({ path: "/" });
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        return next();
-      }
-    }
-    if (
-      to.path.startsWith("/master/bundles/") &&
-      !to.path.includes("/bundle-details")
-    ) {
-      try {
-        const hasAccess = hasPermissionSync("master.bundles.view");
-        if (!hasAccess) {
-          return next({ path: "/" });
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        return next();
-      }
-    }
-    if (to.path.startsWith("/master/items/")) {
-      try {
-        const hasAccess = hasPermissionSync("master.items.view");
-        if (!hasAccess) {
-          return next({ path: "/" });
-        }
-      } catch (error) {
-        console.error("Error checking permission:", error);
-        return next();
-      }
-    }
-
-    return next();
+    // If role is neither kasir nor admin, redirect to login
+    console.warn("Unknown role:", user.role);
+    return next({ path: "/login", query: { redirect: to.fullPath } });
   } catch (error) {
     console.error("Router guard auth error:", error);
     return next({ path: "/login", query: { redirect: to.fullPath } });

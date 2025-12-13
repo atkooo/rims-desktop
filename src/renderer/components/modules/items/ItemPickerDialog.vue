@@ -32,7 +32,7 @@
           v-for="item in filteredItems"
           :key="item.id"
           class="picker-row"
-          :class="{ unavailable: item.status !== 'AVAILABLE' }"
+          :class="{ unavailable: checkStatus && item.status !== 'AVAILABLE' }"
         >
           <div class="picker-meta">
             <Icon name="box" :size="20" class="picker-icon" />
@@ -55,13 +55,13 @@
             </div>
           </div>
           <div class="picker-actions">
-            <span class="status-chip" :class="item.status.toLowerCase()">
-              {{ item.status }}
+            <span class="status-chip" :class="getStatusBadge(item).class">
+              {{ getStatusBadge(item).label }}
             </span>
             <AppButton
               variant="primary"
               size="small"
-              :disabled="item.status !== 'AVAILABLE' || (restrictStock && (item.available_quantity || 0) <= 0)"
+              :disabled="(checkStatus && item.status !== 'AVAILABLE') || (restrictStock && (item.available_quantity || 0) <= 0)"
               @click="selectItem(item)"
             >
               Pilih
@@ -76,6 +76,7 @@
 <script>
   import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { useItemStore } from "@/store/items";
+import { useItemStatus } from "@/composables/useItemStatus";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
@@ -106,11 +107,16 @@ export default {
       type: Boolean,
       default: true, // Default true untuk backward compatibility (transaksi)
     },
+    checkStatus: {
+      type: Boolean,
+      default: true, // Default true untuk cek status AVAILABLE, false untuk allow semua status (misalnya untuk stock masuk)
+    },
   },
   emits: ["update:modelValue", "select"],
   setup(props, { emit }) {
     const itemStore = useItemStore();
     const { filterItemsByTransactionType } = useItemType();
+    const { getStatusBadge } = useItemStatus();
     const search = ref("");
     const typeFilter = ref("");
     const visible = computed({
@@ -172,11 +178,11 @@ export default {
     const getItemPriceDisplay = (item) => {
       if (props.transactionType === 'RENTAL') {
         // For rental, show rental_price_per_day
-        const rentalPrice = item.rental_price_per_day ?? item.price ?? 0;
+        const rentalPrice = item.rental_price_per_day ?? 0;
         return formatCurrency(rentalPrice) + "/hari";
       } else {
         // For sale or null, show sale_price
-        return formatCurrency(item.sale_price ?? item.price ?? 0);
+        return formatCurrency(item.sale_price ?? 0);
       }
     };
 
@@ -184,17 +190,14 @@ export default {
     const getPriceNote = (item) => {
       if (props.transactionType === 'RENTAL') {
         // For rental, show sale_price if different from rental_price_per_day
-        const rentalPrice = item.rental_price_per_day ?? item.price ?? 0;
-        const salePrice = item.sale_price ?? item.price ?? 0;
+        const rentalPrice = item.rental_price_per_day ?? 0;
+        const salePrice = item.sale_price ?? 0;
         if (salePrice && salePrice !== rentalPrice) {
           return `(Harga jual: ${formatCurrency(salePrice)})`;
         }
         return null;
       } else {
-        // For sale, show original price if different from sale_price
-        if (item.sale_price && item.sale_price !== item.price) {
-          return `(Harga: ${formatCurrency(item.price)})`;
-        }
+        // For sale, no additional price note needed
         return null;
       }
     };
@@ -234,6 +237,7 @@ export default {
       restrictStock: props.restrictStock,
       getItemPriceDisplay,
       getPriceNote,
+      getStatusBadge,
     };
   },
 };
@@ -366,6 +370,11 @@ export default {
 .status-chip.available {
   background: #dcfce7;
   color: #166534;
+}
+
+.status-chip.out_of_stock {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .status-chip.rented {

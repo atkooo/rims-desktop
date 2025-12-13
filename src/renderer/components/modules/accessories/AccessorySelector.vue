@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
 import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
@@ -97,6 +97,20 @@ export default {
   setup(props, { emit }) {
     const pickerOpen = ref(false);
     const selectedAccessories = ref(props.modelValue);
+
+    // Watch for changes in modelValue to sync with parent
+    watch(
+      () => props.modelValue,
+      (newValue) => {
+        // Only update if the arrays are actually different (by reference or content)
+        const currentStr = JSON.stringify(selectedAccessories.value);
+        const newStr = JSON.stringify(newValue || []);
+        if (currentStr !== newStr) {
+          selectedAccessories.value = newValue ? [...newValue] : [];
+        }
+      },
+      { deep: true, immediate: true }
+    );
 
     // Calculate price after accessory discount
     const calculateAccessoryPrice = (accessory) => {

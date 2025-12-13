@@ -55,7 +55,7 @@
         <select v-model="filters.size" class="filter-select">
           <option value="">Semua Ukuran</option>
           <option v-for="size in sizes" :key="size.id" :value="size.id">
-            {{ size.name }}
+            {{ size.code || size.name }}
           </option>
         </select>
 
@@ -69,6 +69,7 @@
         <select v-model="filters.status" class="filter-select">
           <option value="">Semua Status</option>
           <option value="AVAILABLE">Available</option>
+          <option value="OUT_OF_STOCK">Out of Stock</option>
           <option value="RENTED">Rented</option>
           <option value="MAINTENANCE">Maintenance</option>
         </select>
@@ -105,9 +106,9 @@
           <template #cell-status="{ row }">
             <span
               class="status-badge"
-              :class="(row.status || '').toLowerCase()"
+              :class="getStatusBadge(row).class"
             >
-              {{ row.status || "AVAILABLE" }}
+              {{ getStatusBadge(row).label }}
             </span>
           </template>
           <template #actions="{ row }">
@@ -195,6 +196,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
+import { useItemStatus } from "@/composables/useItemStatus";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
@@ -217,6 +219,7 @@ export default {
   setup() {
     const router = useRouter();
     const itemStore = useItemStore();
+    const { getStatusBadge } = useItemStatus();
     const loading = ref(false);
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -312,7 +315,7 @@ export default {
     );
 
     const totalValue = computed(() =>
-      filteredItems.value.reduce((sum, item) => sum + item.price, 0),
+      filteredItems.value.reduce((sum, item) => sum + (item.purchase_price || 0), 0),
     );
 
     // Methods
@@ -461,6 +464,7 @@ export default {
       handleFormSaved,
       showBulkImport,
       handleBulkImported,
+      getStatusBadge,
     };
   },
 };
@@ -544,6 +548,11 @@ export default {
 .status-badge.available {
   background-color: #dcfce7;
   color: #166534;
+}
+
+.status-badge.out-of-stock {
+  background-color: #e5e7eb;
+  color: #374151;
 }
 
 .status-badge.rented {

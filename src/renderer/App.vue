@@ -2,6 +2,9 @@
   <div v-if="$route.path === '/login' || $route.path === '/activation'" class="auth">
     <router-view :key="$route.fullPath" />
   </div>
+  <div v-else-if="$route.path.startsWith('/cashier')" class="cashier-layout">
+    <router-view :key="$route.fullPath" />
+  </div>
   <div v-else :class="['app', { 'app--sidebar-collapsed': sidebarCollapsed }]">
     <Sidebar :collapsed="sidebarCollapsed" />
     <main class="content">
@@ -105,5 +108,10 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 18px;
+}
+
+.cashier-layout {
+  min-height: 100vh;
+  width: 100%;
 }
 </style>

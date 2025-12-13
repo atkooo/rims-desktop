@@ -104,7 +104,6 @@ const detailListSql = `
     i.code AS item_code,
     i.sale_price AS item_sale_price,
     i.rental_price_per_day AS item_rental_price,
-    i.price AS item_price,
     c.name AS category_name,
     a.name AS accessory_name,
     a.code AS accessory_code,
@@ -371,6 +370,12 @@ function setupBundleHandlers() {
   ipcMain.handle("bundleDetails:create", async (_event, rawPayload = {}) => {
     try {
       const payload = normalizeDetailPayload(rawPayload);
+      
+      // Validate: minimal salah satu item_id atau accessory_id harus ada
+      if (!payload.item_id && !payload.accessory_id) {
+        throw new Error("Pilih minimal salah satu: Item atau Accessory");
+      }
+      
       const sql = `
         INSERT INTO bundle_details (
           bundle_id,
@@ -406,6 +411,12 @@ function setupBundleHandlers() {
         if (!existing) throw new Error("Detail paket tidak ditemukan");
 
         const payload = normalizeDetailPayload(rawPayload, existing);
+        
+        // Validate: minimal salah satu item_id atau accessory_id harus ada
+        if (!payload.item_id && !payload.accessory_id) {
+          throw new Error("Pilih minimal salah satu: Item atau Accessory");
+        }
+        
         const sql = `
           UPDATE bundle_details
           SET bundle_id = ?, item_id = ?, accessory_id = ?, quantity = ?, notes = ?

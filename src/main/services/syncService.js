@@ -288,11 +288,22 @@ async function syncSalesTransaction(transactionId) {
  */
 async function syncPayment(paymentId) {
   try {
-    // Get payment
-    const payment = await database.queryOne(
-      `SELECT * FROM payments WHERE id = ?`,
+    // Get payment from rental_payments first
+    let payment = await database.queryOne(
+      `SELECT *, 'rental' as transaction_type FROM rental_payments WHERE id = ?`,
       [paymentId]
     );
+    
+    let paymentTable = 'rental_payments';
+    
+    // If not found, try sales_payments
+    if (!payment) {
+      payment = await database.queryOne(
+        `SELECT *, 'sale' as transaction_type FROM sales_payments WHERE id = ?`,
+        [paymentId]
+      );
+      paymentTable = 'sales_payments';
+    }
 
     if (!payment) {
       throw new Error(`Payment ${paymentId} not found`);
@@ -307,7 +318,7 @@ async function syncPayment(paymentId) {
     if (result.success) {
       // Update is_sync to 1
       await database.execute(
-        `UPDATE payments SET is_sync = 1 WHERE id = ?`,
+        `UPDATE ${paymentTable} SET is_sync = 1 WHERE id = ?`,
         [paymentId]
       );
 
@@ -408,10 +419,15 @@ async function syncAllPending() {
       }
     }
 
-    // Sync pending payments
-    const pendingPayments = await database.query(
-      `SELECT id FROM payments WHERE is_sync = 0`
+    // Sync pending payments (both rental and sales)
+    const pendingRentalPayments = await database.query(
+      `SELECT id FROM rental_payments WHERE is_sync = 0`
     );
+    const pendingSalesPayments = await database.query(
+      `SELECT id FROM sales_payments WHERE is_sync = 0`
+    );
+    
+    const pendingPayments = [...pendingRentalPayments, ...pendingSalesPayments];
 
     for (const payment of pendingPayments) {
       try {

@@ -517,28 +517,38 @@ function setupCustomerHandlers() {
         throw new Error("Data pelanggan tidak ditemukan");
       }
 
+      // Check if customer has transactions (with RESTRICT FK, this will be enforced by database)
+      // But we check first to give better error message
       const usage = await database.queryOne(
         `
           SELECT
             (SELECT COUNT(1) FROM rental_transactions WHERE customer_id = ?) AS rentals,
-            (SELECT COUNT(1) FROM sales_transactions WHERE customer_id = ?) AS sales
+            (SELECT COUNT(1) FROM sales_transactions WHERE customer_id = ?) AS sales,
+            (SELECT COUNT(1) FROM bookings WHERE customer_id = ?) AS bookings
         `,
-        [id, id],
+        [id, id, id],
       );
 
       if (
         (usage?.rentals ?? 0) > 0 ||
-        (usage?.sales ?? 0) > 0
+        (usage?.sales ?? 0) > 0 ||
+        (usage?.bookings ?? 0) > 0
       ) {
         throw new Error(
-          "Tidak dapat menghapus pelanggan yang sudah memiliki transaksi",
+          "Tidak dapat menghapus pelanggan yang sudah memiliki transaksi atau booking. Gunakan soft delete (nonaktifkan) sebagai gantinya.",
         );
       }
 
-      await database.execute("DELETE FROM customers WHERE id = ?", [id]);
+      // Soft delete: set is_active = 0 instead of DELETE
+      // This preserves data integrity and audit trail
+      await database.execute(
+        "UPDATE customers SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [id],
+      );
 
-      deleteStoredFile(existing.photo_path);
-      deleteStoredFile(existing.id_card_image_path);
+      // Optionally delete files (or keep them for audit)
+      // deleteStoredFile(existing.photo_path);
+      // deleteStoredFile(existing.id_card_image_path);
 
       return true;
     } catch (error) {

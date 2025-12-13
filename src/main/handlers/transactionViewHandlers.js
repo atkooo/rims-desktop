@@ -46,7 +46,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN customers c ON rt.customer_id = c.id
       LEFT JOIN users u ON rt.user_id = u.id
       LEFT JOIN cashier_sessions cs ON rt.cashier_session_id = cs.id
-      LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+      LEFT JOIN rental_payments p ON p.transaction_id = rt.id
       GROUP BY rt.id
       ORDER BY rt.rental_date DESC
     `,
@@ -105,7 +105,7 @@ function setupTransactionViewHandlers() {
       LEFT JOIN customers c ON st.customer_id = c.id
       LEFT JOIN users u ON st.user_id = u.id
       LEFT JOIN cashier_sessions cs ON st.cashier_session_id = cs.id
-      LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+      LEFT JOIN sales_payments p ON p.transaction_id = st.id
       GROUP BY st.id
       ORDER BY st.sale_date DESC
     `,
@@ -175,7 +175,7 @@ function setupTransactionViewHandlers() {
     () => `
       SELECT
         p.id,
-        p.transaction_type,
+        'rental' as transaction_type,
         p.transaction_id,
         p.payment_date,
         p.amount,
@@ -183,9 +183,22 @@ function setupTransactionViewHandlers() {
         p.reference_number,
         u.full_name AS user_name,
         p.notes
-      FROM payments p
+      FROM rental_payments p
       LEFT JOIN users u ON p.user_id = u.id
-      ORDER BY p.payment_date DESC
+      UNION ALL
+      SELECT
+        p.id,
+        'sale' as transaction_type,
+        p.transaction_id,
+        p.payment_date,
+        p.amount,
+        p.payment_method,
+        p.reference_number,
+        u.full_name AS user_name,
+        p.notes
+      FROM sales_payments p
+      LEFT JOIN users u ON p.user_id = u.id
+      ORDER BY payment_date DESC
     `,
     "payments",
   );

@@ -1,18 +1,69 @@
 // Load environment variables from .env file first
 const path = require("path");
 const fs = require("fs");
+const { app } = require("electron");
 
-// Try multiple paths: development (from src/main) and production (from app root)
-// Note: In packaged app, .env should be in the same directory as the executable
-// or in userData directory for production use
-const envPaths = [
-  // Development: from project root (src/main -> ../../)
-  path.join(__dirname, "../../.env"),
-  // Production unpacked: from app root
-  path.join(__dirname, "../.env"),
-  // Current working directory
-  path.join(process.cwd(), ".env"),
-];
+/**
+ * Get environment mode (development or production)
+ */
+function getEnvironment() {
+  // Check NODE_ENV first (set by scripts) - this is the primary method
+  const nodeEnv = process.env.NODE_ENV;
+  
+  // If NODE_ENV is explicitly set, use it (most reliable)
+  if (nodeEnv === "development" || nodeEnv === "production") {
+    return nodeEnv;
+  }
+  
+  // Fallback: if app is available and packaged, assume production
+  // Otherwise, assume development
+  if (app && typeof app.isPackaged === "boolean") {
+    return app.isPackaged ? "production" : "development";
+  }
+  
+  // Default to development for safety (prevents accidental production data access)
+  return "development";
+}
+
+// Get environment early
+const environment = getEnvironment();
+console.log(`=== ENVIRONMENT: ${environment.toUpperCase()} ===`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
+
+// Load environment-specific .env file
+const envPaths = [];
+if (environment === "development") {
+  // Development: try .env.development, then .env
+  envPaths.push(
+    path.join(__dirname, "../../.env.development"),
+    path.join(__dirname, "../../.env"),
+    path.join(process.cwd(), ".env.development"),
+    path.join(process.cwd(), ".env"),
+  );
+} else {
+  // Production: try .env.production, then .env
+  // First try userData directory (for packaged apps)
+  if (app && typeof app.getPath === "function") {
+    envPaths.push(
+      path.join(app.getPath("userData"), ".env.production"),
+      path.join(app.getPath("userData"), ".env"),
+    );
+  }
+  // Then try app directory
+  if (app && typeof app.getAppPath === "function") {
+    envPaths.push(
+      path.join(path.dirname(app.getAppPath()), ".env.production"),
+      path.join(path.dirname(app.getAppPath()), ".env"),
+    );
+  }
+  // Fallback to project root
+  envPaths.push(
+    path.join(__dirname, "../.env.production"),
+    path.join(__dirname, "../.env"),
+    path.join(process.cwd(), ".env.production"),
+    path.join(process.cwd(), ".env"),
+  );
+}
 
 let envLoaded = false;
 for (const envPath of envPaths) {
@@ -25,27 +76,11 @@ for (const envPath of envPaths) {
 }
 
 if (!envLoaded) {
-  console.log("No .env file found. Using environment variables from system or defaults.");
+  console.log(`No .env file found for ${environment} environment. Using environment variables from system or defaults.`);
+  console.log(`Tried paths: ${envPaths.join(", ")}`);
 }
 
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require("electron");
-
-// After app is available, try additional paths for packaged apps
-if (!envLoaded && app && typeof app.getPath === "function") {
-  const additionalPaths = [
-    path.join(app.getPath("userData"), ".env"),
-    app.getAppPath ? path.join(path.dirname(app.getAppPath()), ".env") : null,
-  ].filter(Boolean);
-  
-  for (const envPath of additionalPaths) {
-    if (fs.existsSync(envPath)) {
-      require("dotenv").config({ path: envPath });
-      console.log(`Loaded .env from: ${envPath}`);
-      envLoaded = true;
-      break;
-    }
-  }
-}
+const { BrowserWindow, ipcMain, globalShortcut, dialog } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 
@@ -69,6 +104,7 @@ const setupCustomerHandlers = require("./handlers/customerHandlers");
 const { setupTransactionHandlers } = require("./handlers/transactionHandlers");
 const { setupPaymentHandlers } = require("./handlers/paymentHandlers");
 const { setupStockMovementHandlers } = require("./handlers/stockMovementHandlers");
+const { setupStockRepairHandlers } = require("./handlers/stockRepairHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
 const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");
@@ -80,7 +116,6 @@ const setupStockAlertHandlers = require("./handlers/stockAlertHandlers");
 const setupCashierHandlers = require("./handlers/cashierHandlers");
 const setupDiscountGroupHandlers = require("./handlers/discountGroupHandlers");
 const setupReceiptHandlers = require("./handlers/receiptHandlers");
-const setupRoleHandlers = require("./handlers/roleHandlers");
 const setupUserHandlers = require("./handlers/userHandlers");
 const setupAutoBackup = require("./handlers/autoBackup");
 const setupActivationHandlers = require("./handlers/activationHandlers");
@@ -336,30 +371,42 @@ app.whenReady().then(async () => {
 
   // Check activation status before proceeding
   try {
-    const activationStatus = await activationService.checkActivationStatus();
+    // Check if sync/activation is enabled
+    const enableSyncAndActivation = process.env.ENABLE_SYNC_AND_ACTIVATION;
+    const isEnabled = process.env.NODE_ENV === "production" || 
+                     enableSyncAndActivation === "true" || 
+                     enableSyncAndActivation === "1";
     
-    // If not active and not offline, don't create window
-    // The activation screen will handle this in the router guard
-    if (!activationStatus.isActive && !activationStatus.offline) {
-      logger.warn(
-        `Application not activated for machine: ${activationStatus.machineId}`,
-      );
-      // Still create window - router guard will redirect to activation screen
-    } else if (activationStatus.offline) {
-      logger.warn(
-        "Cannot connect to activation server. Running in offline mode.",
-      );
+    if (!isEnabled && process.env.NODE_ENV === "development") {
+      logger.info("Sync/Activation disabled in development - skipping activation check");
     } else {
-      logger.info("Application activated successfully");
-    }
-
-    // Start periodic activation check
-    activationService.startPeriodicCheck((status) => {
-      // If status changed to inactive and not offline, can send event to renderer
-      if (!status.isActive && !status.offline && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("activation:statusChanged", status);
+      const activationStatus = await activationService.checkActivationStatus();
+      
+      // If not active and not offline, don't create window
+      // The activation screen will handle this in the router guard
+      if (!activationStatus.isActive && !activationStatus.offline) {
+        logger.warn(
+          `Application not activated for machine: ${activationStatus.machineId}`,
+        );
+        // Still create window - router guard will redirect to activation screen
+      } else if (activationStatus.offline) {
+        logger.warn(
+          "Cannot connect to activation server. Running in offline mode.",
+        );
+      } else {
+        logger.info("Application activated successfully");
       }
-    });
+
+      // Start periodic activation check only if enabled
+      if (isEnabled) {
+        activationService.startPeriodicCheck((status) => {
+          // If status changed to inactive and not offline, can send event to renderer
+          if (!status.isActive && !status.offline && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("activation:statusChanged", status);
+          }
+        });
+      }
+    }
   } catch (error) {
     logger.error("Error during activation check:", error);
     // Continue anyway - graceful degradation
@@ -378,6 +425,7 @@ app.whenReady().then(async () => {
   setupTransactionHandlers();
   setupPaymentHandlers();
   setupStockMovementHandlers();
+  setupStockRepairHandlers();
   setupSettingsHandlers();
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();
@@ -387,7 +435,6 @@ app.whenReady().then(async () => {
   setupCashierHandlers();
   setupDiscountGroupHandlers();
   setupReceiptHandlers();
-  setupRoleHandlers();
   setupUserHandlers();
   setupSyncHandlers();
   
@@ -421,7 +468,10 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  // On macOS, keep app running even when all windows are closed
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
 
 app.on("before-quit", async () => {
@@ -454,14 +504,30 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.on("will-quit", () => {
+app.on("will-quit", async (event) => {
   try {
+    // Unregister global shortcuts
     globalShortcut.unregisterAll();
   } catch (_) {}
+  
   // Stop periodic activation check
   try {
     activationService.stopPeriodicCheck();
   } catch (error) {
     logger.error("Error stopping periodic activation check:", error);
+  }
+  
+  // Close database connection
+  try {
+    if (database) {
+      await database.close();
+    }
+  } catch (error) {
+    // Ignore errors during cleanup
+  }
+  
+  // Force exit in development to ensure all processes stop
+  if (process.env.NODE_ENV === "development") {
+    process.exit(0);
   }
 });

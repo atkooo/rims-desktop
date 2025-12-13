@@ -6,11 +6,36 @@ let autoSyncInterval = null;
 let isRunning = false;
 
 /**
+ * Check if sync/activation is enabled in development
+ */
+function isSyncAndActivationEnabled() {
+  // In production, always enable
+  if (process.env.NODE_ENV === "production") {
+    return true;
+  }
+  
+  // In development, check env variable
+  const enabled = process.env.ENABLE_SYNC_AND_ACTIVATION;
+  if (enabled === undefined || enabled === null) {
+    return false; // Default: disabled in development
+  }
+  
+  // Parse string to boolean
+  return enabled === "true" || enabled === "1" || enabled === true;
+}
+
+/**
  * Start auto sync service
  */
 async function startAutoSync() {
   if (isRunning) {
     logger.warn('Auto sync is already running');
+    return;
+  }
+
+  // Check if sync is enabled in development
+  if (!isSyncAndActivationEnabled()) {
+    logger.info('Sync/Activation disabled in development - auto sync skipped');
     return;
   }
 

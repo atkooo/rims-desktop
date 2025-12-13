@@ -98,7 +98,7 @@
 </template>
 
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useItemStore } from "@/store/items";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
@@ -132,14 +132,28 @@ export default {
     const selectedItems = ref(props.modelValue);
     const transactionType = computed(() => props.transactionType);
 
+    // Watch for changes in modelValue to sync with parent
+    watch(
+      () => props.modelValue,
+      (newValue) => {
+        // Only update if the arrays are actually different (by reference or content)
+        const currentStr = JSON.stringify(selectedItems.value);
+        const newStr = JSON.stringify(newValue || []);
+        if (currentStr !== newStr) {
+          selectedItems.value = newValue ? [...newValue] : [];
+        }
+      },
+      { deep: true, immediate: true }
+    );
+
     // Calculate price after item discount
     const calculateItemPrice = (item) => {
       // Use rental_price_per_day for rental transactions, sale_price for sale transactions
       let basePrice;
       if (transactionType.value === 'RENTAL') {
-        basePrice = item.rental_price_per_day ?? item.price ?? 0;
+        basePrice = item.rental_price_per_day ?? 0;
       } else {
-        basePrice = item.sale_price ?? item.price ?? 0;
+        basePrice = item.sale_price ?? 0;
       }
 
       // Apply item discount if item has discount_group (only for sale transactions)

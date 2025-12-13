@@ -88,8 +88,8 @@
                 <div v-if="item.size_name" class="footer-info">
                   Ukuran: {{ item.size_name }}
                 </div>
-                <div v-if="item.price" class="footer-info">
-                  Harga: {{ formatCurrency(item.price) }}
+                <div v-if="item.sale_price" class="footer-info">
+                  Harga: {{ formatCurrency(item.sale_price) }}
                 </div>
               </div>
             </div>

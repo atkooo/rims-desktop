@@ -232,9 +232,41 @@ function makeRequest(url, method = 'GET', data = null, timeout = 10000) {
 }
 
 /**
+ * Check if sync/activation is enabled in development
+ */
+function isSyncAndActivationEnabled() {
+  // In production, always enable
+  if (process.env.NODE_ENV === "production") {
+    return true;
+  }
+  
+  // In development, check env variable
+  // Default to false (skip sync/activation) for easier development
+  const enabled = process.env.ENABLE_SYNC_AND_ACTIVATION;
+  if (enabled === undefined || enabled === null) {
+    return false; // Default: disabled in development
+  }
+  
+  // Parse string to boolean
+  return enabled === "true" || enabled === "1" || enabled === true;
+}
+
+/**
  * Check activation status from sync service
  */
 async function checkActivationStatus(forceRefresh = false) {
+  // If sync/activation is disabled in development, return active status
+  if (!isSyncAndActivationEnabled()) {
+    const machineId = await getOrGenerateMachineId().catch(() => "dev-machine-id");
+    logger.info("Sync/Activation disabled in development - assuming active");
+    return {
+      isActive: true,
+      machineId: machineId.trim(),
+      offline: false,
+      error: null,
+    };
+  }
+
   const now = Date.now();
 
   // Check cache first

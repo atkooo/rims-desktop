@@ -136,7 +136,7 @@
     </form>
 
     <!-- Picker Dialogs -->
-    <ItemPickerDialog v-model="showItemPicker" :restrict-stock="false" @select="handleItemSelect" />
+    <ItemPickerDialog v-model="showItemPicker" :restrict-stock="false" :check-status="form.movementType === 'OUT'" @select="handleItemSelect" />
     <BundlePickerDialog v-model="showBundlePicker" :bundle-type="form.bundleType || 'both'" :restrict-stock="false"
       @select="handleBundleSelect" />
     <AccessoryPickerDialog v-model="showAccessoryPicker" :restrict-stock="false" @select="handleAccessorySelect" />

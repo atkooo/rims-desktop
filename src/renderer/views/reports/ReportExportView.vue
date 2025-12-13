@@ -1,109 +1,107 @@
 <template>
-  <div class="data-page report-export-page">
+  <div class="data-page master-page">
     <div class="page-header">
-      <div class="header-content">
-        <div>
-          <h1>{{ reportTitle }}</h1>
-          <p class="subtitle">{{ reportDescription }}</p>
-        </div>
+      <div>
+        <h1>{{ reportTitle }}</h1>
+        <p class="subtitle">{{ reportDescription }}</p>
       </div>
     </div>
 
-    <section class="card-section">
-      <div class="export-card">
-        <div class="export-info">
-          <h3>Export Laporan</h3>
-          <p>Pilih format export untuk membuka di aplikasi pihak ketiga (Crystal Reports, Excel, dll)</p>
-        </div>
+    <div class="detail-container">
+      <!-- Baris 1: Export Form & Informasi Laporan (2 card) -->
+      <div class="cards-row">
+        <!-- Card 1: Export Form -->
+        <section class="card-section">
+          <h3 class="column-title">Export Laporan</h3>
+          
+          <div class="filter-section">
+            <div class="filter-row">
+              <div class="filter-group filter-group-full">
+                <label>Jenis Laporan:</label>
+                <select v-model="selectedReport" class="filter-select">
+                  <option value="">-- Pilih Jenis Laporan --</option>
+                  <option
+                    v-for="report in availableReports"
+                    :key="report.value"
+                    :value="report.value"
+                  >
+                    {{ report.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
 
-        <div class="filter-section">
-          <h4>Pilih Report</h4>
-          <div class="filter-row">
-            <div class="filter-group filter-group-full">
-              <label>Jenis Laporan:</label>
-              <select v-model="selectedReport" class="filter-select">
-                <option value="">-- Pilih Jenis Laporan --</option>
-                <option
-                  v-for="report in availableReports"
-                  :key="report.value"
-                  :value="report.value"
-                >
-                  {{ report.label }}
-                </option>
-              </select>
+            <div v-if="selectedReport && hasDateFilter" class="filter-row" style="margin-top: 1rem;">
+              <div class="filter-group">
+                <label>Periode:</label>
+                <select v-model="filters.period" class="filter-select">
+                  <option value="daily">Harian</option>
+                  <option value="monthly">Bulanan</option>
+                  <option value="custom">Custom (Range Tanggal)</option>
+                </select>
+              </div>
+              <div v-if="filters.period === 'custom'" class="filter-group">
+                <label>Dari Tanggal:</label>
+                <input
+                  v-model="filters.dateFrom"
+                  type="date"
+                  class="filter-input"
+                />
+              </div>
+              <div v-if="filters.period === 'custom'" class="filter-group">
+                <label>Sampai Tanggal:</label>
+                <input
+                  v-model="filters.dateTo"
+                  type="date"
+                  class="filter-input"
+                />
+              </div>
             </div>
           </div>
 
-          <div v-if="selectedReport && hasDateFilter" class="filter-row" style="margin-top: 1rem;">
-            <h4 style="width: 100%; margin-bottom: 0.5rem;">Filter Periode</h4>
-            <div class="filter-group">
-              <label>Periode:</label>
-              <select v-model="filters.period" class="filter-select">
-                <option value="daily">Harian</option>
-                <option value="monthly">Bulanan</option>
-                <option value="custom">Custom (Range Tanggal)</option>
-              </select>
+          <div class="export-actions">
+            <AppButton
+              variant="secondary"
+              :loading="previewing"
+              @click="previewReport"
+            >
+              <Icon name="eye" :size="16" />
+              Preview
+            </AppButton>
+            <AppButton
+              variant="primary"
+              :loading="exporting"
+              @click="exportReport('excel')"
+            >
+              Export Excel
+            </AppButton>
+          </div>
+
+          <div v-if="success" class="success-banner">
+            {{ success }}
+          </div>
+        </section>
+
+        <!-- Card 2: Informasi Laporan -->
+        <section class="card-section">
+          <h3 class="column-title">Informasi Laporan</h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <label>Nama Laporan</label>
+              <div class="detail-value">{{ reportTitle }}</div>
             </div>
-            <div v-if="filters.period === 'custom'" class="filter-group">
-              <label>Dari Tanggal:</label>
-              <input
-                v-model="filters.dateFrom"
-                type="date"
-                class="filter-input"
-              />
+            <div class="detail-row">
+              <label>Format Tersedia</label>
+              <div class="detail-value">Excel (.xlsx)</div>
             </div>
-            <div v-if="filters.period === 'custom'" class="filter-group">
-              <label>Sampai Tanggal:</label>
-              <input
-                v-model="filters.dateTo"
-                type="date"
-                class="filter-input"
-              />
+            <div class="detail-row full-row">
+              <label>Keterangan</label>
+              <div class="detail-value">File dapat dibuka dengan aplikasi pihak ketiga untuk preview dan cetak</div>
             </div>
           </div>
-        </div>
-
-        <div class="export-actions">
-          <AppButton
-            variant="secondary"
-            :loading="previewing"
-            @click="previewReport"
-          >
-            <Icon name="eye" :size="16" />
-            Preview
-          </AppButton>
-          <AppButton
-            variant="primary"
-            :loading="exporting"
-            @click="exportReport('excel')"
-          >
-            Export Excel
-          </AppButton>
-        </div>
-
-        <div v-if="success" class="success-banner">
-          {{ success }}
-        </div>
+        </section>
       </div>
-
-      <div class="info-card">
-        <h4>Informasi Laporan</h4>
-        <div class="info-grid">
-          <div class="info-item">
-            <span>Nama Laporan:</span>
-            <strong>{{ reportTitle }}</strong>
-          </div>
-          <div class="info-item">
-            <span>Format Tersedia:</span>
-            <strong>Excel (.xlsx)</strong>
-          </div>
-          <div class="info-item">
-            <span>Keterangan:</span>
-            <strong>File dapat dibuka dengan aplikasi pihak ketiga untuk preview dan cetak</strong>
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
   </div>
 </template>
 
@@ -294,46 +292,41 @@ export default {
 </script>
 
 <style scoped>
-.report-export-page {
-  padding: 2rem;
+.detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.export-card {
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.card-section {
   background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.export-info {
-  margin-bottom: 2rem;
-}
-
-.export-info h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: #111827;
-}
-
-.export-info p {
-  color: #6b7280;
+.column-title {
   font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .filter-section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.filter-section h4 {
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  color: #111827;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .filter-row {
@@ -343,12 +336,12 @@ export default {
   align-items: flex-end;
 }
 
-/* Using global utility classes for form-group, form-label, form-input, form-select */
 .filter-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   min-width: 150px;
+  flex: 1;
 }
 
 .filter-group-full {
@@ -358,14 +351,21 @@ export default {
 
 .filter-group label {
   font-size: 0.875rem;
-  color: #4b5563;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .filter-select,
 .filter-input {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
   cursor: pointer;
+  transition: border-color 0.2s;
 }
 
 .filter-select:hover,
@@ -373,50 +373,59 @@ export default {
   border-color: #9ca3af;
 }
 
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
 .export-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: 0.5rem;
 }
 
-.info-card {
-  background: #f9fafb;
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid #e5e7eb;
-}
-
-.info-card h4 {
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
-  color: #111827;
-}
-
-.info-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.info-item {
+.detail-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e5e7eb;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.info-item:last-child {
+.detail-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.detail-row:last-child {
   border-bottom: none;
 }
 
-.info-item span {
-  color: #6b7280;
-  font-size: 0.9rem;
+.detail-row.full-row {
+  grid-template-columns: 1fr;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.info-item strong {
+.detail-row label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+
+.detail-value {
+  font-size: 0.9rem;
   color: #111827;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .success-banner {
@@ -424,19 +433,14 @@ export default {
   color: #065f46;
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
 }
 
-.export-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.export-actions button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+@media (max-width: 768px) {
+  .cards-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 

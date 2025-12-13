@@ -32,6 +32,7 @@ CREATE TABLE bundle_details (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (bundle_id) REFERENCES bundles(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL,
-    FOREIGN KEY (accessory_id) REFERENCES accessories(id) ON DELETE SET NULL
+    FOREIGN KEY (accessory_id) REFERENCES accessories(id) ON DELETE SET NULL,
+    CHECK ((item_id IS NOT NULL) OR (accessory_id IS NOT NULL))
 );
 

@@ -371,11 +371,11 @@ export default {
     // Calculate item price after discount (for sales)
     const calculateItemPrice = (item) => {
       if (isRental.value) {
-        return item.rental_price_per_day ?? item.price ?? 0;
+        return item.rental_price_per_day ?? 0;
       }
 
       // For sales, use sale_price and apply item discount
-      const basePrice = item.sale_price ?? item.price ?? 0;
+      const basePrice = item.sale_price ?? 0;
 
       // Apply item discount if item has discount_group
       if (item.discount_percentage > 0) {

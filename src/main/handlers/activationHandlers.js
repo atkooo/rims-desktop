@@ -20,6 +20,22 @@ function setupActivationHandlers() {
   // Check activation status
   ipcMain.handle("activation:checkStatus", async (event, forceRefresh = false) => {
     try {
+      // Check if sync/activation is enabled in development
+      const enableSyncAndActivation = process.env.ENABLE_SYNC_AND_ACTIVATION;
+      const isEnabled = process.env.NODE_ENV === "production" || 
+                       enableSyncAndActivation === "true" || 
+                       enableSyncAndActivation === "1";
+      
+      if (!isEnabled && process.env.NODE_ENV === "development") {
+        // Return active status without checking
+        return {
+          success: true,
+          isActive: true,
+          offline: false,
+          error: null,
+        };
+      }
+      
       const status = await activationService.checkActivationStatus(forceRefresh);
       return {
         success: true,

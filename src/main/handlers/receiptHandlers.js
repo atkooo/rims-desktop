@@ -313,14 +313,26 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Get payment history for this transaction
     // Normalize transaction type: ensure it matches database format ('sale' or 'rental')
     const normalizedTransactionType = transactionType === "sale" ? "sale" : "rental";
-    const payments = await database.query(
-      `SELECT p.*, u.full_name AS user_name
-       FROM payments p
-       LEFT JOIN users u ON p.user_id = u.id
-       WHERE p.transaction_id = ? AND p.transaction_type = ?
-       ORDER BY p.payment_date DESC`,
-      [transactionId, normalizedTransactionType],
-    );
+    let payments = [];
+    if (normalizedTransactionType === "rental") {
+      payments = await database.query(
+        `SELECT p.*, u.full_name AS user_name
+         FROM rental_payments p
+         LEFT JOIN users u ON p.user_id = u.id
+         WHERE p.transaction_id = ?
+         ORDER BY p.payment_date DESC`,
+        [transactionId],
+      );
+    } else {
+      payments = await database.query(
+        `SELECT p.*, u.full_name AS user_name
+         FROM sales_payments p
+         LEFT JOIN users u ON p.user_id = u.id
+         WHERE p.transaction_id = ?
+         ORDER BY p.payment_date DESC`,
+        [transactionId],
+      );
+    }
 
     // Get thermal printer settings
     const thermalPaperSize = settings.thermalPaperSize || "80";
@@ -1201,7 +1213,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
           doc.text(line, margin, yPos);
           if (idx === 0) {
             doc.text(item.quantity.toString(), qtyPos, yPos);
-            doc.text(formatCurrency(item.price), hargaPos, yPos, { align: "right" });
+            // Use sale_price if available, otherwise rental_price_per_day, or 0
+            const displayPrice = item.sale_price || item.rental_price_per_day || 0;
+            doc.text(formatCurrency(displayPrice), hargaPos, yPos, { align: "right" });
           }
           yPos += 3.5;
         });

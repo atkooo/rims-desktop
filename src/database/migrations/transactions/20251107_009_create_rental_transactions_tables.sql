@@ -22,7 +22,8 @@ CREATE TABLE rental_transactions (
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    is_sync INTEGER DEFAULT 0 CHECK (is_sync IN (0, 1)),
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
     FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL,
     FOREIGN KEY (cashier_session_id) REFERENCES cashier_sessions(id) ON DELETE SET NULL,
@@ -46,6 +47,7 @@ CREATE TABLE rental_transaction_details (
     return_condition VARCHAR(50) CHECK (return_condition IN ('good','damaged','lost')),
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_sync INTEGER DEFAULT 0 CHECK (is_sync IN (0, 1)),
     FOREIGN KEY (rental_transaction_id) REFERENCES rental_transactions(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT,
     CHECK (quantity > 0),
@@ -65,4 +67,6 @@ CREATE INDEX idx_rental_transactions_return_date ON rental_transactions(planned_
 CREATE INDEX idx_rental_transaction_details_transaction ON rental_transaction_details(rental_transaction_id);
 CREATE INDEX idx_rental_transaction_details_item ON rental_transaction_details(item_id);
 CREATE INDEX idx_rental_transaction_details_returned ON rental_transaction_details(is_returned);
+CREATE INDEX idx_rental_transactions_is_sync ON rental_transactions(is_sync);
+CREATE INDEX idx_rental_transaction_details_is_sync ON rental_transaction_details(is_sync);
 

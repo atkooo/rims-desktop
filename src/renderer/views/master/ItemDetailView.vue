@@ -57,8 +57,8 @@
             <div class="detail-row">
               <label>Status</label>
               <div class="detail-value">
-                <span class="status-badge" :class="getStatusClass(item.status)">
-                  {{ item.status }}
+                <span class="status-badge" :class="getStatusBadge(item).class">
+                  {{ getStatusBadge(item).label }}
                 </span>
               </div>
             </div>
@@ -76,10 +76,6 @@
             <div class="detail-row">
               <label>Harga Beli</label>
               <div class="detail-value">{{ formatCurrency(item.purchase_price) }}</div>
-            </div>
-            <div class="detail-row">
-              <label>Harga Dasar</label>
-              <div class="detail-value">{{ formatCurrency(item.price) }}</div>
             </div>
             <div v-if="showSalePrice" class="detail-row">
               <label>Harga Jual</label>
@@ -187,6 +183,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import ItemForm from "@/components/modules/items/ItemForm.vue";
 import { fetchItemById } from "@/services/masterData";
 import { useItemType } from "@/composables/useItemType";
+import { useItemStatus } from "@/composables/useItemStatus";
 
 export default {
   name: "ItemDetailView",
@@ -194,6 +191,7 @@ export default {
   setup() {
     const route = useRoute();
     const { canBeSold, canBeRented } = useItemType();
+    const { getStatusBadge } = useItemStatus();
     const item = ref(null);
     const loading = ref(false);
     const error = ref("");
@@ -238,7 +236,8 @@ export default {
 
     const getStatusClass = (status) => {
       const statusMap = {
-        AVAILABLE: "active",
+        AVAILABLE: "available",
+        OUT_OF_STOCK: "out-of-stock",
         RENTED: "rented",
         MAINTENANCE: "maintenance",
       };
@@ -301,6 +300,7 @@ export default {
       formatDateTime,
       getTypeClass,
       getStatusClass,
+      getStatusBadge,
       showSalePrice,
       showRentalPrice,
       showCanBeRented,
@@ -487,6 +487,16 @@ export default {
 .status-badge.both {
   background-color: #e9d5ff;
   color: #6b21a8;
+}
+
+.status-badge.available {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.out-of-stock {
+  background-color: #e5e7eb;
+  color: #374151;
 }
 
 .status-badge.rented {

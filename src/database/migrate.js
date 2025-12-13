@@ -164,10 +164,16 @@ async function runMigrations(providedDb = null) {
     // database.js manages its own connection lifecycle
     if (shouldClose) {
       try {
+        // Close connection and wait for it to complete
+        await new Promise((resolve, reject) => {
         db.close((err) => {
           if (err) {
             console.error("Error closing database connection:", err);
+              reject(err);
+            } else {
+              resolve();
           }
+          });
         });
       } catch (closeError) {
         console.error("Error closing database:", closeError);

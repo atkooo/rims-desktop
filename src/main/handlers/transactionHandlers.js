@@ -22,7 +22,7 @@ function setupTransactionHandlers() {
   // Get all transactions
   ipcMain.handle("transactions:getAll", async () => {
     try {
-      // Get rental transactions with payment calculation from payments table
+      // Get rental transactions with payment calculation from rental_payments table
       const rentalTransactions = await database.query(`
                 SELECT 
                     rt.*,
@@ -38,11 +38,11 @@ function setupTransactionHandlers() {
                 FROM rental_transactions rt
                 LEFT JOIN customers c ON rt.customer_id = c.id
                 LEFT JOIN rental_transaction_details rtd ON rt.id = rtd.rental_transaction_id
-                LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+                LEFT JOIN rental_payments p ON p.transaction_id = rt.id
                 GROUP BY rt.id
             `);
 
-      // Get sales transactions with payment calculation from payments table
+      // Get sales transactions with payment calculation from sales_payments table
       const salesTransactions = await database.query(`
                 SELECT 
                     st.*,
@@ -58,7 +58,7 @@ function setupTransactionHandlers() {
                 FROM sales_transactions st
                 LEFT JOIN customers c ON st.customer_id = c.id
                 LEFT JOIN sales_transaction_details std ON st.id = std.sales_transaction_id
-                LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+                LEFT JOIN sales_payments p ON p.transaction_id = st.id
                 GROUP BY st.id
             `);
 
@@ -151,6 +151,11 @@ function setupTransactionHandlers() {
         const transactionCode = generateTransactionCode(transactionData.type);
 
         if (transactionData.type === "RENTAL") {
+          // Validasi customer wajib untuk rental
+          if (!transactionData.customerId || transactionData.customerId === null || transactionData.customerId === "") {
+            throw new Error("Customer wajib dipilih untuk transaksi rental");
+          }
+          
           // Insert rental transaction
           result = await database.execute(
             `INSERT INTO rental_transactions (
@@ -361,6 +366,23 @@ function setupTransactionHandlers() {
       });
     } catch (error) {
       logger.error("Error creating transaction:", error);
+      
+      // Handle SQLite constraint errors with user-friendly messages
+      if (error.code === "SQLITE_CONSTRAINT") {
+        if (error.message && error.message.includes("customer_id")) {
+          throw new Error("Customer wajib dipilih untuk transaksi rental");
+        }
+        if (error.message && error.message.includes("NOT NULL")) {
+          const field = error.message.match(/NOT NULL constraint failed: \w+\.(\w+)/);
+          if (field && field[1]) {
+            const fieldName = field[1].replace(/_/g, " ");
+            throw new Error(`Data tidak lengkap: ${fieldName} wajib diisi`);
+          }
+          throw new Error("Data tidak lengkap: Ada field wajib yang belum diisi");
+        }
+        throw new Error("Data tidak valid: Terjadi kesalahan saat menyimpan transaksi");
+      }
+      
       throw error;
     }
   });
@@ -928,8 +950,8 @@ function setupTransactionHandlers() {
 
           // Check if deposit has already been refunded
           const existingRefund = await database.queryOne(
-            `SELECT COUNT(*) as count FROM payments 
-             WHERE transaction_type = 'rental' AND transaction_id = ? 
+            `SELECT COUNT(*) as count FROM rental_payments 
+             WHERE transaction_id = ? 
              AND (notes LIKE '%Deposit Refund%' OR notes LIKE '%Pengembalian Deposit%' OR amount < 0)`,
             [rentalTransactionId],
           );
@@ -961,12 +983,11 @@ function setupTransactionHandlers() {
               await validateCashierSession(returnUserId);
               
               await database.execute(
-                `INSERT INTO payments (
-                  transaction_type, transaction_id, payment_date, amount,
+                `INSERT INTO rental_payments (
+                  transaction_id, payment_date, amount,
                   payment_method, reference_number, user_id, notes, is_sync
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
                 [
-                  "rental",
                   rentalTransactionId,
                   new Date().toISOString(),
                   -depositAmount, // Negative amount for refund

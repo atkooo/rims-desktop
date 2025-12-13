@@ -2,9 +2,9 @@
   <div class="data-page master-page">
     <header class="page-header">
       <div class="title-wrap">
-        <h1>User & Role Management</h1>
+        <h1>User Management</h1>
         <p class="subtitle">
-          Kelola user internal, role, dan hak akses dalam satu tempat.
+          Kelola user internal aplikasi.
         </p>
       </div>
     </header>
@@ -37,7 +37,6 @@
           </div>
           <div style="display: flex; gap: 8px">
             <AppButton
-              v-if="hasPermissionSync('users.create')"
               variant="primary"
               @click="openCreateUserDialog"
             >
@@ -90,7 +89,6 @@
             </template>
             <template #actions="{ row }">
               <AppButton
-                v-if="hasPermissionSync('users.update')"
                 variant="secondary"
                 @click="editUser(row)"
                 title="Edit"
@@ -99,7 +97,6 @@
                 Edit
               </AppButton>
               <AppButton
-                v-if="hasPermissionSync('users.delete')"
                 variant="danger"
                 @click="confirmDeleteUser(row)"
                 title="Hapus"
@@ -112,269 +109,6 @@
         </div>
       </section>
     </div>
-
-    <!-- Roles Tab Content -->
-    <div v-if="currentTab === 'roles'" class="tab-content">
-      <section class="card-section">
-        <div class="section-header">
-          <div>
-            <h2>Role & Hak Akses</h2>
-            <p class="section-subtitle">
-              Kelola daftar role dan permission. Setiap role dapat memiliki
-              permission yang berbeda.
-            </p>
-          </div>
-          <AppButton
-            v-if="hasPermissionSync('roles.create')"
-            variant="primary"
-            @click="openCreateDialog"
-          >
-            <Icon name="plus" :size="16" />
-            <span>Tambah Role</span>
-          </AppButton>
-        </div>
-
-        <div class="summary-grid">
-          <div class="summary-card">
-            <span>Total Role</span>
-            <strong>{{ roles.length }}</strong>
-          </div>
-          <div class="summary-card">
-            <span>Total Permission</span>
-            <strong>{{ allPermissions.length }}</strong>
-          </div>
-        </div>
-
-        <div v-if="rolesError" class="error-banner">
-          {{ rolesError }}
-        </div>
-
-        <AppTable
-          :columns="roleColumns"
-          :rows="roles"
-          :loading="rolesLoading"
-          :searchable-keys="['name', 'description']"
-          :show-index="true"
-          :dense="true"
-          :default-page-size="20"
-        >
-          <template #cell-name="{ row }">
-            <div class="role-name">
-              <strong>{{ row.name }}</strong>
-            </div>
-          </template>
-          <template #cell-permission_count="{ row }">
-            <span class="badge badge-info">
-              {{ row.permission_count || 0 }} Permission
-            </span>
-          </template>
-          <template #cell-user_count="{ row }">
-            <span class="badge badge-secondary">
-              {{ row.user_count || 0 }} User
-            </span>
-          </template>
-          <template #actions="{ row }">
-            <AppButton
-              v-if="hasPermissionSync('roles.permissions.manage')"
-              variant="secondary"
-              @click="openPermissionsDialog(row)"
-              title="Kelola Permission"
-            >
-              <Icon name="shield" :size="14" />
-              Permission
-            </AppButton>
-            <AppButton
-              v-if="hasPermissionSync('roles.update')"
-              variant="secondary"
-              @click="editRole(row)"
-              title="Edit"
-            >
-              <Icon name="edit" :size="14" />
-              Edit
-            </AppButton>
-            <AppButton
-              v-if="hasPermissionSync('roles.delete') && row.user_count === 0"
-              variant="danger"
-              @click="confirmDelete(row)"
-              title="Hapus"
-            >
-              <Icon name="trash" :size="14" />
-              Hapus
-            </AppButton>
-          </template>
-        </AppTable>
-      </section>
-    </div>
-
-    <!-- Dialog Form Role -->
-    <Dialog
-      v-model="showDialog"
-      :title="isEdit ? 'Edit Role' : 'Tambah Role'"
-      :max-width="600"
-      @update:modelValue="
-        (v) => {
-          if (!v) closeDialog();
-        }
-      "
-    >
-      <form @submit.prevent="saveRole">
-        <div class="form-group">
-          <label>Nama Role <span class="required">*</span></label>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            maxlength="20"
-            placeholder="Misal: admin, manager, staff"
-            :disabled="isEdit"
-          />
-          <small class="form-hint">
-            Nama role harus unik dan tidak bisa diubah setelah dibuat
-          </small>
-        </div>
-
-        <div class="form-group">
-          <label>Deskripsi</label>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            maxlength="200"
-            placeholder="Deskripsi role dan akses yang dimiliki"
-          ></textarea>
-        </div>
-
-        <div v-if="formError" class="error-message">
-          {{ formError }}
-        </div>
-
-        <div class="dialog-footer">
-          <button type="button" class="btn" @click="closeDialog">Batal</button>
-          <button type="submit" class="btn primary" :disabled="rolesLoading">
-            {{ isEdit ? "Simpan" : "Tambah" }}
-          </button>
-        </div>
-      </form>
-    </Dialog>
-
-    <!-- Dialog Manage Permissions -->
-    <Dialog
-      v-model="showPermissionsDialog"
-      :title="`Kelola Permission: ${selectedRole?.name || ''}`"
-      :max-width="800"
-      @update:modelValue="
-        (v) => {
-          if (!v) closePermissionsDialog();
-        }
-      "
-    >
-      <div v-if="loadingPermissions" class="loading-state">
-        Memuat permissions...
-      </div>
-      <div v-else>
-        <div class="permissions-header">
-          <p class="permissions-description">
-            Pilih permission yang akan diberikan kepada role ini. Permission
-            dikelompokkan berdasarkan modul.
-          </p>
-          <div class="permissions-actions">
-            <button
-              type="button"
-              class="btn-link"
-              @click="selectAllPermissions"
-            >
-              Pilih Semua
-            </button>
-            <button
-              type="button"
-              class="btn-link"
-              @click="deselectAllPermissions"
-            >
-              Hapus Semua
-            </button>
-          </div>
-        </div>
-
-        <div class="permissions-container">
-          <div
-            v-for="module in permissionModules"
-            :key="module"
-            class="permission-module"
-          >
-            <div class="module-header">
-              <h4>{{ getModuleLabel(module) }}</h4>
-              <button
-                type="button"
-                class="btn-link-small"
-                @click="toggleModule(module)"
-              >
-                {{ isModuleSelected(module) ? "Hapus" : "Pilih" }} Semua
-              </button>
-            </div>
-            <div class="permission-list">
-              <label
-                v-for="permission in getPermissionsByModule(module)"
-                :key="permission.id"
-                class="permission-item"
-              >
-                <input
-                  type="checkbox"
-                  :value="permission.id"
-                  v-model="selectedPermissionIds"
-                />
-                <div class="permission-info">
-                  <span class="permission-name">{{ permission.name }}</span>
-                  <span class="permission-slug">{{ permission.slug }}</span>
-                  <span
-                    v-if="permission.description"
-                    class="permission-description"
-                  >
-                    {{ permission.description }}
-                  </span>
-                </div>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="permissionsError" class="error-message">
-          {{ permissionsError }}
-        </div>
-
-        <div class="dialog-footer">
-          <button type="button" class="btn" @click="closePermissionsDialog">
-            Batal
-          </button>
-          <button
-            type="button"
-            class="btn primary"
-            @click="savePermissions"
-            :disabled="rolesLoading"
-          >
-            Simpan Permission
-          </button>
-        </div>
-      </div>
-    </Dialog>
-
-    <!-- Dialog Konfirmasi Hapus -->
-    <Dialog
-      v-model="showDeleteDialog"
-      title="Hapus Role"
-      @update:modelValue="
-        (v) => {
-          if (!v) closeDeleteDialog();
-        }
-      "
-    >
-      <p>Yakin ingin menghapus role ini?</p>
-      <p class="warning-text">
-        Role yang sedang digunakan oleh user tidak dapat dihapus.
-      </p>
-      <div class="dialog-footer">
-        <button class="btn" @click="closeDeleteDialog">Batal</button>
-        <button class="btn danger" @click="handleDeleteRole">Hapus</button>
-      </div>
-    </Dialog>
 
     <!-- Dialog Form User -->
     <Dialog
@@ -437,14 +171,14 @@
 
         <div class="form-group">
           <label>Role <span class="required">*</span></label>
-          <select v-model="userForm.role_id" required>
+          <select v-model="userForm.role" required>
             <option value="">Pilih Role</option>
             <option
               v-for="role in selectableRoles"
-              :key="role.id"
-              :value="role.id"
+              :key="role"
+              :value="role"
             >
-              {{ role.name }}
+              {{ role === 'admin' ? 'Admin' : 'Kasir' }}
             </option>
           </select>
           <small class="form-hint" v-if="!isEditUser">
@@ -504,7 +238,6 @@ import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
-import { usePermissions } from "@/composables/usePermissions";
 import {
   fetchUsers,
   fetchUserById,
@@ -512,33 +245,12 @@ import {
   updateUser,
   deleteUser,
 } from "@/services/masterData";
-import {
-  fetchRoles,
-  fetchRoleById,
-  createRole,
-  updateRole,
-  deleteRole,
-  fetchPermissions,
-  fetchRolePermissions,
-  updateRolePermissions,
-} from "@/services/masterData";
 
-const { hasPermissionSync } = usePermissions();
-
-// Tabs - filter based on permissions
+// Tabs - only users tab now
 const tabs = computed(() => {
-  const availableTabs = [];
-  if (hasPermissionSync("users.view")) {
-    availableTabs.push({ id: "users", label: "User Internal", icon: "users" });
-  }
-  if (hasPermissionSync("roles.view")) {
-    availableTabs.push({
-      id: "roles",
-      label: "Role & Hak Akses",
-      icon: "shield",
-    });
-  }
-  return availableTabs;
+  return [
+    { id: "users", label: "User Internal", icon: "users" },
+  ];
 });
 
 const currentTab = ref("users");
@@ -569,7 +281,6 @@ watch(
 const users = ref([]);
 const usersLoading = ref(false);
 const usersError = ref("");
-const availableRoles = ref([]);
 const showUserDialog = ref(false);
 const showDeleteUserDialog = ref(false);
 const isEditUser = ref(false);
@@ -581,7 +292,7 @@ const userForm = ref({
   password: "",
   full_name: "",
   email: "",
-  role_id: "",
+  role: "",
   is_active: true,
 });
 
@@ -630,29 +341,23 @@ async function loadUsers() {
   }
 }
 
-async function loadAvailableRoles() {
-  try {
-    availableRoles.value = await fetchRoles();
-  } catch (err) {
-    console.error("Error loading roles:", err);
-  }
-}
+// Available roles - hardcoded since we only have 2 roles
+const availableRoles = ['admin', 'kasir'];
 
 // Filter roles - exclude admin when creating new user or editing non-admin user
 const selectableRoles = computed(() => {
   if (isEditUser.value && selectedUser.value) {
     // When editing, check if user already has admin role
-    const userRole = availableRoles.value.find(r => r.id === selectedUser.value.role_id);
-    if (userRole && userRole.name === "admin") {
+    if (selectedUser.value.role_name === "admin" || selectedUser.value.role === "admin") {
       // If user is already admin, show all roles (can keep admin or change)
-      return availableRoles.value;
+      return availableRoles;
     } else {
       // If user is not admin, exclude admin role (cannot change to admin)
-      return availableRoles.value.filter((role) => role.name !== "admin");
+      return availableRoles.filter((role) => role !== "admin");
     }
   } else {
     // When creating new user, exclude admin role
-    return availableRoles.value.filter((role) => role.name !== "admin");
+    return availableRoles.filter((role) => role !== "admin");
   }
 });
 
@@ -663,7 +368,7 @@ function openCreateUserDialog() {
     password: "",
     full_name: "",
     email: "",
-    role_id: "",
+    role: "",
     is_active: true,
   };
   userFormError.value = "";
@@ -681,7 +386,7 @@ async function editUser(user) {
       password: "",
       full_name: userData.full_name || "",
       email: userData.email || "",
-      role_id: userData.role_id || "",
+      role: userData.role_name || userData.role || "",
       is_active: userData.is_active !== undefined ? Boolean(userData.is_active) : true,
     };
     userFormError.value = "";
@@ -702,7 +407,7 @@ function closeUserDialog() {
     password: "",
     full_name: "",
     email: "",
-    role_id: "",
+    role: "",
     is_active: true,
   };
   userFormError.value = "";
@@ -729,7 +434,7 @@ async function saveUser() {
     const payload = {
       full_name: String(userForm.value.full_name || "").trim(),
       email: String(userForm.value.email || "").trim() || null,
-      role_id: Number(userForm.value.role_id),
+      role: String(userForm.value.role || "").trim(),
       is_active: Boolean(userForm.value.is_active),
     };
 
@@ -769,284 +474,10 @@ async function handleDeleteUser() {
   }
 }
 
-// Roles state
-const roles = ref([]);
-const allPermissions = ref([]);
-const rolesLoading = ref(false);
-const loadingPermissions = ref(false);
-const rolesError = ref("");
-const formError = ref("");
-const permissionsError = ref("");
-
-const roleColumns = ref([
-  { key: "name", label: "Nama Role", sortable: true },
-  { key: "description", label: "Deskripsi" },
-  {
-    key: "permission_count",
-    label: "Permission",
-    sortable: true,
-    align: "center",
-  },
-  { key: "user_count", label: "User", sortable: true, align: "center" },
-]);
-
-const showDialog = ref(false);
-const showDeleteDialog = ref(false);
-const showPermissionsDialog = ref(false);
-const selectedRole = ref(null);
-const isEdit = ref(false);
-const selectedPermissionIds = ref([]);
-
-const form = ref({
-  name: "",
-  description: "",
-});
-
-// Permission modules
-const permissionModules = computed(() => {
-  const modules = new Set();
-  allPermissions.value.forEach((perm) => {
-    if (perm.module) modules.add(perm.module);
-  });
-  return Array.from(modules).sort();
-});
-
-// Load data
-async function loadRoles() {
-  try {
-    rolesLoading.value = true;
-    rolesError.value = "";
-    roles.value = await fetchRoles();
-  } catch (err) {
-    rolesError.value = err.message || "Gagal memuat data role.";
-    console.error(err);
-  } finally {
-    rolesLoading.value = false;
-  }
-}
-
-async function loadPermissions() {
-  try {
-    loadingPermissions.value = true;
-    allPermissions.value = await fetchPermissions();
-  } catch (err) {
-    console.error("Error loading permissions:", err);
-  } finally {
-    loadingPermissions.value = false;
-  }
-}
-
-// Dialog handlers
-function openCreateDialog() {
-  form.value = {
-    name: "",
-    description: "",
-  };
-  formError.value = "";
-  isEdit.value = false;
-  showDialog.value = true;
-}
-
-async function editRole(role) {
-  try {
-    rolesLoading.value = true;
-    const roleData = await fetchRoleById(role.id);
-    selectedRole.value = roleData;
-    form.value = {
-      name: roleData.name || "",
-      description: roleData.description || "",
-    };
-    formError.value = "";
-    isEdit.value = true;
-    showDialog.value = true;
-  } catch (err) {
-    rolesError.value = err.message || "Gagal memuat data role.";
-    console.error(err);
-  } finally {
-    rolesLoading.value = false;
-  }
-}
-
-function closeDialog() {
-  showDialog.value = false;
-  form.value = {
-    name: "",
-    description: "",
-  };
-  formError.value = "";
-  selectedRole.value = null;
-  isEdit.value = false;
-}
-
-async function openPermissionsDialog(role) {
-  try {
-    loadingPermissions.value = true;
-    selectedRole.value = role;
-    selectedPermissionIds.value = [];
-
-    // Load all permissions if not loaded
-    if (allPermissions.value.length === 0) {
-      await loadPermissions();
-    }
-
-    // Load role permissions
-    const rolePermissions = await fetchRolePermissions(role.id);
-    selectedPermissionIds.value = rolePermissions.map((p) => p.id);
-
-    showPermissionsDialog.value = true;
-  } catch (err) {
-    permissionsError.value = err.message || "Gagal memuat permissions.";
-    console.error(err);
-  } finally {
-    loadingPermissions.value = false;
-  }
-}
-
-function closePermissionsDialog() {
-  showPermissionsDialog.value = false;
-  selectedRole.value = null;
-  selectedPermissionIds.value = [];
-  permissionsError.value = "";
-}
-
-function confirmDelete(role) {
-  selectedRole.value = role;
-  showDeleteDialog.value = true;
-}
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  selectedRole.value = null;
-}
-
-// Permission management
-function getPermissionsByModule(module) {
-  return allPermissions.value.filter((p) => p.module === module);
-}
-
-function getModuleLabel(module) {
-  const labels = {
-    dashboard: "Dashboard",
-    master: "Data Master",
-    transactions: "Transaksi",
-    settings: "Pengaturan",
-    users: "Manajemen User",
-    roles: "Manajemen Role",
-  };
-  return labels[module] || module;
-}
-
-function isModuleSelected(module) {
-  const modulePermissions = getPermissionsByModule(module);
-  return modulePermissions.every((p) =>
-    selectedPermissionIds.value.includes(p.id),
-  );
-}
-
-function toggleModule(module) {
-  const modulePermissions = getPermissionsByModule(module);
-  const allSelected = isModuleSelected(module);
-
-  if (allSelected) {
-    // Deselect all
-    selectedPermissionIds.value = selectedPermissionIds.value.filter(
-      (id) => !modulePermissions.some((p) => p.id === id),
-    );
-  } else {
-    // Select all
-    modulePermissions.forEach((p) => {
-      if (!selectedPermissionIds.value.includes(p.id)) {
-        selectedPermissionIds.value.push(p.id);
-      }
-    });
-  }
-}
-
-function selectAllPermissions() {
-  selectedPermissionIds.value = allPermissions.value.map((p) => p.id);
-}
-
-function deselectAllPermissions() {
-  selectedPermissionIds.value = [];
-}
-
-// CRUD operations
-async function saveRole() {
-  try {
-    formError.value = "";
-    rolesLoading.value = true;
-
-    const payload = {
-      name: String(form.value.name || "")
-        .trim()
-        .toLowerCase(),
-      description: String(form.value.description || "").trim(),
-    };
-
-    if (isEdit.value) {
-      await updateRole(selectedRole.value.id, payload);
-    } else {
-      await createRole(payload);
-    }
-
-    closeDialog();
-    await loadRoles();
-  } catch (error) {
-    formError.value = error?.message || "Gagal menyimpan role.";
-    console.error(error);
-  } finally {
-    rolesLoading.value = false;
-  }
-}
-
-async function handleDeleteRole() {
-  try {
-    rolesLoading.value = true;
-    await deleteRole(selectedRole.value.id);
-    closeDeleteDialog();
-    await loadRoles();
-  } catch (error) {
-    rolesError.value = error?.message || "Gagal menghapus role.";
-    alert(error?.message || "Gagal menghapus role.");
-    console.error(error);
-  } finally {
-    rolesLoading.value = false;
-  }
-}
-
-async function savePermissions() {
-  try {
-    permissionsError.value = "";
-    rolesLoading.value = true;
-
-    // Ensure permissionIds is an array of numbers (not objects)
-    const permissionIds = selectedPermissionIds.value.map((id) => Number(id));
-
-    await updateRolePermissions(
-      selectedRole.value.id,
-      permissionIds,
-    );
-
-    closePermissionsDialog();
-    await loadRoles();
-  } catch (error) {
-    permissionsError.value = error?.message || "Gagal menyimpan permissions.";
-    console.error(error);
-  } finally {
-    rolesLoading.value = false;
-  }
-}
 
 onMounted(async () => {
   initializeTab();
-  await loadAvailableRoles();
-  if (hasPermissionSync("users.view")) {
-    await loadUsers();
-  }
-  if (hasPermissionSync("roles.view")) {
-    await loadRoles();
-    await loadPermissions();
-  }
+  await loadUsers();
 });
 </script>
 

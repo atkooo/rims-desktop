@@ -25,7 +25,7 @@ async function calculateExpectedBalance(session) {
     `SELECT 
       COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
     FROM sales_transactions st
-    LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+    LEFT JOIN sales_payments p ON p.transaction_id = st.id
     WHERE st.cashier_session_id = ?`,
     [session.id]
   );
@@ -34,7 +34,7 @@ async function calculateExpectedBalance(session) {
     `SELECT 
       COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
     FROM rental_transactions rt
-    LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+    LEFT JOIN rental_payments p ON p.transaction_id = rt.id
     WHERE rt.cashier_session_id = ?`,
     [session.id]
   );
@@ -48,7 +48,7 @@ async function calculateExpectedBalance(session) {
       `SELECT 
         COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
       FROM sales_transactions st
-      LEFT JOIN payments p ON p.transaction_type = 'sale' AND p.transaction_id = st.id
+      LEFT JOIN sales_payments p ON p.transaction_id = st.id
       WHERE st.user_id = ? 
         AND st.sale_date >= date(?) 
         AND st.sale_date <= date('now', '+1 day')`,
@@ -59,7 +59,7 @@ async function calculateExpectedBalance(session) {
       `SELECT 
         COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
       FROM rental_transactions rt
-      LEFT JOIN payments p ON p.transaction_type = 'rental' AND p.transaction_id = rt.id
+      LEFT JOIN rental_payments p ON p.transaction_id = rt.id
       WHERE rt.user_id = ? 
         AND rt.rental_date >= date(?) 
         AND rt.rental_date <= date('now', '+1 day')`,

@@ -134,9 +134,15 @@ export default {
 
     watch(
       () => props.modelValue,
-      (value) => {
-        selectedBundles.value = value;
+      (newValue) => {
+        // Only update if the arrays are actually different (by reference or content)
+        const currentStr = JSON.stringify(selectedBundles.value);
+        const newStr = JSON.stringify(newValue || []);
+        if (currentStr !== newStr) {
+          selectedBundles.value = newValue ? [...newValue] : [];
+        }
       },
+      { deep: true, immediate: true }
     );
 
     // Calculate price after bundle discount

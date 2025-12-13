@@ -12,7 +12,6 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_user ON stock_movements(user_id);
 -- Items indexes
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
 CREATE INDEX IF NOT EXISTS idx_items_size ON items(size_id);
-CREATE INDEX IF NOT EXISTS idx_items_status ON items(status);
 CREATE INDEX IF NOT EXISTS idx_items_type ON items(type);
 CREATE INDEX IF NOT EXISTS idx_items_active ON items(is_active);
 CREATE INDEX IF NOT EXISTS idx_items_code ON items(code);
@@ -21,10 +20,8 @@ CREATE INDEX IF NOT EXISTS idx_items_code ON items(code);
 CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(is_active);
 CREATE INDEX IF NOT EXISTS idx_customers_code ON customers(code);
 
--- Payments indexes
-CREATE INDEX IF NOT EXISTS idx_payments_transaction ON payments(transaction_type, transaction_id);
-CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
-CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+-- Note: Indexes for sales_payments and rental_payments are already created in 
+-- transactions\20251107_011_create_stock_movements_and_payments_tables.sql
 
 -- Bundle Details indexes
 CREATE INDEX IF NOT EXISTS idx_bundle_details_bundle ON bundle_details(bundle_id);

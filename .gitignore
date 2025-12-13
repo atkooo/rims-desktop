@@ -34,6 +34,8 @@ build/
 .env
 .env.*
 !.env.example
+!.env.development.example
+!.env.production.example
 
 # Database files and backups
 data/backups/*
@@ -44,6 +46,10 @@ data/exports/pdf/*
 !data/exports/pdf/.gitkeep
 data/uploads/items/*
 !data/uploads/items/.gitkeep
+
+# Development data folder (separate from production)
+data/dev/*
+!data/dev/.gitkeep
 
 # Temporary files
 src/data/temp/*

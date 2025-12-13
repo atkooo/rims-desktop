@@ -3,60 +3,128 @@ const path = require("path");
 const { runMigrations } = require("./migrate");
 const { runSeeders } = require("./seed");
 const dbConfig = require("../main/config/database");
+const {
+  createDatabaseConnection,
+  promisifyDb,
+} = require("./utils/db-utils");
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function deleteDatabaseFile(dbPath, maxRetries = 5) {
-  for (let i = 0; i < maxRetries; i++) {
+
+/**
+ * Drop all tables from database (alternative to deleting file)
+ * This is safer when file is locked
+ */
+async function dropAllTables(dbPath) {
+  const db = createDatabaseConnection(dbPath);
+  const dbPromisified = promisifyDb(db);
+  
+  try {
+    // Wait a bit to ensure connection is ready
+    await sleep(200);
+    
+    // Get all table names (including migrations table)
+    let tables = [];
     try {
-      if (fs.existsSync(dbPath)) {
-        // Try to close any open connections by attempting to access the file
-        // Wait a bit to allow any pending operations to complete
-        if (i > 0) {
-          console.log(`⏳ Waiting for database to be released (attempt ${i + 1}/${maxRetries})...`);
-          await sleep(1000 * i); // Exponential backoff
-        }
-        
-        fs.unlinkSync(dbPath);
-        return true;
-      }
-      return false; // File doesn't exist
+      tables = await dbPromisified.allAsync(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+      );
     } catch (error) {
-      if (error.code === 'EBUSY' && i < maxRetries - 1) {
-        // File is locked, wait and retry
-        continue;
-      }
-      throw error;
+      console.warn("⚠️  Could not query tables:", error.message);
+      // If query fails, database might be empty or corrupted - that's okay
+      return;
     }
+    
+    // Also get views
+    let views = [];
+    try {
+      views = await dbPromisified.allAsync(
+        "SELECT name FROM sqlite_master WHERE type='view'"
+      );
+    } catch (error) {
+      // Ignore view query errors
+    }
+    
+    if (tables.length === 0 && views.length === 0) {
+      console.log("ℹ️  Database is empty (no tables or views to drop)");
+      return;
+    }
+    
+    console.log(`🗑️  Dropping ${tables.length} table(s) and ${views.length} view(s)...`);
+    
+    // Disable foreign keys temporarily
+    await dbPromisified.runAsync("PRAGMA foreign_keys = OFF");
+    
+    // Drop all views first (they may depend on tables)
+    for (const view of views) {
+      try {
+        await dbPromisified.runAsync(`DROP VIEW IF EXISTS "${view.name}"`);
+        console.log(`   ✓ Dropped view: ${view.name}`);
+      } catch (error) {
+        console.warn(`   ⚠️  Could not drop view ${view.name}:`, error.message);
+      }
+    }
+    
+    // Drop all tables (including migrations to allow re-running)
+    for (const table of tables) {
+      try {
+        await dbPromisified.runAsync(`DROP TABLE IF EXISTS "${table.name}"`);
+        console.log(`   ✓ Dropped table: ${table.name}`);
+      } catch (error) {
+        console.warn(`   ⚠️  Could not drop table ${table.name}:`, error.message);
+      }
+    }
+    
+    // Re-enable foreign keys
+    await dbPromisified.runAsync("PRAGMA foreign_keys = ON");
+    
+    console.log("✅ All tables and views dropped successfully");
+  } catch (error) {
+    console.error("❌ Error dropping tables:", error.message);
+    throw error;
+  } finally {
+    // Close connection properly
+    await new Promise((resolve, reject) => {
+      db.close((err) => {
+        if (err) {
+          console.warn("⚠️  Error closing database connection:", err.message);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+    // Wait a bit after closing
+    await sleep(200);
   }
-  throw new Error(`Failed to delete database file after ${maxRetries} attempts. Please close any applications using the database.`);
 }
 
 async function freshDatabase() {
+  // Get database path FIRST (this creates directory but NOT the file)
   const dbPath = dbConfig.path;
   
   console.log("🔄 Resetting database...");
+  console.log(`📁 Database path: ${dbPath}`);
   
-  // Close any existing connections and delete database file
-  try {
-    // Check if database file exists
-    if (fs.existsSync(dbPath)) {
-      console.log(`📁 Deleting existing database: ${dbPath}`);
-      await deleteDatabaseFile(dbPath);
-      console.log("✅ Database file deleted");
-    } else {
-      console.log("ℹ️  Database file does not exist, creating new one");
+  // Use drop tables method (more reliable than deleting file on Windows)
+  if (fs.existsSync(dbPath)) {
+    console.log("🔄 Dropping all tables and views...");
+    try {
+      await dropAllTables(dbPath);
+      await sleep(500);
+    } catch (error) {
+      console.error("❌ Error dropping tables:", error.message);
+      console.error("💡 Please manually delete the database file or close all applications");
+      throw error;
     }
-  } catch (error) {
-    console.error("❌ Error deleting database file:", error.message);
-    console.error("💡 Tip: Make sure no applications are using the database file.");
-    throw error;
+  } else {
+    console.log("ℹ️  Database file does not exist (will be created by migrations)");
   }
 
   try {
-    // Run migrations (will create its own connection)
+    // Run migrations (will create its own connection and CREATE the database file)
     console.log("\n📦 Running migrations...");
     await runMigrations();
     console.log("✅ Migrations completed");

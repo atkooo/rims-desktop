@@ -6,8 +6,8 @@ const { toInteger } = require("../helpers/codeUtils");
  */
 async function fetchBundleItemDetails(bundleId, isRental = false) {
   const priceField = isRental 
-    ? 'COALESCE(i.rental_price_per_day, i.price, 0) AS rental_price'
-    : 'COALESCE(i.sale_price, i.price, 0) AS sale_price';
+    ? 'COALESCE(i.rental_price_per_day, 0) AS rental_price'
+    : 'COALESCE(i.sale_price, 0) AS sale_price';
   const bundleType = isRental 
     ? "(b.bundle_type = 'rental' OR b.bundle_type = 'both')"
     : "(b.bundle_type = 'sale' OR b.bundle_type = 'both')";
@@ -199,7 +199,7 @@ async function restoreStockWithMovement({
 async function getTransactionPaymentStatus(transactionType, transactionId) {
   const table =
     transactionType === "rental" ? "rental_transactions" : "sales_transactions";
-  const type = transactionType === "rental" ? "rental" : "sale";
+  const paymentTable = transactionType === "rental" ? "rental_payments" : "sales_payments";
 
   const transaction = await database.queryOne(
     `SELECT t.*, 
@@ -209,10 +209,10 @@ async function getTransactionPaymentStatus(transactionType, transactionId) {
        ELSE 'unpaid'
      END as calculated_payment_status
      FROM ${table} t
-     LEFT JOIN payments p ON p.transaction_type = ? AND p.transaction_id = t.id
+     LEFT JOIN ${paymentTable} p ON p.transaction_id = t.id
      WHERE t.id = ?
      GROUP BY t.id`,
-    [type, transactionId],
+    [transactionId],
   );
 
   return transaction;

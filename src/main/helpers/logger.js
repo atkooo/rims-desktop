@@ -3,15 +3,45 @@ const path = require("path");
 const fs = require("fs");
 const { app } = require("electron");
 
-function resolveLogDir() {
-  try {
-    if (app && typeof app.getPath === "function") {
-      return path.join(app.getPath("userData"), "logs");
-    }
-  } catch (error) {
-    // Ignore and fall back to project data folder
+/**
+ * Get environment mode (development or production)
+ */
+function getEnvironment() {
+  // Check NODE_ENV first (set by scripts)
+  const nodeEnv = process.env.NODE_ENV;
+  
+  // If NODE_ENV is explicitly set, use it
+  if (nodeEnv === "development" || nodeEnv === "production") {
+    return nodeEnv;
   }
-  return path.join(__dirname, "../../../data/logs");
+  
+  // Fallback: if app is packaged, assume production
+  // Otherwise, assume development
+  if (app && typeof app.isPackaged === "boolean") {
+    return app.isPackaged ? "production" : "development";
+  }
+  
+  // Default to development for safety
+  return "development";
+}
+
+function resolveLogDir() {
+  const environment = getEnvironment();
+  
+  if (environment === "production") {
+    try {
+      // Production: use userData/logs (separate from dev)
+      if (app && typeof app.getPath === "function") {
+        return path.join(app.getPath("userData"), "logs");
+      }
+    } catch (error) {
+      console.error("Error resolving userData path for logs:", error);
+      throw new Error("Cannot resolve production log directory");
+    }
+  }
+  
+  // Development: use project data/dev/logs folder (separate from production)
+  return path.join(__dirname, "../../../data/dev/logs");
 }
 
 const logDir = resolveLogDir();

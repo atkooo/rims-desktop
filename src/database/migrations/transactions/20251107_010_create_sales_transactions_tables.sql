@@ -17,6 +17,7 @@ CREATE TABLE sales_transactions (
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_sync INTEGER DEFAULT 0 CHECK (is_sync IN (0, 1)),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
     FOREIGN KEY (cashier_session_id) REFERENCES cashier_sessions(id) ON DELETE SET NULL,
@@ -36,6 +37,7 @@ CREATE TABLE sales_transaction_details (
     sale_price DECIMAL(15,2) NOT NULL,
     subtotal DECIMAL(15,2) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_sync INTEGER DEFAULT 0 CHECK (is_sync IN (0, 1)),
     FOREIGN KEY (sales_transaction_id) REFERENCES sales_transactions(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT,
     FOREIGN KEY (accessory_id) REFERENCES accessories(id) ON DELETE RESTRICT,
@@ -56,4 +58,6 @@ CREATE INDEX idx_sales_transactions_date ON sales_transactions(sale_date);
 CREATE INDEX idx_sales_transaction_details_transaction ON sales_transaction_details(sales_transaction_id);
 CREATE INDEX idx_sales_transaction_details_item ON sales_transaction_details(item_id);
 CREATE INDEX IF NOT EXISTS idx_sales_transactions_status ON sales_transactions(status);
+CREATE INDEX idx_sales_transactions_is_sync ON sales_transactions(is_sync);
+CREATE INDEX idx_sales_transaction_details_is_sync ON sales_transaction_details(is_sync);
 

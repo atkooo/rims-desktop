@@ -164,7 +164,8 @@
       <div v-else-if="!filteredDetails.length" class="detail-state">
         Tidak ada item untuk transaksi ini.
       </div>
-      <table v-else class="detail-table">
+      <div v-else class="table-wrapper">
+        <table class="detail-table">
         <thead>
           <tr>
             <th>Kode</th>
@@ -180,24 +181,24 @@
         </thead>
         <tbody>
           <tr v-for="detail in filteredDetails" :key="detail.id">
-            <td><strong>{{ detail.item_code || "-" }}</strong></td>
-            <td>{{ detail.item_name || "-" }}</td>
-            <td>{{ detail.quantity }}</td>
-            <td>{{ formatCurrency(detail.rental_price) }}</td>
-            <td><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
-            <td>
+            <td data-label="Kode"><strong>{{ detail.item_code || "-" }}</strong></td>
+            <td data-label="Nama">{{ detail.item_name || "-" }}</td>
+            <td data-label="Jumlah">{{ detail.quantity }}</td>
+            <td data-label="Harga Sewa">{{ formatCurrency(detail.rental_price) }}</td>
+            <td data-label="Subtotal"><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
+            <td data-label="Dikembalikan">
               <span :class="{ 'status-badge': true, 'returned': detail.is_returned, 'not-returned': !detail.is_returned }">
                 {{ detail.is_returned ? "Ya" : "Belum" }}
               </span>
             </td>
-            <td>
+            <td data-label="Kondisi">
               <span v-if="detail.is_returned" class="condition-badge" :class="detail.return_condition || 'good'">
                 {{ getConditionLabel(detail.return_condition) }}
               </span>
               <span v-else>-</span>
             </td>
-            <td>{{ detail.notes || "-" }}</td>
-            <td v-if="!isAllReturned && isPaid(rental) && !isCancelled(rental)">
+            <td data-label="Catatan">{{ detail.notes || "-" }}</td>
+            <td v-if="!isAllReturned && isPaid(rental) && !isCancelled(rental)" data-label="Aksi">
               <AppButton
                 v-if="!detail.is_returned"
                 variant="secondary"
@@ -211,7 +212,8 @@
             </td>
           </tr>
         </tbody>
-      </table>
+        </table>
+      </div>
     </section>
   </div>
 
@@ -577,18 +579,26 @@ export default {
 </script>
 
 <style scoped>
+.data-page.transaction-page.detail-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
 .section-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .section-header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .section-title {
@@ -605,8 +615,9 @@ export default {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
+  max-width: 100%;
 }
 
 .detail-card {
@@ -669,12 +680,19 @@ export default {
   color: #6b7280;
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .detail-table {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   overflow: hidden;
+  table-layout: auto;
 }
 
 .detail-table th,
@@ -683,6 +701,31 @@ export default {
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.9rem;
+  word-wrap: break-word;
+}
+
+.detail-table th:nth-child(1),
+.detail-table td:nth-child(1) {
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.detail-table th:nth-child(2),
+.detail-table td:nth-child(2) {
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.detail-table th:nth-child(8),
+.detail-table td:nth-child(8) {
+  min-width: 100px;
+  max-width: 150px;
+}
+
+.detail-table th:nth-child(9),
+.detail-table td:nth-child(9) {
+  min-width: 120px;
+  max-width: 150px;
 }
 
 .detail-table thead {
@@ -847,5 +890,73 @@ export default {
   font-size: 0.85rem;
   color: #6b7280;
   font-style: italic;
+}
+
+/* Responsive styles */
+@media (max-width: 1200px) {
+  .data-page.transaction-page.detail-page {
+    padding: 1rem 1.5rem;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .data-page.transaction-page.detail-page {
+    padding: 1rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .section-header-right {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  
+  .detail-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .detail-table thead,
+  .detail-table tbody,
+  .detail-table tr,
+  .detail-table th,
+  .detail-table td {
+    display: block;
+  }
+  
+  .detail-table thead {
+    display: none;
+  }
+  
+  .detail-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: white;
+  }
+  
+  .detail-table td {
+    border: none;
+    padding: 0.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .detail-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 1rem;
+  }
 }
 </style>

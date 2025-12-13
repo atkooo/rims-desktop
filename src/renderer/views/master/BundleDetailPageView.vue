@@ -155,7 +155,7 @@
           </template>
           <template #cell-price="{ row }">
             <span v-if="row.item_id">
-              {{ formatCurrency(row.item_sale_price || row.item_price || 0) }}
+              {{ formatCurrency(row.item_sale_price || 0) }}
             </span>
             <span v-else-if="row.accessory_id">
               {{ formatCurrency(row.accessory_sale_price || 0) }}

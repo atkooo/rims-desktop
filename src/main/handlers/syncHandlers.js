@@ -149,9 +149,15 @@ function setupSyncHandlers() {
       const pendingSalesResult = await database.query(
         'SELECT COUNT(*) as count FROM sales_transactions WHERE is_sync = 0'
       );
-      const pendingPaymentsResult = await database.query(
-        'SELECT COUNT(*) as count FROM payments WHERE is_sync = 0'
+      const pendingRentalPaymentsResult = await database.query(
+        'SELECT COUNT(*) as count FROM rental_payments WHERE is_sync = 0'
       );
+      const pendingSalesPaymentsResult = await database.query(
+        'SELECT COUNT(*) as count FROM sales_payments WHERE is_sync = 0'
+      );
+      const pendingPaymentsResult = {
+        count: (pendingRentalPaymentsResult?.[0]?.count || 0) + (pendingSalesPaymentsResult?.[0]?.count || 0)
+      };
       const pendingStockMovementsResult = await database.query(
         'SELECT COUNT(*) as count FROM stock_movements WHERE is_sync = 0'
       );

@@ -39,23 +39,16 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 import Icon from "../ui/Icon.vue";
 import { menuGroups } from "@/constants/menu-groups";
-import {
-  usePermissions,
-  initPermissions,
-  hasAnyPermissionSync,
-} from "@/composables/usePermissions";
 
 const props = defineProps({
   collapsed: { type: Boolean, default: false },
 });
 
 const route = useRoute();
-const { hasPermissionSync } = usePermissions();
-const permissionsInitialized = ref(false);
 
 // Check if a menu item should be active (prefix match - includes sub-routes)
 const isActive = (menuPath) => {
@@ -67,8 +60,6 @@ const isActive = (menuPath) => {
   }
   
   // Prefix match - active if current path starts with menu path followed by /
-  // This ensures /transactions/sales/new activates /transactions/sales
-  // But /transactions/rentals doesn't activate /transactions/sales
   if (currentPath.startsWith(menuPath + "/")) {
     return true;
   }
@@ -76,52 +67,9 @@ const isActive = (menuPath) => {
   return false;
 };
 
-// Filter menu groups based on permissions
+// Admin can see all menu items (no permission filtering)
 const filteredGroups = computed(() => {
-  // If permissions not initialized yet, return all menu groups (will be filtered once loaded)
-  if (!permissionsInitialized.value) {
-    return menuGroups;
-  }
-
-  try {
-    return menuGroups
-      .map((group) => {
-        if (!group || !group.items) return null;
-        return {
-          ...group,
-          items: group.items.filter((item) => {
-            // If no permission required, show item
-            if (!item || !item.permission) return true;
-            // Check if user has permission(s)
-            try {
-              // Support both single permission string and array of permissions
-              if (Array.isArray(item.permission)) {
-                return hasAnyPermissionSync(item.permission);
-              }
-              return hasPermissionSync(item.permission);
-            } catch (error) {
-              console.error("Error checking permission:", error);
-              return false;
-            }
-          }),
-        };
-      })
-      .filter((group) => group && group.items && group.items.length > 0); // Remove empty groups
-  } catch (error) {
-    console.error("Error filtering menu groups:", error);
-    return menuGroups; // Fallback to all groups
-  }
-});
-
-onMounted(async () => {
-  try {
-    await initPermissions();
-    permissionsInitialized.value = true;
-  } catch (error) {
-    console.error("Error initializing permissions in Sidebar:", error);
-    // Even if there's an error, show menu (will show all items)
-    permissionsInitialized.value = true;
-  }
+  return menuGroups.filter((group) => group && group.items && group.items.length > 0);
 });
 </script>
 

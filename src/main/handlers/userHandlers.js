@@ -13,18 +13,20 @@ function setupUserHandlers() {
     try {
       const sql = `
         SELECT 
-          u.id,
-          u.username,
-          u.full_name,
-          u.email,
-          u.role_id,
-          u.is_active,
-          r.name AS role_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.id = ?
+          id,
+          username,
+          full_name,
+          email,
+          role,
+          is_active
+        FROM users
+        WHERE id = ?
       `;
       const user = await database.queryOne(sql, [id]);
+      if (user) {
+        // Map role to role_name for compatibility
+        user.role_name = user.role;
+      }
       return user;
     } catch (error) {
       logger.error(`Error fetching user ${id}:`, error);
@@ -33,7 +35,7 @@ function setupUserHandlers() {
   });
 
   // Create user
-  ipcMain.handle("users:create", async (event, { username, password, full_name, email, role_id, is_active }) => {
+  ipcMain.handle("users:create", async (event, { username, password, full_name, email, role, is_active }) => {
     try {
       if (!username || !username.trim()) {
         throw new Error("Username wajib diisi");
@@ -44,8 +46,8 @@ function setupUserHandlers() {
       if (!full_name || !full_name.trim()) {
         throw new Error("Nama lengkap wajib diisi");
       }
-      if (!role_id) {
-        throw new Error("Role wajib dipilih");
+      if (!role || !['admin', 'kasir'].includes(role)) {
+        throw new Error("Role harus 'admin' atau 'kasir'");
       }
 
       // Check if username already exists
@@ -57,17 +59,8 @@ function setupUserHandlers() {
         throw new Error("Username sudah digunakan");
       }
 
-      // Check if role exists
-      const role = await database.queryOne(
-        "SELECT id, name FROM roles WHERE id = ?",
-        [role_id],
-      );
-      if (!role) {
-        throw new Error("Role tidak ditemukan");
-      }
-      
       // Prevent creating user with admin role
-      if (role.name === "admin") {
+      if (role === "admin") {
         throw new Error("Tidak dapat membuat user dengan role admin");
       }
 
@@ -76,13 +69,13 @@ function setupUserHandlers() {
 
       // Insert user
       const result = await database.execute(
-        "INSERT INTO users (username, password_hash, full_name, email, role_id, is_active) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (username, password_hash, full_name, email, role, is_active) VALUES (?, ?, ?, ?, ?, ?)",
         [
           username.trim().toLowerCase(),
           passwordHash,
           full_name.trim(),
           email ? email.trim() : null,
-          role_id,
+          role,
           is_active !== undefined ? (is_active ? 1 : 0) : 1,
         ],
       );
@@ -99,18 +92,20 @@ function setupUserHandlers() {
       // Return created user
       const createdUser = await database.queryOne(
         `SELECT 
-          u.id,
-          u.username,
-          u.full_name,
-          u.email,
-          u.role_id,
-          u.is_active,
-          r.name AS role_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.id = ?`,
+          id,
+          username,
+          full_name,
+          email,
+          role,
+          is_active
+        FROM users
+        WHERE id = ?`,
         [result.lastID],
       );
+
+      if (createdUser) {
+        createdUser.role_name = createdUser.role;
+      }
 
       return createdUser;
     } catch (error) {
@@ -120,11 +115,11 @@ function setupUserHandlers() {
   });
 
   // Update user
-  ipcMain.handle("users:update", async (event, id, { full_name, email, role_id, is_active, password }) => {
+  ipcMain.handle("users:update", async (event, id, { full_name, email, role, is_active, password }) => {
     try {
       // Check if user exists
       const existing = await database.queryOne(
-        "SELECT id FROM users WHERE id = ?",
+        "SELECT id, role FROM users WHERE id = ?",
         [id],
       );
       if (!existing) {
@@ -147,35 +142,18 @@ function setupUserHandlers() {
         values.push(email ? email.trim() : null);
       }
 
-      if (role_id !== undefined) {
-        // Check if role exists
-        const role = await database.queryOne(
-          "SELECT id, name FROM roles WHERE id = ?",
-          [role_id],
-        );
-        if (!role) {
-          throw new Error("Role tidak ditemukan");
+      if (role !== undefined) {
+        if (!['admin', 'kasir'].includes(role)) {
+          throw new Error("Role harus 'admin' atau 'kasir'");
         }
         
         // Check if trying to change to admin role
-        if (role.name === "admin") {
-          // Get current user's role
-          const currentUser = await database.queryOne(
-            `SELECT r.name as role_name 
-             FROM users u 
-             LEFT JOIN roles r ON u.role_id = r.id 
-             WHERE u.id = ?`,
-            [id],
-          );
-          
-          // Only allow if user is already admin
-          if (!currentUser || currentUser.role_name !== "admin") {
-            throw new Error("Tidak dapat mengubah role menjadi admin");
-          }
+        if (role === "admin" && existing.role !== "admin") {
+          throw new Error("Tidak dapat mengubah role menjadi admin");
         }
         
-        updates.push("role_id = ?");
-        values.push(role_id);
+        updates.push("role = ?");
+        values.push(role);
       }
 
       if (is_active !== undefined) {
@@ -216,18 +194,20 @@ function setupUserHandlers() {
       // Return updated user
       const updatedUser = await database.queryOne(
         `SELECT 
-          u.id,
-          u.username,
-          u.full_name,
-          u.email,
-          u.role_id,
-          u.is_active,
-          r.name AS role_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.id = ?`,
+          id,
+          username,
+          full_name,
+          email,
+          role,
+          is_active
+        FROM users
+        WHERE id = ?`,
         [id],
       );
+
+      if (updatedUser) {
+        updatedUser.role_name = updatedUser.role;
+      }
 
       return updatedUser;
     } catch (error) {
@@ -348,18 +328,20 @@ function setupUserHandlers() {
       // Return updated user
       const updatedUser = await database.queryOne(
         `SELECT 
-          u.id,
-          u.username,
-          u.full_name,
-          u.email,
-          u.role_id,
-          u.is_active,
-          r.name AS role_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.id = ?`,
+          id,
+          username,
+          full_name,
+          email,
+          role,
+          is_active
+        FROM users
+        WHERE id = ?`,
         [userId],
       );
+
+      if (updatedUser) {
+        updatedUser.role_name = updatedUser.role;
+      }
 
       // Update currentUser in auth.js to reflect the changes
       await updateCurrentUser(userId);

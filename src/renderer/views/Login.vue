@@ -187,7 +187,7 @@
 <script>
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { login } from "@/services/auth.js";
+import { login, getCurrentUser } from "@/services/auth.js";
 import AppNotification from "@/components/ui/AppNotification.vue";
 
 export default {
@@ -213,14 +213,19 @@ export default {
       showErrorNotification.value = false;
 
       try {
-        await login(username.value, password.value);
+        const user = await login(username.value, password.value);
 
         showNotification.value = true;
         loading.value = false;
 
         setTimeout(() => {
-          const redirect = route.query.redirect || "/";
-          router.push(redirect);
+          // Redirect cashier to cashier page
+          if (user?.role === "kasir") {
+            router.push("/cashier");
+          } else {
+            const redirect = route.query.redirect || "/";
+            router.push(redirect);
+          }
         }, 2000);
       } catch (error) {
         console.error("Login gagal", error);

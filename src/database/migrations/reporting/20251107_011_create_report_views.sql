@@ -13,6 +13,7 @@ SELECT
   (i.stock_quantity - i.available_quantity) AS rented_quantity,
   i.rental_price_per_day,
   i.sale_price,
+  i.min_stock_alert,
   i.is_active
 FROM items i
 LEFT JOIN categories c ON c.id = i.category_id;

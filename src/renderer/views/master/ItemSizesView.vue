@@ -175,7 +175,11 @@ export default {
     const editSize = (row) => {
       selectedSize.value = row;
       isEdit.value = true;
-      form.value = { ...row };
+      form.value = {
+        ...row,
+        // Convert is_active from integer (1/0) to boolean for checkbox
+        is_active: Boolean(row.is_active),
+      };
       showDialog.value = true;
     };
 
@@ -199,6 +203,8 @@ export default {
         const payload = {
           ...form.value,
           sort_order: Number(form.value.sort_order) || 0,
+          // Ensure is_active is explicitly set as boolean
+          is_active: Boolean(form.value.is_active),
         };
         if (isEdit.value) {
           await window.api.invoke("itemSizes:update", {

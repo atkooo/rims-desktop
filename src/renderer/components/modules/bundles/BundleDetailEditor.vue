@@ -326,7 +326,7 @@ export default {
       if (!itemId) return "-";
       const item = itemStore.items.find((i) => i.id === itemId);
       if (!item) return "-";
-      return formatCurrency(item.sale_price ?? item.price ?? 0);
+      return formatCurrency(item.sale_price ?? 0);
     };
 
     const getAccessoryCode = (accessoryId) => {

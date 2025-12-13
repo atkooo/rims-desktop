@@ -44,8 +44,24 @@ function setupItemSizeHandlers() {
 
       const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
-      const sortOrder = Number(sort_order) || 0;
-      const isActive = is_active ? 1 : 0;
+      let sortOrder = Number(sort_order) || 0;
+      const isActive = is_active !== undefined ? (is_active ? 1 : 0) : 1;
+
+      // Shift urutan yang >= sortOrder ke +1 untuk menghindari duplikasi
+      if (sortOrder > 0) {
+        await database.execute(
+          `UPDATE item_sizes 
+           SET sort_order = sort_order + 1 
+           WHERE sort_order >= ?`,
+          [sortOrder]
+        );
+      } else {
+        // Jika sort_order 0 atau tidak diisi, set ke max + 1
+        const maxResult = await database.queryOne(
+          `SELECT COALESCE(MAX(sort_order), 0) as max_order FROM item_sizes`
+        );
+        sortOrder = (maxResult?.max_order || 0) + 1;
+      }
 
       const sql = `
         INSERT INTO item_sizes
@@ -93,10 +109,43 @@ function setupItemSizeHandlers() {
         throw new Error("Nama ukuran wajib diisi");
       }
 
+      // Ambil data item yang ada untuk mendapatkan sort_order dan is_active lama
+      const existingItem = await database.queryOne(
+        `SELECT sort_order, is_active FROM item_sizes WHERE id = ?`,
+        [id]
+      );
+
+      if (!existingItem) {
+        throw new Error("Ukuran tidak ditemukan");
+      }
+
       const normalizedCode = normalizeItemSizeCode(code || name, name);
       const now = new Date().toISOString();
-      const sortOrder = Number(sort_order) || 0;
-      const isActive = is_active ? 1 : 0;
+      let sortOrder = sort_order !== undefined ? Number(sort_order) : existingItem.sort_order;
+      const isActive = is_active !== undefined ? (is_active ? 1 : 0) : (existingItem.is_active ?? 1);
+
+      const oldSortOrder = existingItem.sort_order;
+
+      // Handle shifting urutan jika sort_order berubah
+      if (sort_order !== undefined && sortOrder !== oldSortOrder) {
+        if (sortOrder > oldSortOrder) {
+          // Pindah ke bawah: shift semua yang antara oldSortOrder dan sortOrder ke -1
+          await database.execute(
+            `UPDATE item_sizes 
+             SET sort_order = sort_order - 1 
+             WHERE sort_order > ? AND sort_order <= ? AND id != ?`,
+            [oldSortOrder, sortOrder, id]
+          );
+        } else {
+          // Pindah ke atas: shift semua yang antara sortOrder dan oldSortOrder ke +1
+          await database.execute(
+            `UPDATE item_sizes 
+             SET sort_order = sort_order + 1 
+             WHERE sort_order >= ? AND sort_order < ? AND id != ?`,
+            [sortOrder, oldSortOrder, id]
+          );
+        }
+      }
 
       const sql = `
         UPDATE item_sizes

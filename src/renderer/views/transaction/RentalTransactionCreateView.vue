@@ -53,16 +53,6 @@
               </span>
             </div>
           </div>
-          <div class="cashier-status-action">
-            <AppButton
-              v-if="cashierStatus.status !== 'open'"
-              variant="primary"
-              size="small"
-              @click="$router.push('/transactions/cashier')"
-            >
-              Buka Kasir
-            </AppButton>
-          </div>
         </div>
       </div>
     </section>
@@ -429,7 +419,7 @@ export default {
 
     const baseSubtotal = computed(() =>
       form.value.items.reduce((sum, item) => {
-        const price = item.rental_price_per_day ?? item.price ?? 0;
+        const price = item.rental_price_per_day ?? 0;
         return sum + price * (item.quantity || 1);
       }, 0),
     );
@@ -476,7 +466,7 @@ export default {
     const normalizedItems = computed(() =>
       form.value.items.map((item) => {
         const quantity = item.quantity || 1;
-        const basePrice = item.rental_price_per_day ?? item.price ?? 0;
+        const basePrice = item.rental_price_per_day ?? 0;
         return {
           itemId: item.id,
           quantity,
@@ -949,6 +939,8 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   padding: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .cashier-total-label-minimal {
@@ -961,15 +953,24 @@ export default {
 }
 
 .cashier-total-value {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 700;
   color: #111827;
   margin-bottom: 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .cashier-total-info {
   font-size: 0.75rem;
   color: #6b7280;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .cashier-breakdown-minimal {

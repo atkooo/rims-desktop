@@ -41,7 +41,7 @@
         <select v-model="filters.size" class="filter-select">
           <option value="">Semua Ukuran</option>
           <option v-for="size in sizes" :key="size.id" :value="size.id">
-            {{ size.name }}
+            {{ size.code || size.name }}
           </option>
         </select>
 
@@ -55,6 +55,7 @@
         <select v-model="filters.status" class="filter-select">
           <option value="">Semua Status</option>
           <option value="AVAILABLE">Available</option>
+          <option value="OUT_OF_STOCK">Out of Stock</option>
           <option value="RENTED">Rented</option>
           <option value="MAINTENANCE">Maintenance</option>
         </select>
@@ -115,12 +116,12 @@
             </span>
           </template>
           <template #cell-status="{ row }">
-            <span class="status-badge" :class="getStatusClass(row.status)">
-              {{ row.status }}
+            <span class="status-badge" :class="getStatusBadge(row).class">
+              {{ getStatusBadge(row).label }}
             </span>
           </template>
           <template #cell-price="{ row }">
-            {{ formatCurrency(row.price || 0) }}
+            {{ formatCurrency(row.sale_price || row.rental_price_per_day || 0) }}
           </template>
         </AppTable>
 
@@ -159,6 +160,7 @@ import { useItemStore } from "@/store/items";
 import { fetchItemSizes } from "@/services/masterData";
 import { ITEM_TYPE } from "@shared/constants";
 import { useCurrency } from "@/composables/useCurrency";
+import { useItemStatus } from "@/composables/useItemStatus";
 
 export default {
   name: "BulkLabelGeneratorView",
@@ -166,6 +168,7 @@ export default {
   setup() {
     const itemStore = useItemStore();
     const { formatCurrency } = useCurrency();
+    const { getStatusBadge } = useItemStatus();
     const loading = ref(false);
     const error = ref("");
     const items = ref([]);
@@ -300,6 +303,7 @@ export default {
     const getStatusClass = (status) => {
       const statusMap = {
         AVAILABLE: "active",
+        OUT_OF_STOCK: "out-of-stock",
         RENTED: "rented",
         MAINTENANCE: "maintenance",
       };
@@ -386,6 +390,7 @@ export default {
       someSelected,
       getTypeClass,
       getStatusClass,
+      getStatusBadge,
       tableColumns,
       loadItems,
     };

@@ -140,7 +140,8 @@
       <div v-else-if="!filteredDetails.length" class="detail-state">
         Tidak ada item untuk transaksi ini.
       </div>
-      <table v-else class="detail-table">
+      <div v-else class="table-wrapper">
+        <table class="detail-table">
         <thead>
           <tr>
             <th>Kode</th>
@@ -154,20 +155,21 @@
         </thead>
         <tbody>
           <tr v-for="detail in filteredDetails" :key="detail.id">
-            <td><strong>{{ detail.item_code || "-" }}</strong></td>
-            <td>
+            <td data-label="Kode"><strong>{{ detail.item_code || "-" }}</strong></td>
+            <td data-label="Tipe">
               <span class="type-badge" :class="detail.item_type">
                 {{ detail.item_type_label || "Item" }}
               </span>
             </td>
-            <td>{{ detail.item_name || "-" }}</td>
-            <td>{{ detail.quantity }}</td>
-            <td>{{ formatCurrency(detail.sale_price) }}</td>
-            <td><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
-            <td>{{ formatDateTime(detail.created_at) }}</td>
+            <td data-label="Nama">{{ detail.item_name || "-" }}</td>
+            <td data-label="Jumlah">{{ detail.quantity }}</td>
+            <td data-label="Harga">{{ formatCurrency(detail.sale_price) }}</td>
+            <td data-label="Subtotal"><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
+            <td data-label="Dibuat">{{ formatDateTime(detail.created_at) }}</td>
           </tr>
         </tbody>
-      </table>
+        </table>
+      </div>
     </section>
   </div>
 
@@ -411,6 +413,12 @@ export default {
 </script>
 
 <style scoped>
+.data-page.transaction-page.detail-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
 .section-header {
   display: flex;
   align-items: baseline;
@@ -433,8 +441,9 @@ export default {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
+  max-width: 100%;
 }
 
 .detail-card {
@@ -501,12 +510,19 @@ export default {
   color: #6b7280;
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .detail-table {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   overflow: hidden;
+  table-layout: auto;
 }
 
 .detail-table th,
@@ -515,6 +531,25 @@ export default {
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.9rem;
+  word-wrap: break-word;
+}
+
+.detail-table th:nth-child(1),
+.detail-table td:nth-child(1) {
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.detail-table th:nth-child(3),
+.detail-table td:nth-child(3) {
+  min-width: 150px;
+  max-width: 250px;
+}
+
+.detail-table th:nth-child(7),
+.detail-table td:nth-child(7) {
+  min-width: 140px;
+  max-width: 180px;
 }
 
 .detail-table thead {
@@ -622,5 +657,68 @@ export default {
 
 .detail-item.edit-action button {
   width: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 1200px) {
+  .data-page.transaction-page.detail-page {
+    padding: 1rem 1.5rem;
+  }
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .data-page.transaction-page.detail-page {
+    padding: 1rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .detail-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .detail-table thead,
+  .detail-table tbody,
+  .detail-table tr,
+  .detail-table th,
+  .detail-table td {
+    display: block;
+  }
+  
+  .detail-table thead {
+    display: none;
+  }
+  
+  .detail-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: white;
+  }
+  
+  .detail-table td {
+    border: none;
+    padding: 0.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .detail-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 1rem;
+  }
 }
 </style>

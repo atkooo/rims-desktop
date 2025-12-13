@@ -12,7 +12,40 @@ const {
   sanitizeAvailable,
   toInteger,
   generateItemCode,
+  getItemCodePrefix,
 } = require("../helpers/codeUtils");
+
+/**
+ * Calculate item status based on stock quantities
+ * @param {number} stockQuantity - Total stock quantity
+ * @param {number} availableQuantity - Available quantity
+ * @param {number} rentedQuantity - Currently rented quantity (from rental_transaction_details)
+ * @returns {string} Status: 'OUT_OF_STOCK', 'AVAILABLE', 'RENTED', or 'MAINTENANCE'
+ */
+function calculateItemStatus(stockQuantity, availableQuantity, rentedQuantity = 0) {
+  // If no stock at all, item is out of stock
+  if (stockQuantity === 0) {
+    return "OUT_OF_STOCK";
+  }
+  
+  // If has available items, status is available
+  if (availableQuantity > 0) {
+    return "AVAILABLE";
+  }
+  
+  // If items are rented out, status is rented
+  if (rentedQuantity > 0) {
+    return "RENTED";
+  }
+  
+  // If stock > 0 but available = 0 and not rented, assume maintenance
+  if (stockQuantity > 0 && availableQuantity === 0) {
+    return "MAINTENANCE";
+  }
+  
+  // Default fallback
+  return "OUT_OF_STOCK";
+}
 
 // Setup item handlers
 function setupItemHandlers() {
@@ -27,11 +60,21 @@ function setupItemHandlers() {
           s.code AS size_code,
           dg.name AS discount_group_name,
           dg.discount_percentage,
-          dg.discount_amount
+          dg.discount_amount,
+          COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) AS rented_quantity,
+          CASE
+            WHEN i.stock_quantity = 0 THEN 'OUT_OF_STOCK'
+            WHEN i.available_quantity > 0 THEN 'AVAILABLE'
+            WHEN COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) > 0 THEN 'RENTED'
+            WHEN i.stock_quantity > 0 AND i.available_quantity = 0 THEN 'MAINTENANCE'
+            ELSE 'OUT_OF_STOCK'
+          END AS status
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        LEFT JOIN rental_transaction_details rtd ON rtd.item_id = i.id
+        GROUP BY i.id
         ORDER BY i.id DESC
       `);
       return items;
@@ -58,12 +101,22 @@ function setupItemHandlers() {
           s.code AS size_code,
           dg.name AS discount_group_name,
           dg.discount_percentage,
-          dg.discount_amount
+          dg.discount_amount,
+          COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) AS rented_quantity,
+          CASE
+            WHEN i.stock_quantity = 0 THEN 'OUT_OF_STOCK'
+            WHEN i.available_quantity > 0 THEN 'AVAILABLE'
+            WHEN COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) > 0 THEN 'RENTED'
+            WHEN i.stock_quantity > 0 AND i.available_quantity = 0 THEN 'MAINTENANCE'
+            ELSE 'OUT_OF_STOCK'
+          END AS status
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        LEFT JOIN rental_transaction_details rtd ON rtd.item_id = i.id
         WHERE i.code = ? OR UPPER(i.code) = UPPER(?)
+        GROUP BY i.id
         LIMIT 1
       `,
         [normalizedCode, code.trim()],
@@ -105,9 +158,6 @@ function setupItemHandlers() {
       if (!validator.isNotEmpty(itemData.name)) {
         throw new Error("Nama item harus diisi");
       }
-      if (!validator.isPositiveNumber(itemData.price)) {
-        throw new Error("Harga harus berupa angka positif");
-      }
       if (!itemData.category_id) {
         throw new Error("Kategori harus dipilih");
       }
@@ -118,6 +168,14 @@ function setupItemHandlers() {
       
       // Get sale_price from itemData
       const salePrice = itemData.sale_price ?? 0;
+      
+      // Get purchase_price from itemData
+      const purchasePrice = Math.max(0, Number(itemData.purchase_price ?? 0));
+
+      // Validasi: harga beli tidak boleh lebih dari harga jual
+      if (salePrice > 0 && purchasePrice > salePrice) {
+        throw new Error("Harga beli tidak boleh lebih dari harga jual");
+      }
 
       // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
       const itemType = itemData.type ?? "RENTAL";
@@ -164,10 +222,9 @@ function setupItemHandlers() {
             code,
             name,
             description,
-            price,
+            purchase_price,
             sale_price,
             type,
-            status,
             size_id,
             category_id,
             rental_price_per_day,
@@ -179,15 +236,14 @@ function setupItemHandlers() {
             is_available_for_rent,
             is_available_for_sale,
             is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
           itemData.name,
           itemData.description ?? null,
-          itemData.price,
+          purchasePrice,
           salePrice,
           itemType,
-          itemData.status ?? "AVAILABLE",
           itemData.size_id ?? null,
           itemData.category_id,
           rentalPricePerDay,
@@ -212,12 +268,22 @@ function setupItemHandlers() {
           s.code AS size_code,
           dg.name AS discount_group_name,
           dg.discount_percentage,
-          dg.discount_amount
+          dg.discount_amount,
+          COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) AS rented_quantity,
+          CASE
+            WHEN i.stock_quantity = 0 THEN 'OUT_OF_STOCK'
+            WHEN i.available_quantity > 0 THEN 'AVAILABLE'
+            WHEN COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) > 0 THEN 'RENTED'
+            WHEN i.stock_quantity > 0 AND i.available_quantity = 0 THEN 'MAINTENANCE'
+            ELSE 'OUT_OF_STOCK'
+          END AS status
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        LEFT JOIN rental_transaction_details rtd ON rtd.item_id = i.id
         WHERE i.id = ?
+        GROUP BY i.id
         `,
         [result.id],
       );
@@ -244,12 +310,22 @@ function setupItemHandlers() {
           c.name AS category_name,
           dg.name AS discount_group_name,
           dg.discount_percentage,
-          dg.discount_amount
+          dg.discount_amount,
+          COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) AS rented_quantity,
+          CASE
+            WHEN i.stock_quantity = 0 THEN 'OUT_OF_STOCK'
+            WHEN i.available_quantity > 0 THEN 'AVAILABLE'
+            WHEN COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) > 0 THEN 'RENTED'
+            WHEN i.stock_quantity > 0 AND i.available_quantity = 0 THEN 'MAINTENANCE'
+            ELSE 'OUT_OF_STOCK'
+          END AS status
         FROM items i
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        LEFT JOIN rental_transaction_details rtd ON rtd.item_id = i.id
         WHERE i.id = ?
+        GROUP BY i.id
       `,
         [id],
       );
@@ -272,9 +348,6 @@ function setupItemHandlers() {
       if (updates.name !== undefined && !validator.isNotEmpty(updates.name)) {
         throw new Error("Nama item harus diisi");
       }
-      if (updates.price && !validator.isPositiveNumber(updates.price)) {
-        throw new Error("Harga harus berupa angka positif");
-      }
       if (updates.code !== undefined && !validator.isNotEmpty(updates.code)) {
         throw new Error("Kode item harus diisi");
       }
@@ -287,9 +360,7 @@ function setupItemHandlers() {
         "code",
         "name",
         "description",
-        "price",
         "type",
-        "status",
         "size_id",
         "category_id",
         "purchase_price",
@@ -308,22 +379,20 @@ function setupItemHandlers() {
 
       const normalizedUpdates = {};
 
-      // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item jika type di-update
-      if (updates.type !== undefined) {
-        const getAvailabilityByType = (type) => {
-          if (type === "RENTAL") {
-            return { is_available_for_rent: 1, is_available_for_sale: 0 };
-          } else if (type === "SALE") {
-            return { is_available_for_rent: 0, is_available_for_sale: 1 };
-          } else if (type === "BOTH") {
-            return { is_available_for_rent: 1, is_available_for_sale: 1 };
-          }
-          return { is_available_for_rent: 1, is_available_for_sale: 0 };
-        };
-        
-        const availability = getAvailabilityByType(updates.type);
-        normalizedUpdates.is_available_for_rent = availability.is_available_for_rent;
-        normalizedUpdates.is_available_for_sale = availability.is_available_for_sale;
+      // Validasi: Type item tidak bisa diubah saat edit
+      // Ambil item yang ada untuk mendapatkan type saat ini
+      const existingItem = await database.queryOne(
+        "SELECT type FROM items WHERE id = ?",
+        [id]
+      );
+
+      if (!existingItem) {
+        throw new Error("Item tidak ditemukan");
+      }
+
+      // Jika ada percobaan untuk mengubah type, tolak dengan error
+      if (updates.type !== undefined && updates.type !== existingItem.type) {
+        throw new Error("Jenis item (type) tidak dapat diubah. Item yang sudah dibuat dengan jenis tertentu tidak dapat diubah jenisnya.");
       }
 
       // Map dailyRate or rental_price_per_day to rental_price_per_day
@@ -363,23 +432,60 @@ function setupItemHandlers() {
       if (updates.available_quantity !== undefined) {
         logger.warn(`Ignoring available_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`);
       }
+      
+      // Status dihitung otomatis berdasarkan stok, tidak bisa diubah manual
+      if (updates.status !== undefined) {
+        logger.warn(`Ignoring status update for item ${id} - status dihitung otomatis berdasarkan stok`);
+      }
 
       // Copy other valid fields
       for (const [key, value] of Object.entries(updates)) {
         // Skip fields that don't exist in database or already handled
+        // Type tidak bisa diubah, jadi skip
         if (
           key === "dailyRate" ||
-          key === "weeklyRate" ||
           key === "discount_group_id" ||
           key === "min_stock_alert" ||
           key === "deposit" ||
           key === "stock_quantity" ||
-          key === "available_quantity"
+          key === "available_quantity" ||
+          key === "type" || // Type tidak bisa diubah
+          key === "status" // Status dihitung otomatis berdasarkan stok
         ) {
           continue;
         }
         if (validColumns.includes(key)) {
           normalizedUpdates[key] = value;
+        }
+      }
+
+      // Validasi: harga beli tidak boleh lebih dari harga jual
+      // Perlu mengambil nilai dari database jika salah satu tidak di-update
+      if (normalizedUpdates.purchase_price !== undefined || normalizedUpdates.sale_price !== undefined) {
+        // Ambil item yang ada untuk mendapatkan nilai yang tidak di-update
+        const existingItem = await database.queryOne(
+          "SELECT purchase_price, sale_price FROM items WHERE id = ?",
+          [id]
+        );
+        
+        const finalPurchasePrice = normalizedUpdates.purchase_price !== undefined 
+          ? Math.max(0, Number(normalizedUpdates.purchase_price))
+          : (existingItem?.purchase_price ?? 0);
+        
+        const finalSalePrice = normalizedUpdates.sale_price !== undefined
+          ? Math.max(0, Number(normalizedUpdates.sale_price))
+          : (existingItem?.sale_price ?? 0);
+        
+        if (finalSalePrice > 0 && finalPurchasePrice > finalSalePrice) {
+          throw new Error("Harga beli tidak boleh lebih dari harga jual");
+        }
+        
+        // Set nilai yang sudah dinormalisasi
+        if (normalizedUpdates.purchase_price !== undefined) {
+          normalizedUpdates.purchase_price = finalPurchasePrice;
+        }
+        if (normalizedUpdates.sale_price !== undefined) {
+          normalizedUpdates.sale_price = finalSalePrice;
         }
       }
 
@@ -408,12 +514,22 @@ function setupItemHandlers() {
           s.code AS size_code,
           dg.name AS discount_group_name,
           dg.discount_percentage,
-          dg.discount_amount
+          dg.discount_amount,
+          COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) AS rented_quantity,
+          CASE
+            WHEN i.stock_quantity = 0 THEN 'OUT_OF_STOCK'
+            WHEN i.available_quantity > 0 THEN 'AVAILABLE'
+            WHEN COALESCE(SUM(CASE WHEN rtd.is_returned = 0 THEN rtd.quantity ELSE 0 END), 0) > 0 THEN 'RENTED'
+            WHEN i.stock_quantity > 0 AND i.available_quantity = 0 THEN 'MAINTENANCE'
+            ELSE 'OUT_OF_STOCK'
+          END AS status
         FROM items i
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN item_sizes s ON i.size_id = s.id
         LEFT JOIN discount_groups dg ON i.discount_group_id = dg.id
+        LEFT JOIN rental_transaction_details rtd ON rtd.item_id = i.id
         WHERE i.id = ?
+        GROUP BY i.id
         `,
         [id],
       );
@@ -577,7 +693,9 @@ function setupItemHandlers() {
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 100, 0);
-      const priceText = formatCurrency(item.price || 0);
+      // Use sale_price if available, otherwise rental_price_per_day, or 0
+      const displayPrice = item.sale_price || item.rental_price_per_day || 0;
+      const priceText = formatCurrency(displayPrice);
       const priceHeight = 10; // Height for price line
       doc.text(priceText, labelWidth / 2, priceY, { align: "center" });
 
@@ -840,7 +958,9 @@ function setupItemHandlers() {
         doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 100, 0);
-        const priceText = formatCurrency(item.price || 0);
+        // Use sale_price if available, otherwise rental_price_per_day, or 0
+        const displayPrice = item.sale_price || item.rental_price_per_day || 0;
+        const priceText = formatCurrency(displayPrice);
         const priceHeight = 9; // Height for price line
         doc.text(priceText, x + labelWidth / 2, priceY, { align: "center" });
 
@@ -1059,11 +1179,7 @@ function setupItemHandlers() {
         "Harga Jual",
         "Deposit",
         "Tipe*",
-        "Status",
         "Min Stok Alert",
-        "Tersedia untuk Sewa",
-        "Tersedia untuk Jual",
-        "Aktif",
         "Grup Diskon",
       ];
 
@@ -1075,7 +1191,7 @@ function setupItemHandlers() {
       headerRow.font = { bold: true };
       headerRow.alignment = { vertical: "middle", horizontal: "center" };
       
-      // Set warna background hanya untuk sel yang digunakan (kolom A sampai O = 15 kolom)
+      // Set warna background hanya untuk sel yang digunakan (kolom A sampai L = 12 kolom)
       for (let col = 1; col <= headers.length; col++) {
         const cell = headerRow.getCell(col);
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -1098,11 +1214,7 @@ function setupItemHandlers() {
         { width: 15 }, // Harga Jual
         { width: 15 }, // Deposit
         { width: 15 }, // Tipe
-        { width: 15 }, // Status
         { width: 15 }, // Min Stok Alert
-        { width: 20 }, // Tersedia untuk Sewa
-        { width: 20 }, // Tersedia untuk Jual
-        { width: 15 }, // Aktif
         { width: 20 }, // Grup Diskon
       ];
 
@@ -1117,15 +1229,15 @@ function setupItemHandlers() {
         error: "Pilih kategori dari daftar yang tersedia",
       });
 
-      // Add data validation for sizes
+      // Add data validation for sizes (gunakan code, bukan name)
       worksheet.dataValidations.add("C2:C1000", {
         type: "list",
         allowBlank: true,
-        formulae: [`"${sizes.map(s => s.name).join(",")}"`],
+        formulae: [`"${sizes.map(s => s.code).join(",")}"`],
         showErrorMessage: true,
         errorStyle: "error",
         errorTitle: "Invalid Size",
-        error: "Pilih ukuran dari daftar yang tersedia",
+        error: "Pilih ukuran dari daftar yang tersedia (gunakan code: M, L, XXL, dll)",
       });
 
       // Add data validation for type
@@ -1139,33 +1251,9 @@ function setupItemHandlers() {
         error: "Pilih RENTAL, SALE, atau BOTH",
       });
 
-      // Add data validation for status
-      worksheet.dataValidations.add("J2:J1000", {
-        type: "list",
-        allowBlank: true,
-        formulae: ['"AVAILABLE,NOT_AVAILABLE"'],
-        showErrorMessage: true,
-        errorStyle: "error",
-        errorTitle: "Invalid Status",
-        error: "Pilih AVAILABLE atau NOT_AVAILABLE",
-      });
-
-      // Add data validation for boolean fields
-      ["L2:L1000", "M2:M1000", "N2:N1000"].forEach(range => {
-        worksheet.dataValidations.add(range, {
-          type: "list",
-          allowBlank: true,
-          formulae: ['"Ya,Tidak"'],
-          showErrorMessage: true,
-          errorStyle: "error",
-          errorTitle: "Invalid Value",
-          error: "Pilih Ya atau Tidak",
-        });
-      });
-
       // Add data validation for discount groups
       if (discountGroups.length > 0) {
-        worksheet.dataValidations.add("O2:O1000", {
+        worksheet.dataValidations.add("K2:K1000", {
           type: "list",
           allowBlank: true,
           formulae: [`"${discountGroups.map(dg => dg.name).join(",")}"`],
@@ -1187,11 +1275,7 @@ function setupItemHandlers() {
         "100000",
         "200000",
         "RENTAL",
-        "AVAILABLE",
         "1",
-        "Ya",
-        "Tidak",
-        "Ya",
         "Nama grup diskon (opsional)",
       ]);
 
@@ -1212,11 +1296,10 @@ function setupItemHandlers() {
       noteSheet.addRow([]);
       noteSheet.addRow(["Nama: Nama item (wajib)"]);
       noteSheet.addRow(["Kategori: Pilih dari dropdown (wajib)"]);
-      noteSheet.addRow(["Ukuran: Pilih dari dropdown (opsional)"]);
+      noteSheet.addRow(["Ukuran: Pilih code ukuran dari dropdown (opsional) - contoh: M, L, XL, XXL"]);
       noteSheet.addRow(["Tipe: RENTAL, SALE, atau BOTH (wajib)"]);
-      noteSheet.addRow(["Status: AVAILABLE atau NOT_AVAILABLE (default: AVAILABLE)"]);
-      noteSheet.addRow(["Tersedia untuk Sewa/Jual: Ya atau Tidak (default: Ya)"]);
-      noteSheet.addRow(["Aktif: Ya atau Tidak (default: Ya)"]);
+      noteSheet.addRow(["CATATAN: Status dihitung otomatis berdasarkan stok (AVAILABLE/RENTED/MAINTENANCE)"]);
+      noteSheet.addRow(["CATATAN: Tersedia untuk Sewa/Jual dan Aktif otomatis di-set berdasarkan Tipe"]);
       noteSheet.addRow([]);
       noteSheet.addRow(["CATATAN:"]);
       noteSheet.addRow(["1. Hapus baris contoh sebelum mengisi data"]);
@@ -1263,7 +1346,8 @@ function setupItemHandlers() {
       const discountGroups = await database.query("SELECT id, name FROM discount_groups WHERE is_active = 1");
 
       const categoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
-      const sizeMap = new Map(sizes.map(s => [s.name.toLowerCase(), s.id]));
+      // Gunakan code untuk ukuran (M, L, XXL, dll), bukan name
+      const sizeMap = new Map(sizes.map(s => [s.code.toUpperCase(), s.id]));
       const discountGroupMap = new Map(discountGroups.map(dg => [dg.name.toLowerCase(), dg.id]));
 
       const results = {
@@ -1287,19 +1371,33 @@ function setupItemHandlers() {
           try {
             const name = (row.getCell(1).value || "").toString().trim();
             const categoryName = (row.getCell(2).value || "").toString().trim();
-            const sizeName = (row.getCell(3).value || "").toString().trim() || null;
+            const sizeCode = (row.getCell(3).value || "").toString().trim() || null;
             const description = (row.getCell(4).value || "").toString().trim() || null;
             const purchasePrice = parseFloat(row.getCell(5).value || 0) || 0;
             const rentalPricePerDay = parseFloat(row.getCell(6).value || 0) || 0;
             const salePrice = parseFloat(row.getCell(7).value || 0) || 0;
             const deposit = parseFloat(row.getCell(8).value || 0) || 0;
             const type = (row.getCell(9).value || "RENTAL").toString().trim().toUpperCase();
-            const status = (row.getCell(10).value || "AVAILABLE").toString().trim().toUpperCase();
-            const minStockAlert = parseInt(row.getCell(11).value || 1) || 1;
-            const isAvailableForRent = (row.getCell(12).value || "Ya").toString().trim().toLowerCase() === "ya";
-            const isAvailableForSale = (row.getCell(13).value || "Ya").toString().trim().toLowerCase() === "ya";
-            const isActive = (row.getCell(14).value || "Ya").toString().trim().toLowerCase() === "ya";
-            const discountGroupName = (row.getCell(15).value || "").toString().trim() || null;
+            // Status dihitung otomatis berdasarkan stok, tidak perlu dari Excel
+            const minStockAlert = parseInt(row.getCell(10).value || 1) || 1;
+            const discountGroupName = (row.getCell(11).value || "").toString().trim() || null;
+
+            // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
+            const getAvailabilityByType = (type) => {
+              if (type === "RENTAL") {
+                return { is_available_for_rent: true, is_available_for_sale: false };
+              } else if (type === "SALE") {
+                return { is_available_for_rent: false, is_available_for_sale: true };
+              } else if (type === "BOTH") {
+                return { is_available_for_rent: true, is_available_for_sale: true };
+              }
+              return { is_available_for_rent: true, is_available_for_sale: false };
+            };
+            
+            const availability = getAvailabilityByType(type);
+            const isAvailableForRent = availability.is_available_for_rent;
+            const isAvailableForSale = availability.is_available_for_sale;
+            const isActive = true; // Default aktif
 
             // Validation
             if (!name) {
@@ -1310,16 +1408,20 @@ function setupItemHandlers() {
               throw new Error("Kategori wajib diisi");
             }
 
+            // Validasi status
+            // Status dihitung otomatis berdasarkan stok, tidak perlu validasi
+
             const categoryId = categoryMap.get(categoryName.toLowerCase());
             if (!categoryId) {
               throw new Error(`Kategori "${categoryName}" tidak ditemukan`);
             }
 
             let sizeId = null;
-            if (sizeName) {
-              sizeId = sizeMap.get(sizeName.toLowerCase());
+            if (sizeCode) {
+              // Gunakan code (M, L, XXL, dll) untuk mencocokkan ukuran
+              sizeId = sizeMap.get(sizeCode.toUpperCase());
               if (!sizeId) {
-                throw new Error(`Ukuran "${sizeName}" tidak ditemukan`);
+                throw new Error(`Ukuran dengan code "${sizeCode}" tidak ditemukan`);
               }
             }
 
@@ -1334,31 +1436,22 @@ function setupItemHandlers() {
             // Generate code automatically
             const finalCode = await generateItemCode(database, type);
 
-            // Determine price based on type
-            let price = 0;
-            if (type === "RENTAL" || type === "BOTH") {
-              price = rentalPricePerDay;
-            } else if (type === "SALE") {
-              price = salePrice;
-            }
-
             // Insert item
+            // Status dihitung otomatis berdasarkan stok
             await database.execute(
               `INSERT INTO items (
-                code, name, description, price, sale_price, type, status,
+                code, name, description, sale_price, type,
                 size_id, category_id, rental_price_per_day, deposit,
                 discount_group_id, stock_quantity, available_quantity,
                 min_stock_alert, is_available_for_rent, is_available_for_sale,
                 is_active
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 finalCode,
                 name,
                 description,
-                price,
                 salePrice,
                 type,
-                status,
                 sizeId,
                 categoryId,
                 rentalPricePerDay,

@@ -236,7 +236,7 @@ export default {
 
     // Calculate item price after discount
     const calculateItemPrice = (item) => {
-      const basePrice = item.sale_price ?? item.price ?? 0;
+      const basePrice = item.sale_price ?? 0;
       if (item.discount_percentage > 0) {
         return Math.round(basePrice * (1 - item.discount_percentage / 100));
       } else if (item.discount_amount > 0) {
@@ -519,7 +519,7 @@ export default {
               return {
                 ...item,
                 quantity: d.quantity || 1,
-                sale_price: d.sale_price || item.sale_price || item.price || 0,
+                sale_price: d.sale_price || item.sale_price || 0,
               };
             }
             return null;
@@ -746,6 +746,8 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   padding: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .cashier-total-label-minimal {
@@ -758,15 +760,24 @@ export default {
 }
 
 .cashier-total-value {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: 700;
   color: #111827;
   margin-bottom: 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .cashier-total-info {
   font-size: 0.75rem;
   color: #6b7280;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .cashier-breakdown-minimal {

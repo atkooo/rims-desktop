@@ -48,34 +48,10 @@
               {{ errors.purchase_price }}
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="price" class="form-label">Harga Dasar</label>
-            <input
-              id="price"
-              :value="formatNumberInput(form.price)"
-              @input="handlePriceInput"
-              type="text"
-              class="form-input"
-              :class="{ error: errors.price }"
-              required
-            />
-            <div v-if="errors.price" class="error-message">
-              {{ errors.price }}
-            </div>
-          </div>
         </div>
 
         <div class="form-pair">
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select v-model="form.status" class="form-select" required>
-              <option :value="null" disabled>Pilih Status</option>
-              <option value="AVAILABLE">Available</option>
-              <option value="RENTED">Rented</option>
-              <option value="MAINTENANCE">Maintenance</option>
-            </select>
-          </div>
+          <!-- Status dihitung otomatis berdasarkan stok, tidak perlu input manual -->
         </div>
 
         <!-- Harga Jual (ditampilkan berdasarkan tipe item) -->
@@ -104,7 +80,12 @@
         <div class="form-pair">
           <div class="form-group">
             <label class="form-label">Tipe Item</label>
-            <select v-model="form.type" class="form-select" required>
+            <select 
+              v-model="form.type" 
+              class="form-select" 
+              :disabled="isEdit"
+              required
+            >
               <option :value="null" disabled>Pilih Tipe Item</option>
               <option v-for="type in ITEM_TYPE" :key="type" :value="type">
                 {{ type }}
@@ -113,6 +94,9 @@
             <div v-if="errors.type" class="error-message">
               {{ errors.type }}
             </div>
+            <small v-if="isEdit" class="form-hint">
+              Jenis item tidak dapat diubah setelah dibuat
+            </small>
           </div>
         </div>
 
@@ -223,20 +207,6 @@
             </div>
           </div>
           <div class="form-group">
-            <label for="weeklyRate" class="form-label">Harga per Minggu</label>
-            <input
-              id="weeklyRate"
-              :value="formatNumberInput(form.weeklyRate)"
-              @input="handleWeeklyRateInput"
-              type="text"
-              class="form-input"
-              :class="{ error: errors.weeklyRate }"
-            />
-            <div v-if="errors.weeklyRate" class="error-message">
-              {{ errors.weeklyRate }}
-            </div>
-          </div>
-          <div class="form-group">
             <label for="deposit" class="form-label">Deposit <span class="label-optional">(Opsional)</span></label>
             <input
               id="deposit"
@@ -276,15 +246,12 @@ import { useItemType } from "@/composables/useItemType";
 const defaultForm = () => ({
   name: "",
   purchase_price: 0,
-  price: 0,
   sale_price: 0,
   rental_price_per_day: 0,
   type: null,
   description: "",
-  status: null,
   code: "",
   dailyRate: 0,
-  weeklyRate: 0,
   deposit: 0,
   size_id: null,
   category_id: null,
@@ -342,9 +309,6 @@ export default {
     const handlePurchasePriceInput = createInputHandler(
       (value) => (form.value.purchase_price = value)
     );
-    const handlePriceInput = createInputHandler(
-      (value) => (form.value.price = value)
-    );
     const handleSalePriceInput = createInputHandler(
       (value) => (form.value.sale_price = value)
     );
@@ -354,9 +318,6 @@ export default {
         // Sync dailyRate to rental_price_per_day for backend compatibility
         form.value.rental_price_per_day = value;
       }
-    );
-    const handleWeeklyRateInput = createInputHandler(
-      (value) => (form.value.weeklyRate = value)
     );
     const handleDepositInput = createInputHandler(
       (value) => (form.value.deposit = value)
@@ -382,10 +343,12 @@ export default {
     };
 
     const resetForm = () => {
-      form.value = props.editData
-        ? {
+      if (props.editData) {
+        // Copy editData but exclude price field (no longer used)
+        const { price, ...editDataWithoutPrice } = props.editData;
+        form.value = {
             ...defaultForm(),
-            ...props.editData,
+          ...editDataWithoutPrice,
             // Map database column to form field
             purchase_price: props.editData.purchase_price ?? 0,
             sale_price: props.editData.sale_price ?? 0,
@@ -395,7 +358,6 @@ export default {
               props.editData.dailyRate ??
               props.editData.rental_price_per_day ??
               0,
-            weeklyRate: props.editData.weeklyRate ?? 0,
             deposit: props.editData.deposit ?? 0,
             // Stok tidak bisa diubah dari form, tetap tampilkan nilai saat ini untuk info saja
             // Tapi saat submit, akan di-ignore dan tidak di-update
@@ -412,8 +374,10 @@ export default {
               props.editData.category ??
               null,
             discount_group_id: props.editData.discount_group_id ?? null,
+        };
+      } else {
+        form.value = defaultForm();
           }
-        : defaultForm();
       // Jangan auto-select kategori, biarkan user memilih
       errors.value = {};
       // Pastikan data ukuran tersedia untuk menampilkan ringkasan
@@ -429,10 +393,14 @@ export default {
       // Kode akan di-generate otomatis, tidak perlu validasi
       if (form.value.purchase_price < 0)
         e.purchase_price = "Harga beli tidak boleh negatif";
-      if (!form.value.price || form.value.price <= 0)
-        e.price = "Harga harus > 0";
+      
+      // Validasi: harga beli tidak boleh lebih dari harga jual
+      if (form.value.sale_price > 0 && form.value.purchase_price > form.value.sale_price) {
+        e.purchase_price = "Harga beli tidak boleh lebih dari harga jual";
+      }
+      
       if (!form.value.type) e.type = "Tipe item wajib dipilih";
-      if (!form.value.status) e.status = "Status wajib dipilih";
+      // Status dihitung otomatis berdasarkan stok, tidak perlu validasi
       if (!form.value.category_id) e.category_id = "Kategori wajib dipilih";
       if (!form.value.size_id) e.size_id = "Ukuran wajib dipilih";
       
@@ -461,6 +429,10 @@ export default {
         // Hapus stock_quantity dan available_quantity dari payload
         // Stok hanya bisa diubah melalui manajemen stok
         const payload = { ...form.value };
+        // Hapus price karena sudah tidak digunakan (diganti dengan purchase_price dan sale_price)
+        delete payload.price;
+        // Hapus status karena dihitung otomatis berdasarkan stok
+        delete payload.status;
         if (!isEdit.value) {
           // Saat create, force stok = 0
           payload.stock_quantity = 0;
@@ -469,6 +441,8 @@ export default {
           // Saat edit, jangan kirim stok, biarkan tidak berubah
           delete payload.stock_quantity;
           delete payload.available_quantity;
+          // Type tidak bisa diubah saat edit
+          delete payload.type;
         }
         
         if (isEdit.value)
@@ -569,10 +543,8 @@ export default {
       formatCurrency,
       formatNumberInput,
       handlePurchasePriceInput,
-      handlePriceInput,
       handleSalePriceInput,
       handleDailyRateInput,
-      handleWeeklyRateInput,
       handleDepositInput,
       showSizePicker,
       openSizePicker,

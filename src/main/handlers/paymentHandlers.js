@@ -41,13 +41,15 @@ function setupPaymentHandlers() {
         await validateCashierSession(paymentData.userId);
       }
 
+      // Use appropriate payment table based on transaction type
+      const paymentTable = paymentData.transactionType === "rental" ? "rental_payments" : "sales_payments";
+      
       const result = await database.execute(
-        `INSERT INTO payments (
-          transaction_type, transaction_id, payment_date, amount,
+        `INSERT INTO ${paymentTable} (
+          transaction_id, payment_date, amount,
           payment_method, reference_number, user_id, notes, is_sync
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
         [
-          paymentData.transactionType,
           paymentData.transactionId,
           paymentData.paymentDate || new Date().toISOString(),
           paymentData.amount,
@@ -111,11 +113,11 @@ function setupPaymentHandlers() {
       }
 
       const newPayment = await database.queryOne(
-        `SELECT p.*, u.full_name AS user_name
-         FROM payments p
+        `SELECT p.*, u.full_name AS user_name, ? as transaction_type
+         FROM ${paymentTable} p
          LEFT JOIN users u ON p.user_id = u.id
          WHERE p.id = ?`,
-        [result.id],
+        [paymentData.transactionType, result.id],
       );
 
       return newPayment;
@@ -128,11 +130,24 @@ function setupPaymentHandlers() {
   // Update payment
   ipcMain.handle("payments:update", async (event, id, paymentData) => {
     try {
-      // Get payment info before updating
-      const payment = await database.queryOne(
-        `SELECT transaction_type, transaction_id FROM payments WHERE id = ?`,
+      // Get payment info before updating - check both tables
+      let payment = await database.queryOne(
+        `SELECT 'rental' as transaction_type, transaction_id FROM rental_payments WHERE id = ?`,
         [id],
       );
+      
+      if (!payment) {
+        payment = await database.queryOne(
+          `SELECT 'sale' as transaction_type, transaction_id FROM sales_payments WHERE id = ?`,
+          [id],
+        );
+      }
+      
+      if (!payment) {
+        throw new Error("Payment tidak ditemukan");
+      }
+      
+      const paymentTable = payment.transaction_type === "rental" ? "rental_payments" : "sales_payments";
 
       const updateFields = [];
       const updateValues = [];
@@ -161,7 +176,7 @@ function setupPaymentHandlers() {
       if (updateFields.length > 0) {
         updateValues.push(id);
         await database.execute(
-          `UPDATE payments SET ${updateFields.join(", ")} WHERE id = ?`,
+          `UPDATE ${paymentTable} SET ${updateFields.join(", ")} WHERE id = ?`,
           updateValues,
         );
       }
@@ -199,11 +214,11 @@ function setupPaymentHandlers() {
       }
 
       const updatedPayment = await database.queryOne(
-        `SELECT p.*, u.full_name AS user_name
-         FROM payments p
+        `SELECT p.*, u.full_name AS user_name, ? as transaction_type
+         FROM ${paymentTable} p
          LEFT JOIN users u ON p.user_id = u.id
          WHERE p.id = ?`,
-        [id],
+        [payment.transaction_type, id],
       );
 
       return updatedPayment;
@@ -216,13 +231,26 @@ function setupPaymentHandlers() {
   // Delete payment
   ipcMain.handle("payments:delete", async (event, id) => {
     try {
-      // Get payment info before deleting
-      const payment = await database.queryOne(
-        `SELECT transaction_type, transaction_id FROM payments WHERE id = ?`,
+      // Get payment info before deleting - check both tables
+      let payment = await database.queryOne(
+        `SELECT 'rental' as transaction_type, transaction_id FROM rental_payments WHERE id = ?`,
         [id],
       );
+      
+      if (!payment) {
+        payment = await database.queryOne(
+          `SELECT 'sale' as transaction_type, transaction_id FROM sales_payments WHERE id = ?`,
+          [id],
+        );
+      }
+      
+      if (!payment) {
+        throw new Error("Payment tidak ditemukan");
+      }
+      
+      const paymentTable = payment.transaction_type === "rental" ? "rental_payments" : "sales_payments";
 
-      await database.execute("DELETE FROM payments WHERE id = ?", [id]);
+      await database.execute(`DELETE FROM ${paymentTable} WHERE id = ?`, [id]);
 
       // Update transaction status if payment deletion makes it unpaid
       if (payment && payment.transaction_type === "sale") {

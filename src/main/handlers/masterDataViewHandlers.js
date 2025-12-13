@@ -77,7 +77,6 @@ function setupMasterDataViewHandlers() {
         i.code AS item_code,
         i.sale_price AS item_sale_price,
         i.rental_price_per_day AS item_rental_price,
-        i.price AS item_price,
         c.name AS category_name,
         a.name AS accessory_name,
         a.code AS accessory_code,
@@ -166,33 +165,19 @@ function setupMasterDataViewHandlers() {
   );
 
   register(
-    "master:getRoles",
-    () => `
-      SELECT
-        id,
-        name,
-        description
-      FROM roles
-      ORDER BY name ASC
-    `,
-    "roles",
-  );
-
-  register(
     "master:getUsers",
     () => `
       SELECT
-        u.id,
-        u.username,
-        u.full_name,
-        u.email,
-        u.is_active,
-        r.name AS role_name,
-        u.last_login,
-        u.created_at
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      ORDER BY u.full_name ASC
+        id,
+        username,
+        full_name,
+        email,
+        role AS role_name,
+        is_active,
+        last_login,
+        created_at
+      FROM users
+      ORDER BY full_name ASC
     `,
     "users",
   );
