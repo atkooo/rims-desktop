@@ -28,6 +28,8 @@ import BulkLabelGeneratorView from "./views/master/BulkLabelGeneratorView.vue";
 import SearchResultsView from "./views/SearchResultsView.vue";
 import CashierLayout from "./components/cashier/CashierLayout.vue";
 import CashierHome from "./views/cashier/CashierHome.vue";
+import CashierTransactionPage from "./views/cashier/CashierTransactionPage.vue";
+import CashierTransactionsHistoryPage from "./views/cashier/CashierTransactionsHistoryPage.vue";
 import CashierSalePage from "./views/cashier/CashierSalePage.vue";
 import CashierRentalPage from "./views/cashier/CashierRentalPage.vue";
 import CashierSessionPage from "./views/cashier/CashierSessionPage.vue";
@@ -56,14 +58,48 @@ const routes = [
     component: CashierLayout,
     children: [
       { path: "", name: "cashier-home", component: CashierHome },
+      {
+        path: "transaction",
+        name: "cashier-transaction",
+        component: CashierTransactionPage,
+      },
+      {
+        path: "transactions",
+        name: "cashier-transactions-history",
+        component: CashierTransactionsHistoryPage,
+      },
       { path: "sale", name: "cashier-sale", component: CashierSalePage },
       { path: "rental", name: "cashier-rental", component: CashierRentalPage },
-      { path: "transactions/sales", name: "cashier-transactions-sales", component: CashierSalesTransactionsView },
-      { path: "transactions/rentals", name: "cashier-transactions-rentals", component: CashierRentalsTransactionsView },
-      { path: "transactions/sales/:code", name: "cashier-transaction-sale-detail", component: SaleTransactionDetailView },
-      { path: "transactions/rentals/:code", name: "cashier-transaction-rental-detail", component: RentalTransactionDetailView },
-      { path: "customers", name: "cashier-customers", component: CashierCustomersPage },
-      { path: "session", name: "cashier-session", component: CashierSessionPage },
+      {
+        path: "transactions/sales",
+        name: "cashier-transactions-sales",
+        component: CashierSalesTransactionsView,
+      },
+      {
+        path: "transactions/rentals",
+        name: "cashier-transactions-rentals",
+        component: CashierRentalsTransactionsView,
+      },
+      {
+        path: "transactions/sales/:code",
+        name: "cashier-transaction-sale-detail",
+        component: SaleTransactionDetailView,
+      },
+      {
+        path: "transactions/rentals/:code",
+        name: "cashier-transaction-rental-detail",
+        component: RentalTransactionDetailView,
+      },
+      {
+        path: "customers",
+        name: "cashier-customers",
+        component: CashierCustomersPage,
+      },
+      {
+        path: "session",
+        name: "cashier-session",
+        component: CashierSessionPage,
+      },
     ],
   },
   { path: "/search", name: "search-results", component: SearchResultsView },
@@ -259,13 +295,16 @@ router.beforeEach(async (to, from, next) => {
   // Check activation status first (except for activation and login pages)
   try {
     const activationStatus = await checkActivationStatus();
-    
+
     // If not active, redirect to activation page
     // Allow offline mode only if explicitly marked as active before going offline
     if (!activationStatus.isActive) {
       // Only redirect if not already on activation page
       if (to.path !== "/activation") {
-        console.warn("Application not activated, redirecting to activation page", activationStatus);
+        console.warn(
+          "Application not activated, redirecting to activation page",
+          activationStatus
+        );
         return next({ path: "/activation", query: { redirect: to.fullPath } });
       }
     }
