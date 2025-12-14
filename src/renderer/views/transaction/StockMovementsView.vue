@@ -12,8 +12,11 @@
           <AppButton variant="secondary" :loading="loading" @click="loadData">
             Refresh Data
           </AppButton>
-          <AppButton variant="primary" @click="showForm = true">
-            Mutasi Baru
+          <AppButton variant="primary" size="small" @click="goToReceipt">
+            Penerimaan Stok
+          </AppButton>
+          <AppButton variant="primary" @click="goToOpname">
+            Stock Opname
           </AppButton>
         </div>
       </div>
@@ -68,9 +71,6 @@
         </AppTable>
       </div>
     </section>
-
-    <!-- Stock Movement Form Dialog -->
-    <StockMovementForm v-model="showForm" @saved="handleSaved" />
 
     <!-- Stock Movement Detail Dialog -->
     <AppDialog
@@ -163,24 +163,21 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
-import StockMovementForm from "@/components/modules/stock/StockMovementForm.vue";
-import {
-  fetchStockMovements,
-  createStockMovement,
-} from "@/services/transactions";
+import { fetchStockMovements } from "@/services/transactions";
 
 export default {
   name: "StockMovementsView",
-  components: { AppButton, AppTable, AppDialog, Icon, StockMovementForm },
+  components: { AppButton, AppTable, AppDialog, Icon },
   setup() {
+    const router = useRouter();
     const movements = ref([]);
     const loading = ref(false);
     const error = ref("");
-    const showForm = ref(false);
     const showDetail = ref(false);
     const selectedMovement = ref(null);
 
@@ -229,19 +226,13 @@ export default {
       }
     };
 
-    // Handle save
-    const handleSaved = async () => {
-      showForm.value = false;
-      await loadData();
-    };
+    const goToReceipt = () => router.push("/stock/receipt");
+    const goToOpname = () => router.push("/stock/opname");
 
-    // Handle detail
     const openDetail = (movement) => {
       selectedMovement.value = movement;
       showDetail.value = true;
     };
-
-    // Stock movements are audit trail - deletion not allowed from frontend
 
     onMounted(loadData);
 
@@ -252,8 +243,8 @@ export default {
       columns,
       stats,
       loadData,
-      showForm,
-      handleSaved,
+      goToReceipt,
+      goToOpname,
       showDetail,
       selectedMovement,
       openDetail,

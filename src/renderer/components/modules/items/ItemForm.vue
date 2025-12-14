@@ -176,16 +176,6 @@
           </div>
         </div>
 
-        <!-- Informasi Stok: Stok diatur melalui Manajemen Stok -->
-        <div class="form-group grid-span-2">
-          <div class="info-box">
-            <small>
-              <strong>Catatan:</strong> Stok item diatur melalui menu 
-              <strong>Stok & Gudang → Manajemen Stok</strong>. 
-              Stok awal akan otomatis diset ke 0.
-            </small>
-          </div>
-        </div>
       </div>
 
       <!-- Informasi Rental -->

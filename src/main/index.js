@@ -104,6 +104,7 @@ const setupCustomerHandlers = require("./handlers/customerHandlers");
 const { setupTransactionHandlers } = require("./handlers/transactionHandlers");
 const { setupPaymentHandlers } = require("./handlers/paymentHandlers");
 const { setupStockMovementHandlers } = require("./handlers/stockMovementHandlers");
+const { setupStockReceiptHandlers } = require("./handlers/stockReceiptHandlers");
 const { setupStockRepairHandlers } = require("./handlers/stockRepairHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
@@ -425,6 +426,7 @@ app.whenReady().then(async () => {
   setupTransactionHandlers();
   setupPaymentHandlers();
   setupStockMovementHandlers();
+  setupStockReceiptHandlers();
   setupStockRepairHandlers();
   setupSettingsHandlers();
   setupMasterDataViewHandlers();

@@ -45,6 +45,21 @@ function generateTransactionCode(type) {
 }
 
 /**
+ * Generate simple stock receipt code with prefix 'REC'
+ * @returns {string}
+ */
+function generateStockReceiptCode() {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const random = Math.floor(Math.random() * 9999)
+    .toString()
+    .padStart(4, "0");
+  return `REC${year}${month}${day}${random}`;
+}
+
+/**
  * Convert value to integer, returning 0 if invalid
  * @param {any} value - Value to convert
  * @returns {number} Integer value
@@ -155,6 +170,7 @@ async function generateAccessoryCode(db) {
 module.exports = {
   normalizeCode,
   generateTransactionCode,
+  generateStockReceiptCode,
   toInteger,
   sanitizeAvailable,
   getItemCodePrefix,

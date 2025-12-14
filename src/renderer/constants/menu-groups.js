@@ -8,6 +8,16 @@ export const menuGroups = [
         icon: "warehouse",
       },
       {
+        to: "/stock/receipt",
+        label: "Penerimaan Stok",
+        icon: "download",
+      },
+      {
+        to: "/stock/opname",
+        label: "Stock Opname",
+        icon: "clipboard",
+      },
+      {
         to: "/stock/alerts",
         label: "Alert Stok Minimal",
         icon: "bell",

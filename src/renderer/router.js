@@ -24,6 +24,8 @@ import UserProfileView from "./views/UserProfileView.vue";
 import StockMovementsView from "./views/transaction/StockMovementsView.vue";
 import ReportExportView from "./views/reports/ReportExportView.vue";
 import StockAlertManagementView from "./views/stock/StockAlertManagementView.vue";
+import StockReceiptPage from "./views/stock/StockReceiptPage.vue";
+import StockOpnamePage from "./views/stock/StockOpnamePage.vue";
 import BulkLabelGeneratorView from "./views/master/BulkLabelGeneratorView.vue";
 import SearchResultsView from "./views/SearchResultsView.vue";
 import CashierLayout from "./components/cashier/CashierLayout.vue";
@@ -151,6 +153,16 @@ const routes = [
     path: "/transactions/stock-movements",
     name: "transactions-stock-movements",
     component: StockMovementsView,
+  },
+  {
+    path: "/stock/receipt",
+    name: "stock-receipt",
+    component: StockReceiptPage,
+  },
+  {
+    path: "/stock/opname",
+    name: "stock-opname",
+    component: StockOpnamePage,
   },
   // Sales Transactions
   {
