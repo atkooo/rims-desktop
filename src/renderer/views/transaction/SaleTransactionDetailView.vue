@@ -376,7 +376,6 @@ export default {
       loading,
       error,
       goBack,
-      goToEdit,
       refresh,
       isPaid,
       isCancelled,

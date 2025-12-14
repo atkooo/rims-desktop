@@ -160,9 +160,9 @@ function setupTransactionHandlers() {
           result = await database.execute(
             `INSERT INTO rental_transactions (
               transaction_code, customer_id, user_id, rental_date, 
-              planned_return_date, total_days, subtotal, deposit, tax,
+              planned_return_date, total_days, subtotal, deposit, discount, tax,
               total_amount, status, notes, cashier_session_id, is_sync
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             [
               transactionCode,
               transactionData.customerId,
@@ -172,6 +172,7 @@ function setupTransactionHandlers() {
               transactionData.totalDays,
               transactionData.subtotal,
               transactionData.deposit,
+              transactionData.discount || 0,
               transactionData.tax || 0,
               transactionData.totalAmount,
               "pending", // Status awal: pending (belum dibayar), akan diupdate ke 'active' setelah pembayaran
@@ -515,6 +516,22 @@ function setupTransactionHandlers() {
           if (transactionData.plannedReturnDate !== undefined) {
             updateFields.push("planned_return_date = ?");
             updateValues.push(transactionData.plannedReturnDate);
+          }
+          if (transactionData.subtotal !== undefined) {
+            updateFields.push("subtotal = ?");
+            updateValues.push(transactionData.subtotal);
+          }
+          if (transactionData.deposit !== undefined) {
+            updateFields.push("deposit = ?");
+            updateValues.push(transactionData.deposit);
+          }
+          if (transactionData.discount !== undefined) {
+            updateFields.push("discount = ?");
+            updateValues.push(transactionData.discount);
+          }
+          if (transactionData.tax !== undefined) {
+            updateFields.push("tax = ?");
+            updateValues.push(transactionData.tax);
           }
           if (transactionData.totalAmount !== undefined) {
             updateFields.push("total_amount = ?");

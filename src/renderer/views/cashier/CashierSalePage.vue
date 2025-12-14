@@ -107,19 +107,27 @@
             <input
               type="text"
               :value="formatNumberInput(form.discount)"
-              @input="handleDiscountInput"
-              class="cashier-input"
-            />
-          </div>
-          <div class="input-group">
-            <label>Pajak</label>
-            <input
-              type="text"
-              :value="formatNumberInput(form.tax)"
-              @input="handleTaxInput"
               class="cashier-input"
               readonly
             />
+            <p class="cashier-input-hint">{{ discountHint }}</p>
+          </div>
+          <div class="input-group">
+            <label>
+              Pajak
+              <span v-if="taxPercentage > 0" class="cashier-input-label-note">
+                ({{ taxRateLabel }})
+              </span>
+            </label>
+            <input
+              type="text"
+              :value="formatNumberInput(form.tax)"
+              class="cashier-input"
+              readonly
+            />
+            <p v-if="taxPercentage > 0" class="cashier-input-hint cashier-tax-hint">
+              Tarif pajak {{ taxRateLabel }} diterapkan pada subtotal setelah diskon.
+            </p>
           </div>
         </div>
 
@@ -262,13 +270,75 @@ export default {
       return 0;
     });
 
-    const { formatNumberInput, createInputHandler } = useNumberFormat();
-    const handleDiscountInput = createInputHandler(
-      (value) => (form.value.discount = value)
-    );
-    const handleTaxInput = createInputHandler(
-      (value) => (form.value.tax = value)
-    );
+    const { formatNumberInput } = useNumberFormat();
+    const taxRateLabel = computed(() => `${taxPercentage.value || 0}%`);
+
+    const selectedCustomerId = computed(() => {
+      const parsed = Number(form.value.customerId);
+      return parsed > 0 ? parsed : null;
+    });
+
+    const selectedCustomer = computed(() => {
+      const id = selectedCustomerId.value;
+      if (!id) return null;
+      return (
+        customers.value.find((customer) => Number(customer.id) === id) || null
+      );
+    });
+
+    const lastAutoDiscount = ref(null);
+
+    const applyCustomerDiscount = () => {
+      const customer = selectedCustomer.value;
+      if (!customer || !customer.discount_group_id) {
+        form.value.discount = 0;
+        lastAutoDiscount.value = null;
+        return;
+      }
+
+      const percentage = Number(customer.discount_percentage) || 0;
+      const amount = Number(customer.discount_amount) || 0;
+
+      if (percentage > 0) {
+        const calculated = Math.max(
+          0,
+          Math.round((subtotal.value * percentage) / 100),
+        );
+        form.value.discount = calculated;
+        lastAutoDiscount.value = {
+          type: "percentage",
+          customerId: customer.id,
+        };
+      } else if (amount > 0) {
+        form.value.discount = Math.max(0, amount);
+        lastAutoDiscount.value = {
+          type: "amount",
+          customerId: customer.id,
+        };
+      } else {
+        form.value.discount = 0;
+        lastAutoDiscount.value = {
+          type: "none",
+          customerId: customer.id,
+        };
+      }
+    };
+
+    const discountHint = computed(() => {
+      const customer = selectedCustomer.value;
+      if (customer && customer.discount_group_name) {
+        const percentage = Number(customer.discount_percentage) || 0;
+        const amount = Number(customer.discount_amount) || 0;
+        if (percentage > 0) {
+          return `Diskon otomatis dari grup ${customer.discount_group_name} (${percentage}%)`;
+        }
+        if (amount > 0) {
+          return `Diskon otomatis dari grup ${customer.discount_group_name} (${formatCurrency(amount)})`;
+        }
+        return `Grup diskon ${customer.discount_group_name} belum memiliki potongan aktif.`;
+      }
+      return "Diskon diatur otomatis berdasarkan grup diskon customer (jika ada).";
+    });
 
     // Barcode scanner - supports item, accessory, and bundle
     const handleBarcodeScan = async (barcode) => {
@@ -518,9 +588,40 @@ export default {
       }
     });
 
+    watch(
+      () => form.value.customerId,
+      () => {
+        applyCustomerDiscount();
+      },
+      { immediate: true },
+    );
+
+    watch(
+      () => subtotal.value,
+      () => {
+        if (
+          lastAutoDiscount.value &&
+          lastAutoDiscount.value.type === "percentage" &&
+          Number(form.value.customerId) === lastAutoDiscount.value.customerId
+        ) {
+          applyCustomerDiscount();
+        }
+      },
+    );
+
+    watch(
+      () => customers.value.length,
+      (length) => {
+        if (length > 0) {
+          applyCustomerDiscount();
+        }
+      },
+    );
+
     const loadCustomers = async () => {
       try {
         customers.value = await fetchCustomers();
+        applyCustomerDiscount();
       } catch (error) {
         console.error("Gagal memuat customers:", error);
       }
@@ -556,8 +657,9 @@ export default {
       loading,
       formatCurrency,
       formatNumberInput,
-      handleDiscountInput,
-      handleTaxInput,
+      discountHint,
+      taxPercentage,
+      taxRateLabel,
       totalAmount,
       baseSubtotal,
       bundleSubtotal,
@@ -823,6 +925,22 @@ export default {
   cursor: not-allowed;
 }
 
+.cashier-input-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.cashier-input-label-note {
+  font-size: 0.75rem;
+  color: #6c63ff;
+  margin-left: 0.35rem;
+}
+
+.cashier-tax-hint {
+  margin-top: 0.2rem;
+}
+
 .cashier-textarea {
   padding: 0.75rem;
   border: 1px solid #d1d5db;
@@ -899,4 +1017,3 @@ export default {
   }
 }
 </style>
-

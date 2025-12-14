@@ -117,14 +117,31 @@
             />
           </div>
           <div class="input-group">
-            <label>Pajak</label>
+            <label>Diskon</label>
             <input
               type="text"
-              :value="formatNumberInput(form.tax)"
-              @input="handleTaxInput"
+              :value="formatNumberInput(discountValue)"
               class="cashier-input"
               readonly
             />
+            <p class="cashier-input-hint">{{ discountHint }}</p>
+          </div>
+          <div class="input-group">
+            <label>
+              Pajak
+              <span v-if="taxPercentage > 0" class="cashier-input-label-note">
+                ({{ taxRateLabel }})
+              </span>
+            </label>
+            <input
+              type="text"
+              :value="formatNumberInput(form.tax)"
+              class="cashier-input"
+              readonly
+            />
+            <p v-if="taxPercentage > 0" class="cashier-input-hint cashier-tax-hint">
+              Tarif pajak {{ taxRateLabel }} dikenakan atas subtotal {{ totalDays }} hari.
+            </p>
           </div>
         </div>
 
@@ -207,6 +224,7 @@ const createDefaultForm = () => {
     rentalDate: toDateInput(today),
     plannedReturnDate: toDateInput(tomorrow),
     deposit: 0,
+    discount: 0,
     tax: 0,
     notes: "",
     items: [],
@@ -277,15 +295,25 @@ export default {
 
     const subtotal = computed(() => (baseSubtotal.value + bundleSubtotal.value) * totalDays.value);
 
+    const discountValue = computed(() => {
+      const raw = Math.max(0, Number(form.value.discount) || 0);
+      return Math.min(subtotal.value, raw);
+    });
+
     const calculatedTax = computed(() => {
       if (taxPercentage.value > 0 && subtotal.value > 0) {
-        return Math.round((subtotal.value * taxPercentage.value) / 100);
+        const amountAfterDiscount = subtotal.value - discountValue.value;
+        return Math.round((amountAfterDiscount * taxPercentage.value) / 100);
       }
       return 0;
     });
 
     const totalAmount = computed(
-      () => subtotal.value + (Number(form.value.deposit) || 0) + calculatedTax.value,
+      () =>
+        subtotal.value -
+        discountValue.value +
+        (Number(form.value.deposit) || 0) +
+        calculatedTax.value,
     );
 
     const totalItems = computed(() =>
@@ -317,9 +345,71 @@ export default {
     const handleDepositInput = createInputHandler(
       (value) => (form.value.deposit = value)
     );
-    const handleTaxInput = createInputHandler(
-      (value) => (form.value.tax = value)
-    );
+    const taxRateLabel = computed(() => `${taxPercentage.value || 0}%`);
+
+    const selectedCustomerId = computed(() => {
+      const parsed = Number(form.value.customerId);
+      return parsed > 0 ? parsed : null;
+    });
+
+    const selectedCustomer = computed(() => {
+      const id = selectedCustomerId.value;
+      if (!id) return null;
+      return (
+        customers.value.find((customer) => Number(customer.id) === id) || null
+      );
+    });
+
+    const lastAutoDiscount = ref(null);
+
+    const applyCustomerDiscount = () => {
+      const customer = selectedCustomer.value;
+      if (!customer || !customer.discount_group_id) {
+        form.value.discount = 0;
+        lastAutoDiscount.value = null;
+        return;
+      }
+
+      const percentage = Number(customer.discount_percentage) || 0;
+      const amount = Number(customer.discount_amount) || 0;
+
+      if (percentage > 0) {
+        const calculated = Math.round((subtotal.value * percentage) / 100);
+        form.value.discount = Math.min(subtotal.value, Math.max(0, calculated));
+        lastAutoDiscount.value = {
+          type: "percentage",
+          customerId: customer.id,
+        };
+      } else if (amount > 0) {
+        form.value.discount = Math.min(subtotal.value, amount);
+        lastAutoDiscount.value = {
+          type: "amount",
+          customerId: customer.id,
+        };
+      } else {
+        form.value.discount = 0;
+        lastAutoDiscount.value = {
+          type: "none",
+          customerId: customer.id,
+        };
+      }
+    };
+
+    const discountHint = computed(() => {
+      const customer = selectedCustomer.value;
+      if (customer && customer.discount_group_name) {
+        const percentage = Number(customer.discount_percentage) || 0;
+        const amount = Number(customer.discount_amount) || 0;
+        if (percentage > 0) {
+          return `Diskon otomatis dari grup ${customer.discount_group_name} (${percentage}%)`;
+        }
+        if (amount > 0) {
+          return `Diskon otomatis dari grup ${customer.discount_group_name} (${formatCurrency(amount)})`;
+        }
+        return `Grup diskon ${customer.discount_group_name} belum memiliki potongan aktif.`;
+      }
+      return "Diskon diatur otomatis berdasarkan grup diskon customer (jika ada).";
+    });
 
     // Barcode scanner - supports item and bundle
     const handleBarcodeScan = async (barcode) => {
@@ -452,6 +542,7 @@ export default {
       form.value.bundles = [];
       // Increment key to force re-render of child components
       formKey.value += 1;
+      lastAutoDiscount.value = null;
     };
 
     const handleSubmit = async () => {
@@ -468,6 +559,7 @@ export default {
       loading.value = true;
       try {
         const user = getStoredUser();
+        const rentalDiscount = discountValue.value;
         const newTransaction = await transactionStore.createTransaction({
           type: TRANSACTION_TYPE.RENTAL,
           customerId: form.value.customerId || null,
@@ -480,6 +572,7 @@ export default {
           totalDays: totalDays.value,
           subtotal: subtotal.value,
           deposit: Number(form.value.deposit) || 0,
+          discount: rentalDiscount,
           tax: calculatedTax.value,
           items: normalizedItems.value,
           bundles: normalizedBundles.value,
@@ -546,9 +639,40 @@ export default {
       }
     });
 
+    watch(
+      () => form.value.customerId,
+      () => {
+        applyCustomerDiscount();
+      },
+      { immediate: true },
+    );
+
+    watch(
+      () => subtotal.value,
+      () => {
+        if (
+          lastAutoDiscount.value &&
+          lastAutoDiscount.value.type === "percentage" &&
+          Number(form.value.customerId) === lastAutoDiscount.value.customerId
+        ) {
+          applyCustomerDiscount();
+        }
+      },
+    );
+
+    watch(
+      () => customers.value.length,
+      (length) => {
+        if (length > 0) {
+          applyCustomerDiscount();
+        }
+      },
+    );
+
     const loadCustomers = async () => {
       try {
         customers.value = await fetchCustomers();
+        applyCustomerDiscount();
       } catch (error) {
         console.error("Gagal memuat customers:", error);
       }
@@ -565,7 +689,12 @@ export default {
     };
 
     watch(
-      [() => subtotal.value, () => form.value.deposit, () => taxPercentage.value],
+      [
+        () => subtotal.value,
+        () => form.value.deposit,
+        () => taxPercentage.value,
+        () => discountValue.value,
+      ],
       () => {
         form.value.tax = calculatedTax.value;
       }
@@ -584,8 +713,9 @@ export default {
       loading,
       formatCurrency,
       formatNumberInput,
+      discountValue,
+      discountHint,
       handleDepositInput,
-      handleTaxInput,
       totalAmount,
       baseSubtotal,
       bundleSubtotal,
@@ -593,6 +723,8 @@ export default {
       totalBundles,
       totalDays,
       calculatedTax,
+      taxPercentage,
+      taxRateLabel,
       openItemPicker,
       openBundlePicker,
       addItem,
@@ -851,6 +983,22 @@ export default {
 .cashier-input[readonly] {
   background: #f9fafb;
   cursor: not-allowed;
+}
+
+.cashier-input-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.cashier-input-label-note {
+  font-size: 0.75rem;
+  color: #6c63ff;
+  margin-left: 0.35rem;
+}
+
+.cashier-tax-hint {
+  margin-top: 0.2rem;
 }
 
 .cashier-textarea {
