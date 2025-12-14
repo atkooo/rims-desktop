@@ -90,26 +90,6 @@
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="referenceNumber">No. Referensi (Opsional)</label>
-                  <input
-                    id="referenceNumber"
-                    type="text"
-                    v-model="paymentForm.referenceNumber"
-                    class="form-input"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="paymentNotes">Catatan (Opsional)</label>
-                  <textarea
-                    id="paymentNotes"
-                    v-model="paymentForm.notes"
-                    class="form-textarea"
-                    rows="2"
-                  ></textarea>
-                </div>
-
                 <div class="payment-summary-form">
                   <div class="summary-form-row">
                     <span>Total:</span>
@@ -200,8 +180,6 @@ export default {
     const paymentForm = ref({
       amount: 0,
       paymentMethod: "cash",
-      referenceNumber: "",
-      notes: "",
     });
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
@@ -333,8 +311,6 @@ export default {
           amount: paymentForm.value.amount,
           paymentMethod: paymentForm.value.paymentMethod,
           paymentDate: new Date().toISOString(),
-          referenceNumber: paymentForm.value.referenceNumber || null,
-          notes: paymentForm.value.notes || null,
           userId: user?.id || 1,
         };
 
@@ -347,8 +323,6 @@ export default {
         paymentForm.value = {
           amount: 0,
           paymentMethod: "cash",
-          referenceNumber: "",
-          notes: "",
         };
 
         // Check if payment is complete
@@ -385,8 +359,6 @@ export default {
       paymentForm.value = {
         amount: 0,
         paymentMethod: "cash",
-        referenceNumber: "",
-        notes: "",
       };
       errors.value = {};
     };
@@ -503,8 +475,8 @@ export default {
 
 .modal-content {
   padding: 1.5rem;
-  overflow-y: auto;
   flex: 1;
+  overflow-y: auto;
 }
 
 .loading-state {

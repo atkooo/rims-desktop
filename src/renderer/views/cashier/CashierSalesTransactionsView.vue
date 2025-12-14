@@ -29,7 +29,8 @@
             <th>Customer</th>
             <th>Tanggal</th>
             <th>Total</th>
-            <th>Status</th>
+            <th>Status Transaksi</th>
+            <th>Status Pembayaran</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -46,8 +47,13 @@
             <td>{{ formatDate(sale.sale_date) }}</td>
             <td><strong>{{ formatCurrency(sale.total_amount) }}</strong></td>
             <td>
-              <span class="status-badge" :class="getStatusClass(sale)">
-                {{ getStatusLabel(sale) }}
+              <span class="status-badge" :class="getTransactionStatusClass(sale)">
+                {{ getTransactionStatusLabel(sale) }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" :class="getPaymentStatusClass(sale)">
+                {{ getPaymentStatusLabel(sale) }}
               </span>
             </td>
             <td>
@@ -67,6 +73,14 @@
                 >
                   <Icon name="printer" :size="16" />
                 </button>
+                <button
+                  v-if="canCancelTransaction(sale)"
+                  class="btn-action danger"
+                  @click="handleCancel(sale)"
+                  title="Batalkan"
+                >
+                  <Icon name="x-circle" :size="16" />
+                </button>
               </div>
             </td>
           </tr>
@@ -81,6 +95,28 @@
       transaction-type="sale"
       @printed="handleReceiptPrinted"
     />
+
+    <AppDialog
+      v-model="showCancelDialog"
+      title="Konfirmasi Pembatalan Transaksi"
+      confirm-text="Ya, Batalkan"
+      cancel-text="Tidak"
+      confirm-variant="danger"
+      :loading="cancelling"
+      @confirm="confirmCancel"
+      @cancel="showCancelDialog = false"
+    >
+      <div class="cancel-dialog-content">
+        <p class="cancel-message">
+          Apakah Anda yakin ingin membatalkan transaksi
+          <strong>{{ selectedCancelTransaction?.transaction_code }}</strong>?
+        </p>
+        <div class="cancel-warning">
+          <Icon name="alert-triangle" :size="20" />
+          <span>Stok akan dikembalikan secara otomatis setelah pembatalan.</span>
+        </div>
+      </div>
+    </AppDialog>
   </div>
 </template>
 
@@ -88,14 +124,16 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
+import AppDialog from "@/components/ui/AppDialog.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
-import { fetchSalesTransactions } from "@/services/transactions";
+import { fetchSalesTransactions, cancelTransaction } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "CashierSalesTransactionsView",
   components: {
     Icon,
+    AppDialog,
     ReceiptPreviewDialog,
   },
   setup() {
@@ -109,6 +147,9 @@ export default {
     });
     const showReceiptPreview = ref(false);
     const selectedTransactionId = ref(null);
+    const showCancelDialog = ref(false);
+    const selectedCancelTransaction = ref(null);
+    const cancelling = ref(false);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -133,21 +174,42 @@ export default {
       return status === "paid";
     };
 
-    const getStatusLabel = (sale) => {
-      if (isCancelled(sale)) return "Dibatalkan";
-      const paymentStatus = (sale.payment_status || sale.paymentStatus || "")
+    const getPaymentStatusValue = (sale) => {
+      if (!sale) return "";
+      if (isCancelled(sale)) return "cancelled";
+      const status = (sale.payment_status || sale.paymentStatus || "")
         .toString()
         .toLowerCase();
-      return paymentStatus === "paid" ? "Lunas" : "Belum Lunas";
+      if (status === "paid") return "paid";
+      if (status === "unpaid") return "unpaid";
+      return status || "unpaid";
     };
 
-    const getStatusClass = (sale) => {
-      if (isCancelled(sale)) return "status-cancelled";
-      const paymentStatus = (sale.payment_status || sale.paymentStatus || "")
-        .toString()
-        .toLowerCase();
-      return paymentStatus === "paid" ? "status-paid" : "status-unpaid";
+    const getTransactionStatusLabel = (sale) => {
+      if (isCancelled(sale)) return "Dibatalkan";
+      const paymentStatus = getPaymentStatusValue(sale);
+      return paymentStatus === "paid" ? "Selesai" : "Belum Selesai";
     };
+
+    const getPaymentStatusLabel = (sale) => {
+      const status = getPaymentStatusValue(sale);
+      if (status === "cancelled") return "Dibatalkan";
+      return status === "paid" ? "Lunas" : "Belum Lunas";
+    };
+
+    const getTransactionStatusClass = (sale) => {
+      if (isCancelled(sale)) return "status-cancelled";
+      const paymentStatus = getPaymentStatusValue(sale);
+      return paymentStatus === "paid" ? "status-transaction-complete" : "status-transaction-open";
+    };
+
+    const getPaymentStatusClass = (sale) => {
+      const status = getPaymentStatusValue(sale);
+      if (status === "cancelled") return "status-cancelled";
+      return status === "paid" ? "status-paid" : "status-unpaid";
+    };
+
+    const canCancelTransaction = (sale) => !isCancelled(sale) && !isPaid(sale);
 
     const filteredSales = computed(() => {
       let items = sales.value;
@@ -201,6 +263,27 @@ export default {
       selectedTransactionId.value = null;
     };
 
+    const handleCancel = (sale) => {
+      selectedCancelTransaction.value = sale;
+      showCancelDialog.value = true;
+    };
+
+    const confirmCancel = async () => {
+      if (!selectedCancelTransaction.value?.id) return;
+      cancelling.value = true;
+      try {
+        await cancelTransaction(selectedCancelTransaction.value.id, "sale");
+        showSuccess("Transaksi berhasil dibatalkan.");
+        showCancelDialog.value = false;
+        selectedCancelTransaction.value = null;
+        await loadData();
+      } catch (err) {
+        showError(err?.message || "Gagal membatalkan transaksi.");
+      } finally {
+        cancelling.value = false;
+      }
+    };
+
     onMounted(() => {
       loadData();
     });
@@ -217,8 +300,16 @@ export default {
       formatDate,
       isPaid,
       isCancelled,
-      getStatusLabel,
-      getStatusClass,
+      getTransactionStatusLabel,
+      getTransactionStatusClass,
+      getPaymentStatusLabel,
+      getPaymentStatusClass,
+      canCancelTransaction,
+      showCancelDialog,
+      selectedCancelTransaction,
+      cancelling,
+      handleCancel,
+      confirmCancel,
       loadData,
       goToDetail,
       printReceipt,
@@ -370,6 +461,16 @@ export default {
   color: #991b1b;
 }
 
+.status-transaction-complete {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-transaction-open {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .action-buttons {
   display: flex;
   gap: 0.5rem;
@@ -390,10 +491,54 @@ export default {
   color: #374151;
 }
 
+.btn-action.danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-action.danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.cancel-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.cancel-message {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.cancel-message strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.cancel-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.cancel-warning .icon {
+  flex-shrink: 0;
+  color: #d97706;
+}
+
 .btn-action:hover {
   background: #e5e7eb;
   border-color: #9ca3af;
   color: #111827;
 }
 </style>
-

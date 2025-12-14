@@ -127,12 +127,6 @@
               Cetak Struk
             </AppButton>
           </div>
-          <div v-if="!isPaid(rental) && rental.status !== 'cancelled'" class="detail-item edit-action">
-            <AppButton variant="secondary" @click="goToEdit">
-              <Icon name="edit" :size="18" />
-              Edit Transaksi
-            </AppButton>
-          </div>
         </div>
       </div>
     </section>
@@ -375,14 +369,7 @@ export default {
       loadRental();
       loadDetails(true);
     };
-    const goBack = () => router.push({ name: "transactions-rentals" });
-
-    const goToEdit = () => {
-      router.push({
-        name: "transaction-rental-edit",
-        params: { code: code.value },
-      });
-    };
+    const goBack = () => router.back();
 
     const isPaid = (rental) => {
       if (!rental) return false;
@@ -830,16 +817,6 @@ export default {
 
 .cancelled-banner-close:active {
   transform: scale(0.95);
-}
-
-.detail-item.edit-action {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.detail-item.edit-action button {
-  width: 100%;
 }
 
 /* Using global badge utility classes */

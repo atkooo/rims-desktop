@@ -36,16 +36,8 @@ import CashierSessionPage from "./views/cashier/CashierSessionPage.vue";
 import CashierCustomersPage from "./views/cashier/CashierCustomersPage.vue";
 import CashierSalesTransactionsView from "./views/cashier/CashierSalesTransactionsView.vue";
 import CashierRentalsTransactionsView from "./views/cashier/CashierRentalsTransactionsView.vue";
-import SalesTransactionsView from "./views/transaction/SalesTransactionsView.vue";
-import SalesTransactionCreateView from "./views/transaction/SalesTransactionCreateView.vue";
-import SalesTransactionEditView from "./views/transaction/SalesTransactionEditView.vue";
 import SaleTransactionDetailView from "./views/transaction/SaleTransactionDetailView.vue";
-import SaleTransactionPaymentView from "./views/transaction/SaleTransactionPaymentView.vue";
-import RentalTransactionsView from "./views/transaction/RentalTransactionsView.vue";
-import RentalTransactionCreateView from "./views/transaction/RentalTransactionCreateView.vue";
-import RentalTransactionEditView from "./views/transaction/RentalTransactionEditView.vue";
 import RentalTransactionDetailView from "./views/transaction/RentalTransactionDetailView.vue";
-import RentalTransactionPaymentView from "./views/transaction/RentalTransactionPaymentView.vue";
 import { getCurrentUser } from "./services/auth.js";
 import { checkActivationStatus } from "./services/activation.js";
 
@@ -162,55 +154,15 @@ const routes = [
   },
   // Sales Transactions
   {
-    path: "/transactions/sales",
-    name: "transactions-sales",
-    component: SalesTransactionsView,
-  },
-  {
-    path: "/transactions/sales/create",
-    name: "transaction-sale-create",
-    component: SalesTransactionCreateView,
-  },
-  {
     path: "/transactions/sales/:code",
     name: "transaction-sale-detail",
     component: SaleTransactionDetailView,
   },
-  {
-    path: "/transactions/sales/:code/edit",
-    name: "transaction-sale-edit",
-    component: SalesTransactionEditView,
-  },
-  {
-    path: "/transactions/sales/:code/payment",
-    name: "transaction-sale-payment",
-    component: SaleTransactionPaymentView,
-  },
   // Rental Transactions
-  {
-    path: "/transactions/rentals",
-    name: "transactions-rentals",
-    component: RentalTransactionsView,
-  },
-  {
-    path: "/transactions/rentals/create",
-    name: "transaction-rental-create",
-    component: RentalTransactionCreateView,
-  },
   {
     path: "/transactions/rentals/:code",
     name: "transaction-rental-detail",
     component: RentalTransactionDetailView,
-  },
-  {
-    path: "/transactions/rentals/:code/edit",
-    name: "transaction-rental-edit",
-    component: RentalTransactionEditView,
-  },
-  {
-    path: "/transactions/rentals/:code/payment",
-    name: "transaction-rental-payment",
-    component: RentalTransactionPaymentView,
   },
   {
     path: "/stock/alerts",
