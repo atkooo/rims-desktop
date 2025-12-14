@@ -11,12 +11,12 @@ export function toDateInput(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  
+
   // Gunakan local date untuk menghindari masalah timezone
   // Ambil tahun, bulan, hari dari local time bukan UTC
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -30,14 +30,14 @@ export function formatDate(value, options = {}) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  
+
   const defaultOptions = {
     day: "numeric",
     month: "short",
     year: "numeric",
     ...options,
   };
-  
+
   return date.toLocaleDateString("id-ID", defaultOptions);
 }
 
@@ -62,7 +62,7 @@ export function formatDateRelative(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "-";
-  
+
   const now = new Date();
   const diffTime = Math.abs(now - date);
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -81,4 +81,3 @@ export function formatDateRelative(dateString) {
     });
   }
 }
-
