@@ -18,59 +18,68 @@ function generateSessionCode() {
 
 /**
  * Calculate expected balance for cashier session
+ * PENTING: Hanya gunakan total_amount (revenue), bukan payment_amount (uang masuk)
+ * Alasan: Jika barang 135k dibayar 150k, kembalian 15k. Saldo hanya bertambah 135k, bukan 150k
  */
 async function calculateExpectedBalance(session) {
   // Try using cashier_session_id (more accurate)
+  // Query: Hitung total_amount dari transaksi yang bayarnya CASH, bukan payment amount
   const salesResult = await database.queryOne(
     `SELECT 
-      COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+      COALESCE(SUM(st.total_amount), 0) as cash_sales_revenue
     FROM sales_transactions st
-    LEFT JOIN sales_payments p ON p.transaction_id = st.id
-    WHERE st.cashier_session_id = ?`,
+    LEFT JOIN sales_payments p ON p.transaction_id = st.id AND p.payment_method = 'cash'
+    WHERE st.cashier_session_id = ? AND p.id IS NOT NULL`,
     [session.id]
   );
 
   const rentalResult = await database.queryOne(
     `SELECT 
-      COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+      COALESCE(SUM(rt.total_amount), 0) as cash_rentals_revenue
     FROM rental_transactions rt
-    LEFT JOIN rental_payments p ON p.transaction_id = rt.id
-    WHERE rt.cashier_session_id = ?`,
+    LEFT JOIN rental_payments p ON p.transaction_id = rt.id AND p.payment_method = 'cash'
+    WHERE rt.cashier_session_id = ? AND p.id IS NOT NULL`,
     [session.id]
   );
 
-  let cashSales = Number(salesResult?.cash_sales || 0);
-  let cashRentals = Number(rentalResult?.cash_rentals || 0);
+  let cashSalesRevenue = Number(salesResult?.cash_sales_revenue || 0);
+  let cashRentalsRevenue = Number(rentalResult?.cash_rentals_revenue || 0);
 
   // Fallback to date-based if no transactions linked
-  if (cashSales === 0 && cashRentals === 0) {
+  if (cashSalesRevenue === 0 && cashRentalsRevenue === 0) {
     const salesResultFallback = await database.queryOne(
       `SELECT 
-        COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_sales
+        COALESCE(SUM(st.total_amount), 0) as cash_sales_revenue
       FROM sales_transactions st
-      LEFT JOIN sales_payments p ON p.transaction_id = st.id
+      LEFT JOIN sales_payments p ON p.transaction_id = st.id AND p.payment_method = 'cash'
       WHERE st.user_id = ? 
         AND st.sale_date >= date(?) 
-        AND st.sale_date <= date('now', '+1 day')`,
+        AND st.sale_date <= date('now', '+1 day')
+        AND p.id IS NOT NULL`,
       [session.user_id, session.opening_date]
     );
 
     const rentalResultFallback = await database.queryOne(
       `SELECT 
-        COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_rentals
+        COALESCE(SUM(rt.total_amount), 0) as cash_rentals_revenue
       FROM rental_transactions rt
-      LEFT JOIN rental_payments p ON p.transaction_id = rt.id
+      LEFT JOIN rental_payments p ON p.transaction_id = rt.id AND p.payment_method = 'cash'
       WHERE rt.user_id = ? 
         AND rt.rental_date >= date(?) 
-        AND rt.rental_date <= date('now', '+1 day')`,
+        AND rt.rental_date <= date('now', '+1 day')
+        AND p.id IS NOT NULL`,
       [session.user_id, session.opening_date]
     );
 
-    cashSales = Number(salesResultFallback?.cash_sales || 0);
-    cashRentals = Number(rentalResultFallback?.cash_rentals || 0);
+    cashSalesRevenue = Number(salesResultFallback?.cash_sales_revenue || 0);
+    cashRentalsRevenue = Number(
+      rentalResultFallback?.cash_rentals_revenue || 0
+    );
   }
 
-  return Number(session.opening_balance) + cashSales + cashRentals;
+  return (
+    Number(session.opening_balance) + cashSalesRevenue + cashRentalsRevenue
+  );
 }
 
 function setupCashierHandlers() {

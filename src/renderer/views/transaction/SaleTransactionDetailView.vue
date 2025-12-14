@@ -66,22 +66,28 @@
             <span>Status</span>
             <strong>{{ displayStatus(sale) }}</strong>
           </div>
-          <div class="detail-item">
-            <span>Subtotal</span>
-            <strong>{{ formatCurrency(sale.subtotal || 0) }}</strong>
+
+          <!-- Detail Breakdown -->
+          <div class="breakdown-section">
+            <div class="breakdown-row">
+              <span>Subtotal</span>
+              <strong>{{ formatCurrency(sale.subtotal || 0) }}</strong>
+            </div>
+            <div class="breakdown-row" v-if="(sale.discount || 0) > 0">
+              <span class="discount-label">Diskon</span>
+              <strong class="discount">- {{ formatCurrency(sale.discount || 0) }}</strong>
+            </div>
+            <div class="breakdown-row" v-if="(sale.tax || 0) > 0">
+              <span class="tax-label">Pajak</span>
+              <strong class="tax">+ {{ formatCurrency(sale.tax || 0) }}</strong>
+            </div>
+            <div class="breakdown-divider"></div>
+            <div class="breakdown-row total-row">
+              <span>Total</span>
+              <strong>{{ formatCurrency(sale.total_amount) }}</strong>
+            </div>
           </div>
-          <div class="detail-item" v-if="(sale.discount || 0) > 0">
-            <span>Diskon</span>
-            <strong class="discount">- {{ formatCurrency(sale.discount || 0) }}</strong>
-          </div>
-          <div class="detail-item" v-if="(sale.tax || 0) > 0">
-            <span>Pajak</span>
-            <strong>+ {{ formatCurrency(sale.tax || 0) }}</strong>
-          </div>
-          <div class="detail-item total-row">
-            <span>Total</span>
-            <strong>{{ formatCurrency(sale.total_amount) }}</strong>
-          </div>
+
           <div class="detail-item">
             <span>Dibayar</span>
             <strong>{{ formatCurrency(sale.paid_amount) }}</strong>
@@ -129,11 +135,7 @@
       </div>
       <div v-else-if="detailError" class="error-banner">
         {{ detailError }}
-        <AppButton
-          class="retry-button"
-          variant="secondary"
-          @click="loadDetails(true)"
-        >
+        <AppButton class="retry-button" variant="secondary" @click="loadDetails(true)">
           Coba Lagi
         </AppButton>
       </div>
@@ -142,52 +144,44 @@
       </div>
       <div v-else class="table-wrapper">
         <table class="detail-table">
-        <thead>
-          <tr>
-            <th>Kode</th>
-            <th>Tipe</th>
-            <th>Nama</th>
-            <th>Jumlah</th>
-            <th>Harga</th>
-            <th>Subtotal</th>
-            <th>Dibuat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="detail in filteredDetails" :key="detail.id">
-            <td data-label="Kode"><strong>{{ detail.item_code || "-" }}</strong></td>
-            <td data-label="Tipe">
-              <span class="type-badge" :class="detail.item_type">
-                {{ detail.item_type_label || "Item" }}
-              </span>
-            </td>
-            <td data-label="Nama">{{ detail.item_name || "-" }}</td>
-            <td data-label="Jumlah">{{ detail.quantity }}</td>
-            <td data-label="Harga">{{ formatCurrency(detail.sale_price) }}</td>
-            <td data-label="Subtotal"><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
-            <td data-label="Dibuat">{{ formatDateTime(detail.created_at) }}</td>
-          </tr>
-        </tbody>
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Tipe</th>
+              <th>Nama</th>
+              <th>Jumlah</th>
+              <th>Harga</th>
+              <th>Subtotal</th>
+              <th>Dibuat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="detail in filteredDetails" :key="detail.id">
+              <td data-label="Kode"><strong>{{ detail.item_code || "-" }}</strong></td>
+              <td data-label="Tipe">
+                <span class="type-badge" :class="detail.item_type">
+                  {{ detail.item_type_label || "Item" }}
+                </span>
+              </td>
+              <td data-label="Nama">{{ detail.item_name || "-" }}</td>
+              <td data-label="Jumlah">{{ detail.quantity }}</td>
+              <td data-label="Harga">{{ formatCurrency(detail.sale_price) }}</td>
+              <td data-label="Subtotal"><strong>{{ formatCurrency(detail.subtotal) }}</strong></td>
+              <td data-label="Dibuat">{{ formatDateTime(detail.created_at) }}</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </section>
   </div>
 
   <!-- Payment Modal -->
-  <PaymentModal
-    v-model="showPaymentModal"
-    :transaction-id="sale?.id"
-    @payment-success="handlePaymentSuccess"
-    @close="handlePaymentModalClose"
-  />
+  <PaymentModal v-model="showPaymentModal" :transaction-id="sale?.id" @payment-success="handlePaymentSuccess"
+    @close="handlePaymentModalClose" />
 
   <!-- Receipt Preview Dialog -->
-  <ReceiptPreviewDialog
-    v-model="showReceiptPreview"
-    :transaction-id="sale?.id"
-    transaction-type="sale"
-    @printed="handleReceiptPrinted"
-  />
+  <ReceiptPreviewDialog v-model="showReceiptPreview" :transaction-id="sale?.id" transaction-type="sale"
+    @printed="handleReceiptPrinted" />
 </template>
 
 <script>
@@ -276,7 +270,7 @@ export default {
         }
         sale.value = found;
         await loadDetails(true);
-        
+
         // Auto-open receipt preview if query parameter is set and transaction is paid
         if (shouldAutoPrintReceipt.value && isPaid(found)) {
           // Remove query parameter from URL
@@ -300,7 +294,7 @@ export default {
       loadDetails(true);
     };
     const goBack = () => router.back();
-    
+
     const goToEdit = () => {
       router.push({
         name: "transaction-sale-edit",
@@ -367,7 +361,7 @@ export default {
 
     const handlePaymentModalClose = (data) => {
       showPaymentModal.value = false;
-      
+
       // If modal closed without payment (unpaid), just reload data
       if (data?.unpaid) {
         loadSale(); // Reload to refresh data
@@ -485,6 +479,61 @@ export default {
 
 .detail-item .discount {
   color: #16a34a;
+}
+
+.breakdown-section {
+  margin: 1rem 0;
+  padding: 0.75rem 0;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+  color: #374151;
+}
+
+.breakdown-row span {
+  color: #6b7280;
+}
+
+.breakdown-row strong {
+  font-weight: 600;
+}
+
+.breakdown-row.total-row {
+  padding-top: 0.75rem;
+  font-size: 1.05rem;
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.breakdown-row .discount-label {
+  color: #16a34a;
+}
+
+.breakdown-row .discount {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.breakdown-row .tax-label {
+  color: #f59e0b;
+}
+
+.breakdown-row .tax {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.breakdown-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0.5rem 0;
 }
 
 .detail-item.payment-action {
@@ -664,7 +713,7 @@ export default {
   .data-page.transaction-page.detail-page {
     padding: 1rem 1.5rem;
   }
-  
+
   .detail-grid {
     grid-template-columns: 1fr;
   }
@@ -674,18 +723,18 @@ export default {
   .data-page.transaction-page.detail-page {
     padding: 1rem;
   }
-  
+
   .section-header {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .detail-table {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .detail-table thead,
   .detail-table tbody,
   .detail-table tr,
@@ -693,11 +742,11 @@ export default {
   .detail-table td {
     display: block;
   }
-  
+
   .detail-table thead {
     display: none;
   }
-  
+
   .detail-table tr {
     margin-bottom: 1rem;
     border: 1px solid #e5e7eb;
@@ -705,7 +754,7 @@ export default {
     padding: 0.75rem;
     background: white;
   }
-  
+
   .detail-table td {
     border: none;
     padding: 0.5rem 0;
@@ -713,7 +762,7 @@ export default {
     justify-content: space-between;
     align-items: center;
   }
-  
+
   .detail-table td::before {
     content: attr(data-label);
     font-weight: 600;

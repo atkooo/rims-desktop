@@ -55,10 +55,7 @@
           </div>
           <div class="info-item">
             <span class="info-label">Status Pembayaran</span>
-            <strong
-              class="info-value status-badge"
-              :class="transaction.payment_status"
-            >
+            <strong class="info-value status-badge" :class="transaction.payment_status">
               {{ getPaymentStatusLabel(transaction.payment_status) }}
             </strong>
           </div>
@@ -111,12 +108,12 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="payment in paymentHistory" :key="payment.id" :class="{ 'refund-row': Number(payment.amount) < 0 }">
+            <tr v-for="payment in paymentHistory" :key="payment.id"
+              :class="{ 'refund-row': Number(payment.amount) < 0 }">
               <td>{{ formatDate(payment.payment_date) }}</td>
               <td>
                 <span :class="{ 'refund-amount': Number(payment.amount) < 0 }">
-                  {{ Number(payment.amount) < 0 ? '-' : '' }}{{ formatCurrency(Math.abs(payment.amount)) }}
-                </span>
+                  {{ Number(payment.amount) < 0 ? '-' : '' }}{{ formatCurrency(Math.abs(payment.amount)) }} </span>
               </td>
               <td>{{ getPaymentMethodLabel(payment.payment_method) }}</td>
               <td>{{ payment.reference_number || "-" }}</td>
@@ -136,18 +133,16 @@
             <strong>{{ formatCurrency(transaction.subtotal) }}</strong>
           </div>
           <div class="summary-row" v-if="transaction.deposit > 0">
-            <span>Deposit</span>
-            <strong>+ {{ formatCurrency(transaction.deposit) }}</strong>
+            <span class="deposit-label">Deposit</span>
+            <strong class="deposit">+ {{ formatCurrency(transaction.deposit) }}</strong>
           </div>
           <div class="summary-row" v-if="transaction.discount > 0">
             <span>Diskon</span>
-            <strong class="discount"
-              >- {{ formatCurrency(transaction.discount) }}</strong
-            >
+            <strong class="discount">- {{ formatCurrency(transaction.discount) }}</strong>
           </div>
           <div class="summary-row" v-if="transaction.late_fee > 0">
-            <span>Denda Keterlambatan</span>
-            <strong>+ {{ formatCurrency(transaction.late_fee) }}</strong>
+            <span class="late-fee-label">Denda Keterlambatan</span>
+            <strong class="late-fee">+ {{ formatCurrency(transaction.late_fee) }}</strong>
           </div>
           <div class="summary-row total">
             <span>Total</span>
@@ -171,15 +166,8 @@
           <div class="form-grid">
             <div class="field-group">
               <label for="paymentAmount">Jumlah Bayar</label>
-              <input
-                id="paymentAmount"
-                :value="formatNumberInput(paymentForm.amount)"
-                @input="handleAmountInput"
-                type="text"
-                class="form-input"
-                :class="{ error: errors.amount }"
-                placeholder="Masukkan jumlah bayar"
-              />
+              <input id="paymentAmount" :value="formatNumberInput(paymentForm.amount)" @input="handleAmountInput"
+                type="text" class="form-input" :class="{ error: errors.amount }" placeholder="Masukkan jumlah bayar" />
               <div v-if="errors.amount" class="error-message">
                 {{ errors.amount }}
               </div>
@@ -195,12 +183,8 @@
             </div>
             <div class="field-group">
               <label for="paymentMethod">Metode Pembayaran</label>
-              <select
-                id="paymentMethod"
-                v-model="paymentForm.paymentMethod"
-                class="form-select"
-                :class="{ error: errors.paymentMethod }"
-              >
+              <select id="paymentMethod" v-model="paymentForm.paymentMethod" class="form-select"
+                :class="{ error: errors.paymentMethod }">
                 <option value="">Pilih Metode</option>
                 <option value="cash">Tunai</option>
                 <option value="transfer">Transfer</option>
@@ -212,19 +196,11 @@
             </div>
             <div class="field-group">
               <label for="referenceNumber">No. Referensi (Opsional)</label>
-              <FormInput
-                id="referenceNumber"
-                type="text"
-                v-model="paymentForm.referenceNumber"
-              />
+              <FormInput id="referenceNumber" type="text" v-model="paymentForm.referenceNumber" />
             </div>
             <div class="field-group">
               <label for="paymentNotes">Catatan (Opsional)</label>
-              <FormInput
-                id="paymentNotes"
-                type="textarea"
-                v-model="paymentForm.notes"
-              />
+              <FormInput id="paymentNotes" type="textarea" v-model="paymentForm.notes" />
             </div>
           </div>
           <div class="payment-summary-form">
@@ -242,19 +218,11 @@
             </div>
           </div>
           <div class="form-actions">
-            <AppButton
-              type="submit"
-              variant="primary"
-              :loading="paymentLoading"
-              :disabled="paymentForm.amount < remainingAmount"
-            >
+            <AppButton type="submit" variant="primary" :loading="paymentLoading"
+              :disabled="paymentForm.amount < remainingAmount">
               Proses Pembayaran
             </AppButton>
-            <AppButton
-              type="button"
-              variant="secondary"
-              @click="fillFullAmount"
-            >
+            <AppButton type="button" variant="secondary" @click="fillFullAmount">
               Bayar Pas
             </AppButton>
           </div>
@@ -276,12 +244,8 @@
     </div>
 
     <!-- Receipt Preview Dialog -->
-    <ReceiptPreviewDialog
-      v-model="showReceiptPreview"
-      :transaction-id="transaction?.id"
-      transaction-type="rental"
-      @printed="handleReceiptPrinted"
-    />
+    <ReceiptPreviewDialog v-model="showReceiptPreview" :transaction-id="transaction?.id" transaction-type="rental"
+      @printed="handleReceiptPrinted" />
   </div>
 </template>
 
@@ -639,7 +603,10 @@ export default {
 .payment-summary {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
 }
 
 .summary-row {
@@ -648,6 +615,17 @@ export default {
   align-items: center;
   padding: 0.75rem 0;
   border-bottom: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.summary-row span {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.summary-row strong {
+  font-weight: 600;
+  color: #374151;
 }
 
 .summary-row:last-child {
@@ -657,10 +635,16 @@ export default {
 .summary-row.total {
   font-size: 1.25rem;
   font-weight: 700;
+  color: #1f2937;
   border-top: 2px solid #111827;
-  border-bottom: 2px solid #111827;
-  padding: 1rem 0;
+  border-bottom: none;
+  padding: 1rem 0 0.75rem;
   margin-top: 0.5rem;
+}
+
+.summary-row.total strong {
+  color: #1f2937;
+  font-size: 1.25rem;
 }
 
 .summary-row.remaining {
@@ -671,6 +655,25 @@ export default {
 
 .summary-row .discount {
   color: #16a34a;
+  font-weight: 600;
+}
+
+.summary-row .deposit-label {
+  color: #3b82f6;
+}
+
+.summary-row .deposit {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.summary-row .late-fee-label {
+  color: #ea580c;
+}
+
+.summary-row .late-fee {
+  color: #ea580c;
+  font-weight: 600;
 }
 
 .payment-form {
