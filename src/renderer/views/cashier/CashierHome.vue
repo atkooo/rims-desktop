@@ -90,6 +90,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { fetchSalesTransactions, fetchRentalTransactions, fetchPayments } from "@/services/transactions";
 import { useCurrency } from "@/composables/useCurrency";
+import { formatTime } from "@/utils/dateUtils";
 
 export default {
   name: "CashierHome",
@@ -107,12 +108,6 @@ export default {
       paymentsCount: 0,
     });
     const recentTransactions = ref([]);
-
-    const formatTime = (dateString) => {
-      if (!dateString) return "-";
-      const date = new Date(dateString);
-      return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    };
 
     const loadDashboardData = async () => {
       loading.value = true;

@@ -1,67 +1,71 @@
-/**
- * Utility functions untuk format dan manipulasi tanggal
- */
+const LOCALE = "id-ID";
+const WIB_TIMEZONE = "Asia/Jakarta";
 
-/**
- * Convert date value ke format input date (YYYY-MM-DD)
- * @param {Date|string|number|null|undefined} value - Nilai tanggal yang akan dikonversi
- * @returns {string} String dalam format YYYY-MM-DD atau string kosong jika invalid
- */
-export function toDateInput(value) {
-  if (!value) return "";
+const createDate = (value) => {
+  if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
-  // Gunakan local date untuk menghindari masalah timezone
-  // Ambil tahun, bulan, hari dari local time bukan UTC
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+const withTimezone = (options = {}) => ({
+  timeZone: WIB_TIMEZONE,
+  ...options,
+});
+
+const enCADateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: WIB_TIMEZONE,
+});
+
+export function toDateInput(value) {
+  const date = createDate(value);
+  if (!date) return "";
+  return enCADateFormatter.format(date);
 }
 
-/**
- * Format date string ke format Indonesia (DD/MM/YYYY)
- * @param {Date|string|number|null|undefined} value - Nilai tanggal yang akan diformat
- * @param {Object} options - Opsi tambahan untuk format
- * @returns {string} String tanggal yang sudah diformat atau "-" jika invalid
- */
 export function formatDate(value, options = {}) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
+  const date = createDate(value);
+  if (!date) return "-";
   const defaultOptions = {
     day: "numeric",
     month: "short",
     year: "numeric",
-    ...options,
   };
-
-  return date.toLocaleDateString("id-ID", defaultOptions);
+  return date.toLocaleDateString(LOCALE, withTimezone({ ...defaultOptions, ...options }));
 }
 
-/**
- * Format date string ke format singkat (DD/MM/YYYY)
- * @param {Date|string|number|null|undefined} value - Nilai tanggal yang akan diformat
- * @returns {string} String tanggal dalam format DD/MM/YYYY atau "-" jika invalid
- */
 export function formatDateShort(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("id-ID");
+  const date = createDate(value);
+  if (!date) return "-";
+  return date.toLocaleDateString(LOCALE, withTimezone());
 }
 
-/**
- * Format date dengan relative time (Hari ini, Kemarin, dll)
- * @param {Date|string|number|null|undefined} dateString - Nilai tanggal
- * @returns {string} String relative time atau tanggal yang sudah diformat
- */
+export function formatDateTime(value, options = {}) {
+  const date = createDate(value);
+  if (!date) return "-";
+  const defaultOptions = {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  return date.toLocaleString(LOCALE, withTimezone({ ...defaultOptions, ...options }));
+}
+
+export function formatTime(value, options = {}) {
+  const date = createDate(value);
+  if (!date) return "-";
+  const defaultOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  return date.toLocaleTimeString(LOCALE, withTimezone({ ...defaultOptions, ...options }));
+}
+
 export function formatDateRelative(dateString) {
   if (!dateString) return "-";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "-";
+  const date = createDate(dateString);
+  if (!date) return "-";
 
   const now = new Date();
   const diffTime = Math.abs(now - date);
@@ -74,7 +78,7 @@ export function formatDateRelative(dateString) {
   } else if (diffDays < 7) {
     return `${diffDays} hari lalu`;
   } else {
-    return date.toLocaleDateString("id-ID", {
+    return formatDate(dateString, {
       day: "numeric",
       month: "short",
       year: "numeric",

@@ -72,6 +72,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchActivityLogs } from "@/services/settings";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "ActivityLogsView",
@@ -80,9 +81,6 @@ export default {
     const logs = ref([]);
     const loading = ref(false);
     const error = ref("");
-
-    const formatDateTime = (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const columns = [
       { key: "user_name", label: "Pengguna", sortable: true },

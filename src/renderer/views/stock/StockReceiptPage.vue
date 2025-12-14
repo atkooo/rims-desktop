@@ -185,6 +185,7 @@ import BundlePickerDialog from "@/components/modules/bundles/BundlePickerDialog.
 import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
 import { getStoredUser } from "@/services/auth";
 import { createStockReceipt } from "@/services/stock";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "StockReceiptPage",
@@ -322,10 +323,10 @@ export default {
       }
       loading.value = true;
 
-      try {
-        const payload = {
-          userId: getStoredUser()?.id || null,
-          notes: form.value.notes,
+    try {
+      const payload = {
+        userId: getStoredUser()?.id || null,
+        notes: form.value.notes,
           lines: lines.value.map((line) => ({
             type: line.type,
             referenceId: line.referenceId,
@@ -333,6 +334,7 @@ export default {
           })),
         };
         await createStockReceipt(payload);
+        eventBus.emit("inventory:updated");
         resetForm();
       } catch (error) {
         errors.value.submit =

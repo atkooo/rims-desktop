@@ -374,6 +374,7 @@ import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { useNotification } from "@/composables/useNotification";
 import { checkSyncServiceStatus, syncAllPending } from "@/services/sync";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "SettingsPage",
@@ -449,7 +450,7 @@ export default {
         // Get last backup date
         const lastBackup = await ipcRenderer.invoke("backup:getLastDate");
         if (lastBackup) {
-          lastBackupDate.value = new Date(lastBackup).toLocaleString("id-ID");
+          lastBackupDate.value = formatDateTime(lastBackup);
         }
       } catch (error) {
         console.error("Error loading settings:", error);

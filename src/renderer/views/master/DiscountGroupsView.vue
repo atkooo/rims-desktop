@@ -174,6 +174,7 @@ import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { useNumberFormat } from "@/composables/useNumberFormat";
+import { formatDateShort } from "@/utils/dateUtils";
 import {
   fetchDiscountGroups,
   createDiscountGroup,
@@ -204,6 +205,7 @@ export default {
 
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
+    const formatDate = formatDateShort;
 
     // Create input handler for discount amount
     const handleDiscountAmountInput = createInputHandler(
@@ -249,21 +251,6 @@ export default {
     }
 
     // Format date
-    function formatDate(val) {
-      if (!val) return "-";
-      const d = new Date(val);
-      if (isNaN(d)) return String(val);
-      try {
-        return d.toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-      } catch (_) {
-        return d.toISOString().slice(0, 10);
-      }
-    }
-
     // Dialog handlers
     function openCreateDialog() {
       form.value = {

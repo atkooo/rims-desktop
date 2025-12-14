@@ -169,6 +169,7 @@ import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchStockMovements } from "@/services/transactions";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "StockMovementsView",
@@ -181,8 +182,7 @@ export default {
     const showDetail = ref(false);
     const selectedMovement = ref(null);
 
-    const formatDate = (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-";
+    const formatDate = (value) => (value ? formatDateTime(value) : "-");
 
     const columns = [
       { key: "item_name", label: "Produk", sortable: true },

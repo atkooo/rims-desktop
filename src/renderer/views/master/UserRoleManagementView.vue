@@ -83,7 +83,7 @@
             <template #cell-last_login="{ row }">
               {{
                 row.last_login
-                  ? new Date(row.last_login).toLocaleString("id-ID")
+                  ? formatDateTime(row.last_login)
                   : "-"
               }}
             </template>
@@ -245,6 +245,7 @@ import {
   updateUser,
   deleteUser,
 } from "@/services/masterData";
+import { formatDateTime } from "@/utils/dateUtils";
 
 // Tabs - only users tab now
 const tabs = computed(() => {
@@ -310,8 +311,7 @@ const userColumns = [
   {
     key: "last_login",
     label: "Terakhir Login",
-    format: (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-",
+    format: (value) => (value ? formatDateTime(value) : "-"),
     sortable: true,
   },
 ];
@@ -324,7 +324,7 @@ const userStats = computed(() => {
     .filter(Boolean)
     .sort((a, b) => b - a)[0];
 
-  const lastLogin = latest ? latest.toLocaleString("id-ID") : "-";
+  const lastLogin = latest ? formatDateTime(latest) : "-";
 
   return { totalUsers, activeUsers, lastLogin };
 });
@@ -781,4 +781,3 @@ onMounted(async () => {
   color: #9ca3af;
 }
 </style>
-

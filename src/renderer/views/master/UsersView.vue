@@ -43,11 +43,7 @@
             {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </template>
           <template #cell-last_login="{ row }">
-            {{
-              row.last_login
-                ? new Date(row.last_login).toLocaleString("id-ID")
-                : "-"
-            }}
+            {{ row.last_login ? formatDateTime(row.last_login) : "-" }}
           </template>
         </AppTable>
       </div>
@@ -60,6 +56,7 @@ import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import { fetchUsers } from "@/services/masterData";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "UsersView",
@@ -83,8 +80,7 @@ export default {
       {
         key: "last_login",
         label: "Terakhir Login",
-        format: (value) =>
-          value ? new Date(value).toLocaleString("id-ID") : "-",
+        format: (value) => (value ? formatDateTime(value) : "-"),
         sortable: true,
       },
     ];
@@ -97,7 +93,7 @@ export default {
         .filter(Boolean)
         .sort((a, b) => b - a)[0];
 
-      const lastLogin = latest ? latest.toLocaleString("id-ID") : "-";
+      const lastLogin = latest ? formatDateTime(latest) : "-";
 
       return { totalUsers, activeUsers, lastLogin };
     });
@@ -123,6 +119,7 @@ export default {
       columns,
       stats,
       loadData,
+      formatDateTime,
     };
   },
 };

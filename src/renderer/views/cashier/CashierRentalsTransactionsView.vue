@@ -101,6 +101,7 @@ import Icon from "@/components/ui/Icon.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
 import { fetchRentalTransactions } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   name: "CashierRentalsTransactionsView",
@@ -127,8 +128,7 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
-    const formatDate = (value) =>
-      value ? new Date(value).toLocaleDateString("id-ID") : "-";
+    const formatDate = formatDateShort;
 
     const isCancelled = (rental) => {
       if (!rental) return false;
@@ -446,4 +446,3 @@ export default {
   color: #111827;
 }
 </style>
-

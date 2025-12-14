@@ -215,6 +215,7 @@ import Icon from '@/components/ui/Icon.vue';
 import { invoke } from '@/services/ipc';
 import { syncAllPending as syncAllPendingService, checkSyncServiceStatus } from '@/services/sync';
 import { useNotification } from '@/composables/useNotification';
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: 'SyncServiceView',
@@ -252,11 +253,6 @@ export default {
       interval: 300000
     });
     let statusInterval = null;
-
-    const formatDateTime = (value) => {
-      if (!value) return '-';
-      return new Date(value).toLocaleString('id-ID');
-    };
 
     const refreshStatus = async () => {
       refreshing.value = true;
@@ -811,4 +807,3 @@ export default {
   color: #f59e0b;
 }
 </style>
-

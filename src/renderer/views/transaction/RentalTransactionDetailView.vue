@@ -262,6 +262,7 @@ import {
 } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
 import { getCurrentUser } from "@/services/auth";
+import { formatDate } from "@/utils/dateUtils";
 
 export default {
   name: "RentalTransactionDetailView",
@@ -295,8 +296,6 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
-    const formatDate = (value) =>
-      value ? new Date(value).toLocaleDateString("id-ID") : "-";
 
     const loadDetails = async (force = false) => {
       if (details.value.length && !force) return;

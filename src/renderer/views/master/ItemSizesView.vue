@@ -117,6 +117,7 @@ import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { useNotification } from "@/composables/useNotification";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   name: "ItemSizesView",
@@ -148,6 +149,7 @@ export default {
       { key: "updated_at", label: "Diperbarui" },
     ];
 
+    const formatDate = formatDateShort;
     const loadSizes = async () => {
       loading.value = true;
       try {
@@ -232,18 +234,6 @@ export default {
         showError(error);
         console.error(error);
       }
-    };
-
-    const formatDate = (value) => {
-      if (!value) return "-";
-      const d = new Date(value);
-      return Number.isNaN(d.getTime())
-        ? value
-        : d.toLocaleDateString("id-ID", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
     };
 
     onMounted(loadSizes);

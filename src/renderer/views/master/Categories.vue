@@ -120,6 +120,7 @@ import Dialog from "@/components/ui/Dialog.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { useNotification } from "@/composables/useNotification";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   components: { Dialog, AppTable, AppButton },
@@ -135,6 +136,7 @@ export default {
       { key: "is_active", label: "Status", sortable: true, align: "center" },
       { key: "updated_at", label: "Diupdate" },
     ]);
+    const formatDate = formatDateShort;
     const showDialog = ref(false);
     const showDeleteDialog = ref(false);
     const selectedCategory = ref(null);
@@ -233,21 +235,6 @@ export default {
     }
 
     onMounted(loadCategories);
-
-    function formatDate(val) {
-      if (!val) return "-";
-      const d = new Date(val);
-      if (isNaN(d)) return String(val);
-      try {
-        return d.toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-      } catch (_) {
-        return d.toISOString().slice(0, 10);
-      }
-    }
 
     return {
       // Data

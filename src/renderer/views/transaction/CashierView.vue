@@ -291,6 +291,7 @@ import {
 import { getCurrentUser } from "@/services/auth";
 import { useNumberFormat } from "@/composables/useNumberFormat";
 import { useCurrency } from "@/composables/useCurrency";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "CashierView",
@@ -337,17 +338,6 @@ export default {
     });
 
     const { formatCurrency } = useCurrency();
-
-    const formatDateTime = (value) => {
-      if (!value) return "-";
-      return new Date(value).toLocaleString("id-ID", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
-    };
-
-    const formatDate = (value) =>
-      value ? new Date(value).toLocaleDateString("id-ID") : "-";
 
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
@@ -545,7 +535,6 @@ export default {
       canCloseSession,
       formatCurrency,
       formatDateTime,
-      formatDate,
       formatNumberInput,
       handleOpeningBalanceInput,
       handleActualBalanceInput,

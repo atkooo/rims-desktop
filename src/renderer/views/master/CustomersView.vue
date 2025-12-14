@@ -77,11 +77,7 @@
             {{ row.is_active ? "Aktif" : "Nonaktif" }}
           </template>
           <template #cell-created_at="{ row }">
-            {{
-              row.created_at
-                ? new Date(row.created_at).toLocaleDateString("id-ID")
-                : "-"
-            }}
+            {{ formatDate(row.created_at) }}
           </template>
           <template #actions="{ row }">
             <div class="action-menu-wrapper">
@@ -252,6 +248,7 @@ import {
   deleteCustomer,
   fetchCustomerDocument,
 } from "@/services/masterData";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   name: "CustomersView",
@@ -273,6 +270,7 @@ export default {
     const customerToDelete = ref(null);
     const openMenuId = ref(null);
     const menuPositions = ref({});
+    const formatDate = formatDateShort;
 
     const columns = [
       { key: "code", label: "Kode" },
@@ -290,8 +288,7 @@ export default {
       {
         key: "created_at",
         label: "Dibuat",
-        format: (value) =>
-          value ? new Date(value).toLocaleDateString("id-ID") : "-",
+        format: (value) => formatDate(value),
       },
     ];
 
@@ -484,6 +481,7 @@ export default {
       confirmDelete,
       toggleActionMenu,
       getMenuPosition,
+      formatDate,
     };
   },
 };

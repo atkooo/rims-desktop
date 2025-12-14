@@ -190,6 +190,7 @@ import {
   fetchSalesDetails,
 } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
+import { formatDate, formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "SaleTransactionDetailView",
@@ -216,10 +217,6 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
-    const formatDate = (value) =>
-      value ? new Date(value).toLocaleDateString("id-ID") : "-";
-    const formatDateTime = (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const loadDetails = async (force = false) => {
       if (details.value.length && !force) return;

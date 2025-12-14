@@ -216,6 +216,7 @@ import { fetchRentalTransactions, fetchSalesTransactions } from "@/services/tran
 import { fetchCustomers } from "@/services/masterData";
 import { eventBus } from "@/utils/eventBus";
 import { useCurrency } from "@/composables/useCurrency";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   name: "SearchResultsView",
@@ -232,9 +233,7 @@ export default {
     let searchTimeout = null;
 
     const { formatCurrency } = useCurrency();
-    const formatDate = (value) => {
-      return value ? new Date(value).toLocaleDateString("id-ID") : "-";
-    };
+    const formatDate = formatDateShort;
 
     const highlightText = (text, query) => {
       if (!text || !query || !query.trim()) {
@@ -932,4 +931,3 @@ export default {
   }
 }
 </style>
-

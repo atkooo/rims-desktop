@@ -80,6 +80,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchBackupHistory } from "@/services/settings";
+import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "BackupHistoryView",
@@ -95,9 +96,6 @@ export default {
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
-
-    const formatDateTime = (value) =>
-      value ? new Date(value).toLocaleString("id-ID") : "-";
 
     const columns = [
       { key: "backup_file", label: "Nama File", sortable: true },
