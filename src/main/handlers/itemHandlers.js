@@ -699,16 +699,30 @@ function setupItemHandlers() {
       const priceHeight = 10; // Height for price line
       doc.text(priceText, labelWidth / 2, priceY, { align: "center" });
 
+      const sizeLabel = (item.size_name || item.size_code || "").trim();
+      const hasSizeLabel = sizeLabel.length > 0;
+      const sizeLineHeight = hasSizeLabel ? 9 : 0;
+      const sizeSpacing = hasSizeLabel ? 4 : 0;
+      if (hasSizeLabel) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(75, 85, 99);
+        doc.text(`Ukuran: ${sizeLabel}`, labelWidth / 2, priceY + priceHeight + sizeSpacing, {
+          align: "center",
+          maxWidth: maxNameWidth,
+        });
+      }
+
       // Barcode image - fixed size, consistent, within border
       const borderTop = 5;
       const borderBottom = labelHeight - 5;
       const borderLeft = 5;
       const borderRight = labelWidth - 5;
-      const barcodeSpacing = 6; // Spacing after price
+      const barcodeSpacing = 6; // Spacing after price/size
       const marginBottom = 5; // Margin from bottom border
-      
+     
       // Calculate available space for barcode
-      const codeY = priceY + priceHeight + barcodeSpacing;
+      const codeY = priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
       const availableHeight = borderBottom - codeY - marginBottom;
       
       // Fixed barcode size (consistent) but ensure it fits within border
@@ -964,6 +978,20 @@ function setupItemHandlers() {
         const priceHeight = 9; // Height for price line
         doc.text(priceText, x + labelWidth / 2, priceY, { align: "center" });
 
+        const sizeLabel = (item.size_name || item.size_code || "").trim();
+        const hasSizeLabel = sizeLabel.length > 0;
+        const sizeLineHeight = hasSizeLabel ? 8 : 0;
+        const sizeSpacing = hasSizeLabel ? 3 : 0;
+        if (hasSizeLabel) {
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(75, 85, 99);
+          doc.text(`Ukuran: ${sizeLabel}`, x + labelWidth / 2, priceY + priceHeight + sizeSpacing, {
+            align: "center",
+            maxWidth: labelWidth - 10,
+          });
+        }
+
         // Barcode image - fixed size, consistent, within border
         const borderTop = y + 5;
         const borderBottom = y + labelHeight - 5;
@@ -973,7 +1001,7 @@ function setupItemHandlers() {
         const marginBottom = 5; // Margin from bottom border
         
         // Calculate available space for barcode
-        const codeY = priceY + priceHeight + barcodeSpacing;
+        const codeY = priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
         
         // Fixed barcode size (consistent) but ensure it fits within border
         let barcodeImgHeight = 30; // Preferred height for bulk labels
