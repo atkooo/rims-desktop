@@ -102,6 +102,70 @@
         </AppButton>
         <span v-if="infoMessage" class="info-message">{{ infoMessage }}</span>
       </div>
+      <div v-if="form.type === 'bundle'" class="bundle-availability-wrapper">
+        <div v-if="bundleAvailabilityLoading" class="bundle-availability-banner">
+          <Icon name="loader" size="14" class="icon-spin" />
+          <span>Memuat informasi komponen...</span>
+        </div>
+        <div v-else-if="bundleAvailability" class="bundle-availability-card">
+          <div class="bundle-availability-header">
+            <div>
+              <strong>Info paket {{ bundleAvailability.bundleName }}</strong>
+              <span class="reference-code">{{ bundleAvailability.bundleCode }}</span>
+            </div>
+            <span
+              class="availability-badge"
+              :class="{
+                'badge-success': bundleAvailability.maxAssemblable > 0,
+                'badge-danger': bundleAvailability.maxAssemblable === 0,
+              }"
+            >
+              {{
+                bundleAvailability.maxAssemblable > 0
+                  ? `Komponen cukup untuk ${bundleAvailability.maxAssemblable} paket`
+                  : "Komponen tidak cukup"
+              }}
+            </span>
+          </div>
+          <div class="bundle-availability-stats">
+            <div>
+              <span>Stok bundle saat ini</span>
+              <strong>{{ bundleAvailability.bundleAvailable }}</strong>
+            </div>
+            <div>
+              <span>Komponen terlibat</span>
+              <strong>{{ bundleAvailability.components.length }} item</strong>
+            </div>
+          </div>
+          <div class="bundle-components">
+            <div
+              v-for="component in bundleAvailability.components"
+              :key="component.id"
+              class="bundle-component"
+            >
+              <div class="component-title">
+                {{ component.name }}
+                <span class="reference-code">{{ component.code }}</span>
+              </div>
+              <div class="component-meta">
+                {{ component.type === "item" ? "Item" : "Aksesoris" }} ·
+                {{ component.available_quantity }} tersedia · butuh
+                {{ component.detail_quantity }} per paket
+              </div>
+              <div class="component-limit">
+                Maksimal {{ component.maxBundles }} paket
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          v-else-if="bundleAvailabilityError"
+          class="form-error"
+          style="margin-top: 0.5rem;"
+        >
+          {{ bundleAvailabilityError }}
+        </div>
+      </div>
     </section>
 
     <section class="card-section form-section">
@@ -176,7 +240,7 @@
 </template>
 
 <script>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import FormInput from "@/components/ui/FormInput.vue";
 import Icon from "@/components/ui/Icon.vue";
@@ -184,7 +248,7 @@ import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
 import BundlePickerDialog from "@/components/modules/bundles/BundlePickerDialog.vue";
 import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
 import { getStoredUser } from "@/services/auth";
-import { createStockReceipt } from "@/services/stock";
+import { createStockReceipt, fetchBundleAvailability } from "@/services/stock";
 import { eventBus } from "@/utils/eventBus";
 
 export default {
@@ -213,6 +277,9 @@ export default {
     const showBundlePicker = ref(false);
     const showAccessoryPicker = ref(false);
     const selectedReference = ref(null);
+    const bundleAvailability = ref(null);
+    const bundleAvailabilityLoading = ref(false);
+    const bundleAvailabilityError = ref("");
 
     const canOpenPicker = computed(
       () =>
@@ -230,6 +297,9 @@ export default {
     const handleTypeChange = () => {
       selectedReference.value = null;
       errors.value.reference = "";
+      bundleAvailability.value = null;
+      bundleAvailabilityError.value = "";
+      bundleAvailabilityLoading.value = false;
     };
 
     const openPicker = () => {
@@ -268,6 +338,35 @@ export default {
       errors.value.reference = "";
     };
 
+    const loadBundleAvailability = async (bundleId) => {
+      if (!bundleId) {
+        bundleAvailability.value = null;
+        return;
+      }
+      bundleAvailabilityLoading.value = true;
+      bundleAvailabilityError.value = "";
+      try {
+        bundleAvailability.value = await fetchBundleAvailability(bundleId);
+      } catch (err) {
+        bundleAvailabilityError.value = err.message || "Gagal memuat info paket.";
+        bundleAvailability.value = null;
+      } finally {
+        bundleAvailabilityLoading.value = false;
+      }
+    };
+
+    watch(
+      () => [form.value.type, selectedReference.value],
+      ([type, reference]) => {
+        if (type === "bundle" && reference?.id) {
+          loadBundleAvailability(reference.id);
+        } else {
+          bundleAvailability.value = null;
+          bundleAvailabilityError.value = "";
+        }
+      },
+    );
+
     const addLine = () => {
       const validation = {};
       if (!form.value.type) {
@@ -281,6 +380,14 @@ export default {
       }
       if (!form.value.quantity || form.value.quantity < 1) {
         validation.quantity = "Jumlah minimal 1";
+      }
+      if (
+        form.value.type === "bundle" &&
+        bundleAvailability.value &&
+        typeof bundleAvailability.value.maxAssemblable === "number" &&
+        form.value.quantity > bundleAvailability.value.maxAssemblable
+      ) {
+        validation.quantity = `Komponen cukup untuk maksimal ${bundleAvailability.value.maxAssemblable} paket`;
       }
       if (Object.keys(validation).length) {
         errors.value = validation;
@@ -355,6 +462,8 @@ export default {
       lines.value = [];
       errors.value = {};
       infoMessage.value = "";
+      bundleAvailability.value = null;
+      bundleAvailabilityError.value = "";
     };
 
     return {
@@ -367,6 +476,9 @@ export default {
       showBundlePicker,
       showAccessoryPicker,
       selectedReference,
+      bundleAvailability,
+      bundleAvailabilityLoading,
+      bundleAvailabilityError,
       pickerBtnLabel,
       canOpenPicker,
       handleTypeChange,
@@ -454,6 +566,106 @@ export default {
 .info-message {
   color: #0f766e;
   font-weight: 500;
+}
+
+.bundle-availability-wrapper {
+  margin-top: 0.75rem;
+}
+
+.bundle-availability-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+.bundle-availability-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+  margin-top: 0.5rem;
+}
+
+.bundle-availability-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.availability-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #047857;
+  text-transform: none;
+}
+
+.availability-badge.badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.bundle-availability-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.bundle-availability-stats div strong {
+  display: block;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.bundle-components {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bundle-component {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.component-title {
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.component-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.component-limit {
+  font-size: 0.75rem;
+  color: #475569;
+  margin-top: 0.25rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
  .lines-table {

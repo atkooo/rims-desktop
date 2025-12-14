@@ -178,10 +178,12 @@ async function restoreStockWithMovement({
 
   const isItem = tableName === "items";
   const isAccessory = tableName === "accessories";
+  const isBundle = tableName === "bundles";
 
   await createStockMovement({
     itemId: isItem ? entityId : null,
     accessoryId: isAccessory ? entityId : null,
+    bundleId: isBundle ? entityId : null,
     movementType,
     referenceType,
     referenceId,
@@ -313,4 +315,3 @@ module.exports = {
   validateCashierSession,
   expandBundleSelections,
 };
-

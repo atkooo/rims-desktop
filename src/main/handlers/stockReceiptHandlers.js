@@ -158,6 +158,85 @@ function setupStockReceiptHandlers() {
       throw error;
     }
   });
+
+  ipcMain.handle("stock:getBundleAvailability", async (_event, bundleId) => {
+    try {
+      if (!bundleId) {
+        throw new Error("Bundle tidak valid");
+      }
+
+      const bundle = await database.queryOne(
+        "SELECT id, name, code, available_quantity FROM bundles WHERE id = ?",
+        [bundleId],
+      );
+      if (!bundle) {
+        throw new Error("Bundle tidak ditemukan");
+      }
+
+      const details = await database.query(
+        `
+        SELECT
+          bd.id,
+          bd.item_id,
+          bd.accessory_id,
+          bd.quantity AS detail_quantity,
+          i.name AS item_name,
+          i.code AS item_code,
+          COALESCE(i.available_quantity, 0) AS item_available,
+          a.name AS accessory_name,
+          a.code AS accessory_code,
+          COALESCE(a.available_quantity, 0) AS accessory_available
+        FROM bundle_details bd
+        LEFT JOIN items i ON bd.item_id = i.id
+        LEFT JOIN accessories a ON bd.accessory_id = a.id
+        WHERE bd.bundle_id = ?
+      `,
+        [bundleId],
+      );
+
+      const components = details.map((detail) => {
+        const type = detail.item_id ? "item" : detail.accessory_id ? "accessory" : "unknown";
+        const availableQuantity = detail.item_id
+          ? detail.item_available
+          : detail.accessory_id
+            ? detail.accessory_available
+            : 0;
+        const detailQuantity = detail.detail_quantity || 0;
+        const perComponentMax = detailQuantity > 0
+          ? Math.floor(availableQuantity / detailQuantity)
+          : Number.MAX_SAFE_INTEGER;
+        return {
+          id: detail.id,
+          type,
+          name: detail.item_name || detail.accessory_name || "Tidak Diketahui",
+          code: detail.item_code || detail.accessory_code || "-",
+          available_quantity: availableQuantity,
+          detail_quantity: detailQuantity,
+          maxBundles: Math.max(0, perComponentMax),
+          maxBundlesForCalc: perComponentMax,
+        };
+      });
+
+      const finiteLimits = components
+        .map((component) => component.maxBundlesForCalc)
+        .filter((value) => Number.isFinite(value));
+      const maxAssemblable = finiteLimits.length
+        ? Math.max(0, Math.min(...finiteLimits))
+        : 0;
+
+      return {
+        bundleId: bundle.id,
+        bundleName: bundle.name,
+        bundleCode: bundle.code,
+        bundleAvailable: bundle.available_quantity || 0,
+        components,
+        maxAssemblable,
+      };
+    } catch (error) {
+      logger.error("Error fetching bundle availability:", error);
+      throw error;
+    }
+  });
 }
 
 module.exports = {

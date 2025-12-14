@@ -199,7 +199,7 @@ function setupReportExportHandlers() {
     }
 
     // For queries with UNION ALL (executive, finance), add WHERE to each subquery
-    if (query.includes("UNION ALL")) {
+    if (query.includes("UNION ALL") && reportType !== "payments") {
       // Split by UNION ALL and add WHERE clause to each part
       const parts = query.split("UNION ALL");
       const modifiedParts = parts.map((part, index) => {
@@ -492,4 +492,3 @@ function setupReportExportHandlers() {
 }
 
 module.exports = setupReportExportHandlers;
-

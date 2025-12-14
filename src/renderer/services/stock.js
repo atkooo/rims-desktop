@@ -23,3 +23,15 @@ export function repairAllMismatchedItems() {
 export function createStockReceipt(payload) {
   return ipcRenderer.invoke("stockReceipts:create", payload);
 }
+
+export function createStockAdjustment(payload) {
+  return ipcRenderer.invoke("stockAdjustments:create", payload);
+}
+
+export function fetchStockComparison() {
+  return ipcRenderer.invoke("stock:getComparisonItems");
+}
+
+export function fetchBundleAvailability(bundleId) {
+  return ipcRenderer.invoke("stock:getBundleAvailability", bundleId);
+}

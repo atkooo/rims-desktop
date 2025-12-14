@@ -43,16 +43,6 @@
             {{ errors.sale_price }}
           </div>
         </div>
-        <!-- Informasi Stok: Stok diatur melalui Manajemen Stok -->
-        <div class="form-group grid-span-2">
-          <div class="info-box">
-            <small>
-              <strong>Catatan:</strong> Stok aksesoris diatur melalui menu 
-              <strong>Transaksi → Pergerakan Stok</strong>. 
-              Stok awal akan otomatis diset ke 0.
-            </small>
-          </div>
-        </div>
         <FormInput
           id="minStock"
           label="Minimal Stok"
@@ -355,15 +345,39 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
+  padding: 0.75rem 0.75rem;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow-x: hidden;
 }
 
-/* Using global utility classes for form-group, form-label, form-textarea */
+.form-group {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.form-group .form-input,
+.form-group .form-select,
+.form-group .form-textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .form-textarea {
   min-height: 90px;
 }
@@ -385,21 +399,5 @@ export default {
 .submit-error {
   color: #b91c1c;
   font-size: 0.9rem;
-}
-
-/* Info box untuk catatan stok */
-.info-box {
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin-top: 0.5rem;
-  grid-column: span 2;
-}
-
-.info-box small {
-  color: #0369a1;
-  font-size: 0.875rem;
-  line-height: 1.5;
 }
 </style>

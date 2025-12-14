@@ -106,6 +106,7 @@ const { setupPaymentHandlers } = require("./handlers/paymentHandlers");
 const { setupStockMovementHandlers } = require("./handlers/stockMovementHandlers");
 const { setupStockReceiptHandlers } = require("./handlers/stockReceiptHandlers");
 const { setupStockRepairHandlers } = require("./handlers/stockRepairHandlers");
+const { setupStockAdjustmentHandlers } = require("./handlers/stockAdjustmentHandlers");
 const setupSettingsHandlers = require("./handlers/settingsHandlers");
 const setupCategoryHandlers = require("./handlers/categoryHandlers");
 const setupItemSizeHandlers = require("./handlers/itemSizeHandlers");
@@ -428,6 +429,7 @@ app.whenReady().then(async () => {
   setupStockMovementHandlers();
   setupStockReceiptHandlers();
   setupStockRepairHandlers();
+  setupStockAdjustmentHandlers();
   setupSettingsHandlers();
   setupMasterDataViewHandlers();
   setupTransactionViewHandlers();

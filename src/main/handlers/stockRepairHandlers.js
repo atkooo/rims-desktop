@@ -99,8 +99,11 @@ function setupStockRepairHandlers() {
           current_stock_quantity,
           current_available_quantity,
           calculated_stock_quantity,
-          calculated_available_quantity
-        FROM v_items_stock_calculated
+          calculated_available_quantity,
+          stock_qty_mismatch,
+          available_qty_mismatch,
+          product_type
+        FROM v_stock_opname_comparison
         WHERE stock_qty_mismatch = 1 OR available_qty_mismatch = 1
         ORDER BY name
       `);
@@ -111,20 +114,52 @@ function setupStockRepairHandlers() {
     }
   });
 
+  ipcMain.handle("stock:getComparisonItems", async () => {
+    try {
+      const items = await database.query(`
+        SELECT 
+          id,
+          code,
+          name,
+          current_stock_quantity,
+          current_available_quantity,
+          calculated_stock_quantity,
+          calculated_available_quantity,
+          stock_qty_mismatch,
+          available_qty_mismatch,
+          product_type
+        FROM v_stock_opname_comparison
+        ORDER BY name
+      `);
+      return items;
+    } catch (error) {
+      logger.error("Error getting comparison items:", error);
+      throw error;
+    }
+  });
+
   // Repair all mismatched items
   ipcMain.handle("stock:repairAllMismatched", async () => {
     try {
       const mismatched = await database.query(`
-        SELECT id FROM v_items_stock_calculated
+        SELECT id, product_type FROM v_stock_opname_comparison
         WHERE stock_qty_mismatch = 1 OR available_qty_mismatch = 1
       `);
 
+      const repairHandlers = {
+        item: repairStockFromMovements,
+        accessory: repairAccessoryStockFromMovements,
+        bundle: repairBundleStockFromMovements,
+      };
+
       const results = [];
       for (const item of mismatched) {
+        const handler = repairHandlers[item.product_type] || repairStockFromMovements;
         try {
-          const result = await repairStockFromMovements(item.id);
+          const result = await handler(item.id);
           results.push({
             itemId: item.id,
+            productType: item.product_type || "item",
             success: true,
             stock_quantity: result.stock_qty,
             available_quantity: result.available_qty,
@@ -132,6 +167,7 @@ function setupStockRepairHandlers() {
         } catch (error) {
           results.push({
             itemId: item.id,
+            productType: item.product_type || "item",
             success: false,
             error: error.message,
           });
@@ -152,4 +188,3 @@ function setupStockRepairHandlers() {
 }
 
 module.exports = { setupStockRepairHandlers };
-

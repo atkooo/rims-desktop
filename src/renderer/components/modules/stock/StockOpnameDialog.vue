@@ -48,12 +48,12 @@
             row-key="id"
           >
             <template #actions="{ row }">
-              <AppButton
-                size="small"
-                variant="secondary"
-                :loading="repairingId === row.id"
-                @click="repairRow(row)"
-              >
+                <AppButton
+                  size="small"
+                  variant="secondary"
+                  :loading="repairingKey === getRowKey(row)"
+                  @click="repairRow(row)"
+                >
                 Perbaiki
               </AppButton>
             </template>
@@ -74,6 +74,8 @@ import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import {
   fetchStockMismatches,
+  repairAccessoryStock,
+  repairBundleStock,
   repairItemStock,
   repairAllMismatchedItems,
 } from "@/services/stock";
@@ -94,16 +96,29 @@ export default {
     const loading = ref(false);
     const error = ref("");
     const statusMessage = ref("");
-    const repairingId = ref(null);
+    const repairingKey = ref(null);
     const repairingAll = ref(false);
     const showDialog = computed({
       get: () => props.modelValue,
       set: (value) => emit("update:modelValue", value),
     });
 
+    const productTypeLabels = {
+      item: "Item",
+      accessory: "Aksesoris",
+      bundle: "Bundle",
+    };
+    const getProductLabel = (row) => productTypeLabels[row?.product_type] || productTypeLabels.item;
+    const getRowKey = (row) => `${row?.product_type || "item"}-${row?.id}`;
     const columns = [
       { key: "code", label: "Kode", sortable: true },
-      { key: "name", label: "Nama Item", sortable: true },
+      {
+        key: "product_type",
+        label: "Tipe Produk",
+        sortable: true,
+        format: (_, row) => getProductLabel(row),
+      },
+      { key: "name", label: "Nama Produk", sortable: true },
       {
         key: "current_stock_quantity",
         label: "Stok Saat Ini",
@@ -159,18 +174,25 @@ export default {
     };
 
     const repairRow = async (row) => {
-      repairingId.value = row.id;
+      const rowKey = getRowKey(row);
+      repairingKey.value = rowKey;
       error.value = "";
       statusMessage.value = "";
       try {
-        await repairItemStock(row.id);
-        statusMessage.value = `Stok ${row.name || row.code} diselaraskan dengan log mutasi.`;
+        const repairFunctions = {
+          item: repairItemStock,
+          accessory: repairAccessoryStock,
+          bundle: repairBundleStock,
+        };
+        const repairFn = repairFunctions[row.product_type] || repairItemStock;
+        await repairFn(row.id);
+        statusMessage.value = `Stok ${getProductLabel(row)} ${row.name || row.code} diselaraskan dengan log mutasi.`;
         emit("repaired");
         await loadMismatches();
       } catch (err) {
         error.value = err.message || "Gagal memperbaiki stok.";
       } finally {
-        repairingId.value = null;
+        repairingKey.value = null;
       }
     };
 
@@ -207,11 +229,12 @@ export default {
       loading,
       error,
       statusMessage,
-      repairingId,
+      repairingKey,
       repairingAll,
       repairRow,
       handleRepairAll,
       loadMismatches,
+      getRowKey,
     };
   },
 };
