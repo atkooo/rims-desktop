@@ -7,71 +7,95 @@
         <div class="cashier-form-row">
           <div class="cashier-form-field">
             <label>Customer: <span class="required">*</span></label>
-            <CustomerSelector
-              v-model="form.customerId"
-              placeholder="Pilih Customer (Wajib)"
-              :allow-clear="false"
-              class="cashier-select"
-            />
+            <CustomerSelector v-model="form.customerId" placeholder="Pilih Customer (Wajib)" :allow-clear="false"
+              class="cashier-select" />
           </div>
           <div class="cashier-form-field">
             <label>Tanggal Sewa:</label>
-            <DatePicker
-              id="rentalDate"
-              v-model="form.rentalDate"
-              mode="rental"
-              class="cashier-date"
-            />
+            <DatePicker id="rentalDate" v-model="form.rentalDate" mode="rental" class="cashier-date" />
           </div>
           <div class="cashier-form-field">
             <label>Rencana Kembali:</label>
-            <DatePicker
-              id="plannedReturnDate"
-              v-model="form.plannedReturnDate"
-              mode="plannedReturn"
-              :min-date="form.rentalDate"
-              class="cashier-date"
-            />
+            <DatePicker id="plannedReturnDate" v-model="form.plannedReturnDate" mode="plannedReturn"
+              :min-date="form.rentalDate" class="cashier-date" />
           </div>
         </div>
 
-        <!-- Items Table -->
-        <div class="cashier-table-section">
-          <div class="table-header">
-            <h3>Item Sewa</h3>
-            <button class="btn-add-item" @click="openItemPicker">
-              + Tambah Item
-            </button>
-          </div>
-          <ItemSelector :key="formKey" v-model="form.items" transaction-type="RENTAL" />
-        </div>
-
-        <!-- Bundles Table -->
-        <div class="cashier-table-section">
-          <div class="table-header">
-            <h3>Paket Sewa</h3>
-            <button class="btn-add-item" @click="openBundlePicker">
-              + Tambah Paket
-            </button>
-          </div>
-          <BundleSelector :key="formKey" v-model="form.bundles" bundle-type="rental" />
-        </div>
-
-        <!-- Notes -->
-        <details class="cashier-details">
-          <summary>Catatan</summary>
-          <div class="details-content">
-            <div class="input-group">
-              <label>Catatan</label>
-              <textarea
-                v-model="form.notes"
-                class="cashier-textarea"
-                rows="2"
-                placeholder="Catatan khusus..."
-              ></textarea>
+        <!-- Unified Product Table -->
+        <div class="cashier-table-section unified-section">
+          <div class="unified-header">
+            <div>
+              <h3>Daftar Sewa</h3>
+              <p class="unified-description">
+                Semua item dan paket tampil dalam satu tabel yang bisa difilter berdasarkan tipe.
+              </p>
+            </div>
+            <div class="picker-actions">
+              <button class="picker-btn" @click="openItemPicker">+ Item</button>
+              <button class="picker-btn" @click="openBundlePicker">+ Paket</button>
             </div>
           </div>
-        </details>
+
+          <div class="line-filter">
+            <button v-for="option in lineFilterOptions" :key="option.value" class="line-filter-btn"
+              :class="{ active: lineFilter === option.value }" @click="setLineFilter(option.value)">
+              {{ option.label }}
+            </button>
+          </div>
+
+          <div v-if="filteredLines.length" class="line-table-wrapper">
+            <table class="line-table">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Kode</th>
+                  <th>Nama Produk</th>
+                  <th>Harga Per Hari</th>
+                  <th>Qty</th>
+                  <th>Subtotal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="line in filteredLines" :key="`${line.type}-${line.id}`">
+                  <td class="type-cell">{{ line.typeLabel }}</td>
+                  <td class="code-cell">{{ line.code || "-" }}</td>
+                  <td class="name-cell">
+                    <strong>{{ line.name }}</strong>
+                    <div v-if="line.discountLabel" class="discount-badge">
+                      {{ line.discountLabel }}
+                    </div>
+                  </td>
+                  <td class="price-cell">{{ formatCurrency(line.price) }}</td>
+                  <td class="quantity-cell">
+                    <input type="number" :value="line.quantity" min="1" :max="line.maxQty || undefined"
+                      class="quantity-input" @input="updateLineQuantity(line, $event.target.value)" />
+                  </td>
+                  <td class="subtotal-cell">{{ formatCurrency(line.subtotal) }}</td>
+                  <td class="action-cell">
+                    <button class="remove-btn" @click="removeLine(line)" title="Hapus">
+                      <Icon name="trash-2" :size="16" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty-lines">
+            <p>Tidak ada produk yang dipilih. Tambahkan item atau paket untuk memulai.</p>
+          </div>
+
+          <details class="cashier-details">
+            <summary>Catatan</summary>
+            <div class="details-content">
+              <div class="input-group">
+                <!-- <label>Catatan</label> -->
+                <textarea v-model="form.notes" class="cashier-textarea" rows="2"
+                  placeholder="Catatan khusus..."></textarea>
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
 
       <!-- Right: Total & Actions -->
@@ -109,21 +133,12 @@
         <div class="cashier-inputs">
           <div class="input-group">
             <label>Deposit</label>
-            <input
-              type="text"
-              :value="formatNumberInput(form.deposit)"
-              @input="handleDepositInput"
-              class="cashier-input"
-            />
+            <input type="text" :value="formatNumberInput(form.deposit)" @input="handleDepositInput"
+              class="cashier-input" />
           </div>
           <div class="input-group">
             <label>Diskon</label>
-            <input
-              type="text"
-              :value="formatNumberInput(discountValue)"
-              class="cashier-input"
-              readonly
-            />
+            <input type="text" :value="formatNumberInput(discountValue)" class="cashier-input" readonly />
             <p class="cashier-input-hint">{{ discountHint }}</p>
           </div>
           <div class="input-group">
@@ -133,12 +148,7 @@
                 ({{ taxRateLabel }})
               </span>
             </label>
-            <input
-              type="text"
-              :value="formatNumberInput(form.tax)"
-              class="cashier-input"
-              readonly
-            />
+            <input type="text" :value="formatNumberInput(form.tax)" class="cashier-input" readonly />
             <p v-if="taxPercentage > 0" class="cashier-input-hint cashier-tax-hint">
               Tarif pajak {{ taxRateLabel }} dikenakan atas subtotal {{ totalDays }} hari.
             </p>
@@ -158,37 +168,18 @@
     </div>
 
     <!-- Dialogs -->
-    <ItemPickerDialog
-      v-model="itemPickerOpen"
-      :excluded-ids="form.items.map((it) => it.id)"
-      transaction-type="RENTAL"
-      :restrict-stock="true"
-      @select="addItem"
-    />
+    <ItemPickerDialog v-model="itemPickerOpen" :excluded-ids="form.items.map((it) => it.id)" transaction-type="RENTAL"
+      :restrict-stock="true" @select="addItem" />
 
-    <BundlePickerDialog
-      v-model="bundlePickerOpen"
-      :excluded-ids="form.bundles.map((b) => b.id)"
-      bundle-type="rental"
-      :restrict-stock="true"
-      @select="addBundle"
-    />
+    <BundlePickerDialog v-model="bundlePickerOpen" :excluded-ids="form.bundles.map((b) => b.id)" bundle-type="rental"
+      :restrict-stock="true" @select="addBundle" />
 
-    <PaymentModal
-      v-model="showPaymentModal"
-      :transaction-id="savedTransactionId"
-      transaction-type="rental"
-      @payment-success="handlePaymentSuccess"
-      @close="handlePaymentModalClose"
-    />
+    <PaymentModal v-model="showPaymentModal" :transaction-id="savedTransactionId" transaction-type="rental"
+      @payment-success="handlePaymentSuccess" @close="handlePaymentModalClose" />
 
     <!-- Receipt Preview Dialog -->
-    <ReceiptPreviewDialog
-      v-model="showReceiptPreview"
-      :transaction-id="savedTransactionId"
-      transaction-type="rental"
-      @printed="handleReceiptPrinted"
-    />
+    <ReceiptPreviewDialog v-model="showReceiptPreview" :transaction-id="savedTransactionId" transaction-type="rental"
+      @printed="handleReceiptPrinted" />
   </div>
 </template>
 
@@ -197,12 +188,11 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import CustomerSelector from "@/components/modules/customers/CustomerSelector.vue";
+import Icon from "@/components/ui/Icon.vue";
 import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
 import BundlePickerDialog from "@/components/modules/bundles/BundlePickerDialog.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
-import ItemSelector from "@/components/modules/items/ItemSelector.vue";
-import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
 import { fetchCustomers, fetchBundleByCode } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
@@ -218,7 +208,7 @@ const createDefaultForm = () => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   return {
     customerId: "",
     rentalDate: toDateInput(today),
@@ -237,8 +227,7 @@ export default {
   components: {
     DatePicker,
     CustomerSelector,
-    ItemSelector,
-    BundleSelector,
+    Icon,
     ItemPickerDialog,
     BundlePickerDialog,
     PaymentModal,
@@ -275,6 +264,91 @@ export default {
       if (diffMs < 0) return 1;
       return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     });
+
+    const lineFilter = ref("all");
+    const lineFilterOptions = [
+      { label: "Semua", value: "all" },
+      { label: "Item", value: "item" },
+      { label: "Paket", value: "bundle" },
+      { label: "Aksesoris", value: "accessory" },
+    ];
+    const typeLabels = {
+      item: "Item",
+      bundle: "Paket",
+      accessory: "Aksesoris",
+    };
+
+    const formatDiscountLabel = (entry) => {
+      if (entry.discount_percentage > 0) {
+        return `Diskon ${entry.discount_percentage}%`;
+      }
+      if (entry.discount_amount > 0) {
+        return `Diskon ${formatCurrency(entry.discount_amount)}`;
+      }
+      return null;
+    };
+
+    const assembleLine = (type, entry, price) => {
+      const quantity = entry.quantity || 1;
+      return {
+        id: entry.id,
+        type,
+        typeLabel: typeLabels[type] || type,
+        name: entry.name,
+        code: entry.code,
+        price,
+        quantity,
+        subtotal: price * quantity * totalDays.value,
+        maxQty: entry.available_quantity || 0,
+        discountLabel: formatDiscountLabel(entry),
+      };
+    };
+
+    const lines = computed(() => {
+      const itemLines = form.value.items.map((item) => {
+        const price = item.rental_price_per_day || 0;
+        return assembleLine("item", item, price);
+      });
+      const bundleLines = form.value.bundles.map((bundle) => {
+        const price = bundle.rental_price_per_day || 0;
+        return assembleLine("bundle", bundle, price);
+      });
+      return [...itemLines, ...bundleLines];
+    });
+
+    const filteredLines = computed(() => {
+      if (lineFilter.value === "all") return lines.value;
+      return lines.value.filter((line) => line.type === lineFilter.value);
+    });
+
+    const setLineFilter = (value) => {
+      lineFilter.value = value;
+    };
+
+    const getLineArray = (type) => {
+      if (type === "item") return form.value.items;
+      if (type === "bundle") return form.value.bundles;
+      return [];
+    };
+
+    const updateLineQuantity = (line, rawValue) => {
+      const array = getLineArray(line.type);
+      const entry = array.find((item) => item.id === line.id);
+      if (!entry) return;
+      const parsed = Number(rawValue);
+      if (Number.isNaN(parsed)) return;
+      const entered = Math.max(1, Math.floor(parsed));
+      const clampMax = line.maxQty > 0 ? line.maxQty : undefined;
+      entry.quantity = clampMax ? Math.min(entered, clampMax) : entered;
+    };
+
+    const removeLine = (line) => {
+      const array = getLineArray(line.type);
+      const index = array.findIndex((item) => item.id === line.id);
+      if (index !== -1) {
+        array.splice(index, 1);
+      }
+    };
 
     // Calculate subtotals
     const baseSubtotal = computed(() => {
@@ -462,7 +536,7 @@ export default {
         } catch (bundleError) {
           bundle = null;
         }
-        
+
         if (bundle) {
           if (!bundle.is_active) {
             showError(`Paket "${bundle.name}" tidak aktif`);
@@ -551,7 +625,7 @@ export default {
         showError("Pilih customer terlebih dahulu");
         return;
       }
-      
+
       if (form.value.items.length === 0 && form.value.bundles.length === 0) {
         showError("Pilih minimal 1 item atau paket");
         return;
@@ -715,6 +789,12 @@ export default {
       formatNumberInput,
       discountValue,
       discountHint,
+      lineFilter,
+      lineFilterOptions,
+      filteredLines,
+      updateLineQuantity,
+      removeLine,
+      setLineFilter,
       handleDepositInput,
       totalAmount,
       baseSubtotal,
@@ -792,6 +872,156 @@ export default {
 
 .cashier-table-section {
   margin-bottom: 1rem;
+}
+
+.unified-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+}
+
+.unified-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.unified-description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.picker-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 0.85rem;
+  background: #fff;
+  color: #1f2937;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.picker-btn:hover {
+  border-color: #4338ca;
+  color: #4338ca;
+}
+
+.line-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.line-filter-btn {
+  border: 1px solid #e5e7eb;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.line-filter-btn.active {
+  border-color: #4338ca;
+  background: #4338ca;
+  color: #fff;
+}
+
+.line-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.line-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
+.line-table th,
+.line-table td {
+  padding: 0.65rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.line-table th {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: #374151;
+}
+
+.line-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.line-table .type-cell {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.line-table .code-cell {
+  font-family: monospace;
+  color: #6b7280;
+}
+
+.line-table .name-cell strong {
+  display: block;
+  color: #111827;
+}
+
+.line-table .price-cell,
+.line-table .subtotal-cell {
+  font-weight: 600;
+  color: #111827;
+  text-align: right;
+  min-width: 120px;
+}
+
+.line-table .quantity-cell {
+  width: 120px;
+}
+
+.line-table .quantity-input {
+  width: 70px;
+  padding: 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.remove-btn {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-lines {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
 }
 
 .table-header {
@@ -1071,7 +1301,7 @@ export default {
   .cashier-main {
     grid-template-columns: 1fr;
   }
-  
+
   .cashier-summary-section {
     position: static;
   }

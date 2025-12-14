@@ -7,62 +7,91 @@
         <div class="cashier-form-row">
           <div class="cashier-form-field">
             <label>Customer:</label>
-            <CustomerSelector
-              v-model="form.customerId"
-              placeholder="Tanpa Customer"
-              :allow-clear="true"
-              class="cashier-select"
-            />
+            <CustomerSelector v-model="form.customerId" placeholder="Tanpa Customer" :allow-clear="true"
+              class="cashier-select" />
           </div>
           <div class="cashier-form-field">
             <label>Tanggal:</label>
-            <DatePicker
-              id="saleDate"
-              v-model="form.saleDate"
-              mode="sale"
-              class="cashier-date"
-            />
+            <DatePicker id="saleDate" v-model="form.saleDate" mode="sale" class="cashier-date" />
           </div>
         </div>
 
-        <!-- Items Table -->
-        <div class="cashier-table-section">
-          <div class="table-header">
-            <h3>Item Penjualan</h3>
-            <button class="btn-add-item" @click="openItemPicker">
-              + Tambah Item
-            </button>
-          </div>
-          <ItemSelector :key="formKey" v-model="form.items" transaction-type="SALE" />
-        </div>
-
-        <!-- Bundles Table -->
-        <div class="cashier-table-section">
-          <div class="table-header">
-            <h3>Paket Penjualan</h3>
-            <button class="btn-add-item" @click="openBundlePicker">
-              + Tambah Paket
-            </button>
-          </div>
-          <BundleSelector :key="formKey" v-model="form.bundles" bundle-type="sale" />
-        </div>
-
-        <!-- Accessories -->
-        <details class="cashier-details">
-          <summary>Aksesoris & Catatan</summary>
-          <div class="details-content">
-            <AccessorySelector :key="formKey" v-model="form.accessories" />
-            <div class="input-group">
-              <label>Catatan</label>
-              <textarea
-                v-model="form.notes"
-                class="cashier-textarea"
-                rows="2"
-                placeholder="Catatan khusus..."
-              ></textarea>
+        <!-- Unified Product Table -->
+        <div class="cashier-table-section unified-section">
+          <div class="unified-header">
+            <div>
+              <h3>Daftar Produk</h3>
+              <p class="unified-description">
+                Item, paket, dan aksesoris tampil dalam satu tabel yang bisa difilter berdasarkan tipe.
+              </p>
+            </div>
+            <div class="picker-actions">
+              <button class="picker-btn" @click="openItemPicker">+ Item</button>
+              <button class="picker-btn" @click="openBundlePicker">+ Paket</button>
+              <button class="picker-btn" @click="openAccessoryPicker">+ Aksesoris</button>
             </div>
           </div>
-        </details>
+
+          <div class="line-filter">
+            <button v-for="option in lineFilterOptions" :key="option.value" class="line-filter-btn"
+              :class="{ active: lineFilter === option.value }" @click="setLineFilter(option.value)">
+              {{ option.label }}
+            </button>
+          </div>
+
+          <div v-if="filteredLines.length" class="line-table-wrapper">
+            <table class="line-table">
+              <thead>
+                <tr>
+                  <th>Tipe</th>
+                  <th>Kode</th>
+                  <th>Nama Produk</th>
+                  <th>Harga Satuan</th>
+                  <th>Qty</th>
+                  <th>Subtotal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="line in filteredLines" :key="`${line.type}-${line.id}`">
+                  <td class="type-cell">{{ line.typeLabel }}</td>
+                  <td class="code-cell">{{ line.code || "-" }}</td>
+                  <td class="name-cell">
+                    <strong>{{ line.name }}</strong>
+                    <div v-if="line.discountLabel" class="discount-badge">
+                      {{ line.discountLabel }}
+                    </div>
+                  </td>
+                  <td class="price-cell">{{ formatCurrency(line.price) }}</td>
+                  <td class="quantity-cell">
+                    <input type="number" :value="line.quantity" min="1" :max="line.maxQty || undefined"
+                      class="quantity-input" @input="updateLineQuantity(line, $event.target.value)" />
+                  </td>
+                  <td class="subtotal-cell">{{ formatCurrency(line.subtotal) }}</td>
+                  <td class="action-cell">
+    <button class="remove-btn" @click="removeLine(line)" title="Hapus">
+      <Icon name="trash-2" :size="16" />
+    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty-lines">
+            <p>Tidak ada produk yang dipilih. Tambahkan item, paket, atau aksesoris untuk memulai.</p>
+          </div>
+
+          <details class="cashier-details">
+            <summary>Catatan</summary>
+            <div class="details-content">
+              <div class="input-group">
+                <!-- <label>Catatan</label> -->
+                <textarea v-model="form.notes" class="cashier-textarea" rows="2"
+                  placeholder="Catatan khusus..."></textarea>
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
 
       <!-- Right: Total & Actions -->
@@ -72,7 +101,8 @@
           <div class="total-label">TOTAL</div>
           <div class="total-amount">{{ formatCurrency(totalAmount) }}</div>
           <div class="total-info">
-            {{ totalItems }} item{{ totalBundles > 0 ? ` • ${totalBundles} paket` : '' }}{{ totalAccessories > 0 ? ` • ${totalAccessories} aksesoris` : '' }}
+            {{ totalItems }} item{{ totalBundles > 0 ? ` • ${totalBundles} paket` : '' }}{{ totalAccessories > 0 ? ` •
+            ${totalAccessories} aksesoris` : '' }}
           </div>
         </div>
 
@@ -104,12 +134,7 @@
         <div class="cashier-inputs">
           <div class="input-group">
             <label>Diskon</label>
-            <input
-              type="text"
-              :value="formatNumberInput(form.discount)"
-              class="cashier-input"
-              readonly
-            />
+            <input type="text" :value="formatNumberInput(form.discount)" class="cashier-input" readonly />
             <p class="cashier-input-hint">{{ discountHint }}</p>
           </div>
           <div class="input-group">
@@ -119,12 +144,7 @@
                 ({{ taxRateLabel }})
               </span>
             </label>
-            <input
-              type="text"
-              :value="formatNumberInput(form.tax)"
-              class="cashier-input"
-              readonly
-            />
+            <input type="text" :value="formatNumberInput(form.tax)" class="cashier-input" readonly />
             <p v-if="taxPercentage > 0" class="cashier-input-hint cashier-tax-hint">
               Tarif pajak {{ taxRateLabel }} diterapkan pada subtotal setelah diskon.
             </p>
@@ -144,36 +164,21 @@
     </div>
 
     <!-- Dialogs -->
-    <ItemPickerDialog
-      v-model="itemPickerOpen"
-      :excluded-ids="form.items.map((it) => it.id)"
-      transaction-type="SALE"
-      :restrict-stock="true"
-      @select="addItem"
-    />
+    <ItemPickerDialog v-model="itemPickerOpen" :excluded-ids="form.items.map((it) => it.id)" transaction-type="SALE"
+      :restrict-stock="true" @select="addItem" />
 
-    <BundlePickerDialog
-      v-model="bundlePickerOpen"
-      :excluded-ids="form.bundles.map((b) => b.id)"
-      bundle-type="sale"
-      :restrict-stock="true"
-      @select="addBundle"
-    />
+    <BundlePickerDialog v-model="bundlePickerOpen" :excluded-ids="form.bundles.map((b) => b.id)" bundle-type="sale"
+      :restrict-stock="true" @select="addBundle" />
 
-    <PaymentModal
-      v-model="showPaymentModal"
-      :transaction-id="savedTransactionId"
-      @payment-success="handlePaymentSuccess"
-      @close="handlePaymentModalClose"
-    />
+    <AccessoryPickerDialog v-model="accessoryPickerOpen" :excluded-ids="form.accessories.map((a) => a.id)"
+      :restrict-stock="true" @select="addAccessory" />
+
+    <PaymentModal v-model="showPaymentModal" :transaction-id="savedTransactionId"
+      @payment-success="handlePaymentSuccess" @close="handlePaymentModalClose" />
 
     <!-- Receipt Preview Dialog -->
-    <ReceiptPreviewDialog
-      v-model="showReceiptPreview"
-      :transaction-id="savedTransactionId"
-      transaction-type="sale"
-      @printed="handleReceiptPrinted"
-    />
+    <ReceiptPreviewDialog v-model="showReceiptPreview" :transaction-id="savedTransactionId" transaction-type="sale"
+      @printed="handleReceiptPrinted" />
   </div>
 </template>
 
@@ -182,13 +187,12 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import DatePicker from "@/components/ui/DatePicker.vue";
 import CustomerSelector from "@/components/modules/customers/CustomerSelector.vue";
+import Icon from "@/components/ui/Icon.vue";
 import ItemPickerDialog from "@/components/modules/items/ItemPickerDialog.vue";
 import BundlePickerDialog from "@/components/modules/bundles/BundlePickerDialog.vue";
 import PaymentModal from "@/components/modules/transactions/PaymentModal.vue";
 import ReceiptPreviewDialog from "@/components/ui/ReceiptPreviewDialog.vue";
-import ItemSelector from "@/components/modules/items/ItemSelector.vue";
-import BundleSelector from "@/components/modules/bundles/BundleSelector.vue";
-import AccessorySelector from "@/components/modules/accessories/AccessorySelector.vue";
+import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPickerDialog.vue";
 import { fetchCustomers, fetchAccessoryByCode, fetchBundleByCode } from "@/services/masterData";
 import { getStoredUser } from "@/services/auth";
 import { useTransactionStore } from "@/store/transactions";
@@ -217,11 +221,10 @@ export default {
   components: {
     DatePicker,
     CustomerSelector,
-    ItemSelector,
-    BundleSelector,
-    AccessorySelector,
+    Icon,
     ItemPickerDialog,
     BundlePickerDialog,
+    AccessoryPickerDialog,
     PaymentModal,
     ReceiptPreviewDialog,
   },
@@ -239,6 +242,7 @@ export default {
     const savedTransactionId = ref(null);
     const itemPickerOpen = ref(false);
     const bundlePickerOpen = ref(false);
+    const accessoryPickerOpen = ref(false);
     const formKey = ref(0);
 
     const {
@@ -253,6 +257,9 @@ export default {
       normalizedItems,
       normalizedBundles,
       normalizedAccessories,
+      calculateItemPrice,
+      calculateBundlePrice,
+      calculateAccessoryPrice,
     } = useCashierSale(form);
 
     const currencyFormatter = new Intl.NumberFormat("id-ID", {
@@ -272,6 +279,95 @@ export default {
 
     const { formatNumberInput } = useNumberFormat();
     const taxRateLabel = computed(() => `${taxPercentage.value || 0}%`);
+    const lineFilter = ref("all");
+    const lineFilterOptions = [
+      { label: "Semua", value: "all" },
+      { label: "Item", value: "item" },
+      { label: "Paket", value: "bundle" },
+      { label: "Aksesoris", value: "accessory" },
+    ];
+
+    const typeLabels = {
+      item: "Item",
+      bundle: "Paket",
+      accessory: "Aksesoris",
+    };
+
+    const formatDiscountLabel = (entry) => {
+      if (entry.discount_percentage > 0) {
+        return `Diskon ${entry.discount_percentage}%`;
+      }
+      if (entry.discount_amount > 0) {
+        return `Diskon ${formatCurrency(entry.discount_amount)}`;
+      }
+      return null;
+    };
+
+    const assembleLine = (type, entry, price, quantity, codeLabel) => ({
+      id: entry.id,
+      type,
+      typeLabel: typeLabels[type] || type,
+      name: entry.name,
+      code: codeLabel,
+      price,
+      quantity,
+      subtotal: price * quantity,
+      maxQty: entry.available_quantity || 0,
+      discountLabel: formatDiscountLabel(entry),
+    });
+
+    const lines = computed(() => {
+      const itemLines = form.value.items.map((item) => {
+        const quantity = item.quantity || 1;
+        const price = calculateItemPrice(item);
+        return assembleLine("item", item, price, quantity, item.code);
+      });
+      const bundleLines = form.value.bundles.map((bundle) => {
+        const quantity = bundle.quantity || 1;
+        const price = calculateBundlePrice(bundle);
+        return assembleLine("bundle", bundle, price, quantity, bundle.code);
+      });
+      const accessoryLines = form.value.accessories.map((accessory) => {
+        const quantity = accessory.quantity || 1;
+        const price = calculateAccessoryPrice(accessory);
+        return assembleLine("accessory", accessory, price, quantity, accessory.code);
+      });
+      return [...itemLines, ...bundleLines, ...accessoryLines];
+    });
+
+    const filteredLines = computed(() => {
+      if (lineFilter.value === "all") return lines.value;
+      return lines.value.filter((line) => line.type === lineFilter.value);
+    });
+
+    const setLineFilter = (value) => {
+      lineFilter.value = value;
+    };
+
+    const getLineArray = (type) => {
+      if (type === "item") return form.value.items;
+      if (type === "bundle") return form.value.bundles;
+      return form.value.accessories;
+    };
+
+    const updateLineQuantity = (line, rawValue) => {
+      const array = getLineArray(line.type);
+      const target = array.find((entry) => entry.id === line.id);
+      if (!target) return;
+      const parsed = Number(rawValue);
+      if (Number.isNaN(parsed)) return;
+      const entered = Math.max(1, Math.floor(parsed));
+      const clampMax = line.maxQty > 0 ? line.maxQty : undefined;
+      target.quantity = clampMax ? Math.min(entered, clampMax) : entered;
+    };
+
+    const removeLine = (line) => {
+      const array = getLineArray(line.type);
+      const index = array.findIndex((entry) => entry.id === line.id);
+      if (index !== -1) {
+        array.splice(index, 1);
+      }
+    };
 
     const selectedCustomerId = computed(() => {
       const parsed = Number(form.value.customerId);
@@ -391,7 +487,7 @@ export default {
         } catch (accessoryError) {
           accessory = null;
         }
-        
+
         if (accessory) {
           if (!accessory.is_active) {
             showError(`Aksesoris "${accessory.name}" tidak aktif`);
@@ -403,7 +499,7 @@ export default {
           );
 
           if (existingAccessoryIndex >= 0) {
-            form.value.accessories[existingAccessoryIndex].quantity = 
+            form.value.accessories[existingAccessoryIndex].quantity =
               (form.value.accessories[existingAccessoryIndex].quantity || 1) + 1;
           } else {
             form.value.accessories.push({
@@ -422,7 +518,7 @@ export default {
         } catch (bundleError) {
           bundle = null;
         }
-        
+
         if (bundle) {
           if (!bundle.is_active) {
             showError(`Paket "${bundle.name}" tidak aktif`);
@@ -476,6 +572,10 @@ export default {
       bundlePickerOpen.value = true;
     };
 
+    const openAccessoryPicker = () => {
+      accessoryPickerOpen.value = true;
+    };
+
     const addItem = (item) => {
       const existingIndex = form.value.items.findIndex((i) => i.id === item.id);
       if (existingIndex >= 0) {
@@ -491,6 +591,15 @@ export default {
         form.value.bundles[existingIndex].quantity += 1;
       } else {
         form.value.bundles.push({ ...bundle, quantity: 1 });
+      }
+    };
+
+    const addAccessory = (accessory) => {
+      const existingIndex = form.value.accessories.findIndex((a) => a.id === accessory.id);
+      if (existingIndex >= 0) {
+        form.value.accessories[existingIndex].quantity += 1;
+      } else {
+        form.value.accessories.push({ ...accessory, quantity: 1 });
       }
     };
 
@@ -660,6 +769,12 @@ export default {
       discountHint,
       taxPercentage,
       taxRateLabel,
+      lineFilter,
+      lineFilterOptions,
+      filteredLines,
+      updateLineQuantity,
+      removeLine,
+      setLineFilter,
       totalAmount,
       baseSubtotal,
       bundleSubtotal,
@@ -670,12 +785,15 @@ export default {
       calculatedTax,
       openItemPicker,
       openBundlePicker,
+      openAccessoryPicker,
       addItem,
       addBundle,
+      addAccessory,
       resetForm,
       handleSubmit,
       itemPickerOpen,
       bundlePickerOpen,
+      accessoryPickerOpen,
       showPaymentModal,
       showReceiptPreview,
       savedTransactionId,
@@ -733,6 +851,156 @@ export default {
 
 .cashier-table-section {
   margin-bottom: 1rem;
+}
+
+.unified-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
+}
+
+.unified-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.unified-description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.picker-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 0.85rem;
+  background: #fff;
+  color: #1f2937;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.picker-btn:hover {
+  border-color: #4338ca;
+  color: #4338ca;
+}
+
+.line-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.line-filter-btn {
+  border: 1px solid #e5e7eb;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.line-filter-btn.active {
+  border-color: #4338ca;
+  background: #4338ca;
+  color: #fff;
+}
+
+.line-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.line-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
+.line-table th,
+.line-table td {
+  padding: 0.65rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.line-table th {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: #374151;
+}
+
+.line-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.line-table .type-cell {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.line-table .code-cell {
+  font-family: monospace;
+  color: #6b7280;
+}
+
+.line-table .name-cell strong {
+  display: block;
+  color: #111827;
+}
+
+.line-table .price-cell,
+.line-table .subtotal-cell {
+  font-weight: 600;
+  color: #111827;
+  text-align: right;
+  min-width: 120px;
+}
+
+.line-table .quantity-cell {
+  width: 120px;
+}
+
+.line-table .quantity-input {
+  width: 70px;
+  padding: 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.remove-btn {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-lines {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
 }
 
 .table-header {
@@ -1011,7 +1279,7 @@ export default {
   .cashier-main {
     grid-template-columns: 1fr;
   }
-  
+
   .cashier-summary-section {
     position: static;
   }
