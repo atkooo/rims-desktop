@@ -162,7 +162,7 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { fetchSalesTransactions, createPayment } from "@/services/transactions";
@@ -216,6 +216,19 @@ export default {
     const handleAmountInput = createInputHandler(
       (value) => (paymentForm.value.amount = value)
     );
+
+    let previousBodyOverflow = "";
+    const lockBodyScroll = () => {
+      if (typeof document === "undefined") return;
+      previousBodyOverflow = document.body.style.overflow || "";
+      document.body.style.overflow = "hidden";
+    };
+
+    const unlockBodyScroll = () => {
+      if (typeof document === "undefined") return;
+      document.body.style.overflow = previousBodyOverflow || "";
+      previousBodyOverflow = "";
+    };
 
     const remainingAmount = computed(() => {
       if (!transaction.value) return 0;
@@ -393,11 +406,20 @@ export default {
     watch(
       () => props.modelValue,
       (isOpen) => {
-        if (isOpen && props.transactionId) {
-          loadTransaction();
+        if (isOpen) {
+          lockBodyScroll();
+          if (props.transactionId) {
+            loadTransaction();
+          }
+        } else {
+          unlockBodyScroll();
         }
       }
     );
+
+    onBeforeUnmount(() => {
+      unlockBodyScroll();
+    });
 
     return {
       transaction,
@@ -659,4 +681,3 @@ export default {
   transform: scale(0.95);
 }
 </style>
-
