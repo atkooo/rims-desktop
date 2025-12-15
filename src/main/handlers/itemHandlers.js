@@ -882,8 +882,8 @@ function setupItemHandlers() {
 
       const resolvedOptions = {
         paperWidth: 58,
-        labelHeight: 34,
-        spacing: 0.5,
+        labelHeight: 46,
+        spacing: 2,
         margin: 3,
         saveFile: true,
         previewPadding: 0,
@@ -1000,9 +1000,11 @@ function setupItemHandlers() {
 
         // Barcode area
         const barcodeHeight = 16;
-        const barcodeTop = Math.max(
-          cursorY + 1,
-          labelBottom - effectiveMargin - barcodeHeight - 0.5
+        const barcodeBottomLimit =
+          labelBottom - effectiveMargin - barcodeHeight - 0.5;
+        const barcodeTop = Math.min(
+          Math.max(cursorY + 1, labelTop + topPadding + 1),
+          barcodeBottomLimit
         );
         const barcodeWidth = contentWidth;
         const barcodeCanvas = createCanvas(400, 120);
