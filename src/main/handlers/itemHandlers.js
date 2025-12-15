@@ -882,8 +882,8 @@ function setupItemHandlers() {
 
       const resolvedOptions = {
         paperWidth: 58,
-        labelHeight: 38,
-        spacing: 1.5,
+        labelHeight: 34,
+        spacing: 0.5,
         margin: 3,
         saveFile: true,
         previewPadding: 0,
@@ -960,7 +960,8 @@ function setupItemHandlers() {
           "S"
         );
 
-        let cursorY = labelTop + 4;
+        const topPadding = Math.max(effectiveMargin + 2, 5) + 8;
+        let cursorY = labelTop + topPadding;
         const maxNameLines = 2;
         const nameText = (item.name || "N/A").trim();
         doc.setFont("helvetica", "bold");
@@ -994,14 +995,14 @@ function setupItemHandlers() {
           doc.text(`Ukuran: ${sizeLabel}`, centerX, cursorY, {
             align: "center",
           });
-          cursorY += 3;
+          cursorY += 1.2;
         }
 
         // Barcode area
-        const barcodeHeight = 20;
+        const barcodeHeight = 16;
         const barcodeTop = Math.max(
-          cursorY + 4,
-          labelBottom - effectiveMargin - barcodeHeight - 1
+          cursorY + 1,
+          labelBottom - effectiveMargin - barcodeHeight - 0.5
         );
         const barcodeWidth = contentWidth;
         const barcodeCanvas = createCanvas(400, 120);
@@ -1012,7 +1013,7 @@ function setupItemHandlers() {
             height: 60,
             displayValue: true,
             fontSize: 12,
-            margin: 10,
+            margin: 2,
           });
         } catch (barcodeError) {
           logger.error(
