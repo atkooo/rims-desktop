@@ -38,6 +38,10 @@
       </form>
     </div>
     <div class="topbar__right">
+      <div class="topbar__time">
+        <span class="topbar__time-date">{{ formattedTopbarDate }}</span>
+        <span class="topbar__time-clock">{{ formattedTopbarTime }}</span>
+      </div>
       <div class="notification-shell" ref="notificationMenuRef">
         <button
           class="icon-btn"
@@ -210,6 +214,43 @@ const stockAlerts = useStockAlerts();
 const stockAlertsActive = ref(false);
 const { formatCurrency } = useCurrency();
 const formatDate = formatDateRelative;
+
+const toWIB = (date) => {
+  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utc + 7 * 60 * 60 * 1000);
+};
+
+const currentTime = ref(toWIB(new Date()));
+const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+  weekday: "short",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+});
+const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const formattedTopbarDate = computed(() => dateFormatter.format(currentTime.value));
+const formattedTopbarTime = computed(() => timeFormatter.format(currentTime.value));
+
+let timeIntervalHandle = null;
+
+const startClock = () => {
+  if (timeIntervalHandle) return;
+  timeIntervalHandle = setInterval(() => {
+    currentTime.value = new Date(currentTime.value.getTime() + 1000);
+  }, 1000);
+};
+
+const stopClock = () => {
+  if (timeIntervalHandle) {
+    clearInterval(timeIntervalHandle);
+    timeIntervalHandle = null;
+  }
+};
+
 let stockAlertsStarting = false;
 let storageListener = null;
 let searchTimeout = null;
@@ -635,6 +676,7 @@ onMounted(async () => {
     transactionStore.fetchTransactions().catch(() => {});
   }
   document.addEventListener("click", handleClickOutside);
+  startClock();
 });
 
 onBeforeUnmount(() => {
@@ -649,6 +691,7 @@ onBeforeUnmount(() => {
   detachDropdownListeners();
   detachNotificationListeners();
   
+  stopClock();
   // Remove event bus listener
   if (profileUpdateHandler) {
     eventBus.off("user:profileUpdated", profileUpdateHandler);
@@ -722,6 +765,27 @@ watch(notificationMenuOpen, async (isOpen) => {
 .topbar__right {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.topbar__time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  min-width: 120px;
+  font-size: 0.75rem;
+  color: #475569;
+  text-align: right;
+}
+
+.topbar__time-date {
+  font-size: 0.75rem;
+}
+
+.topbar__time-clock {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .topbar__brand h2 {

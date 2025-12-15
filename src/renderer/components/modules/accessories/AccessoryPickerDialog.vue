@@ -41,7 +41,10 @@
                   (Harga: {{ formatCurrency(accessory.price) }})
                 </span>
                 ·
-                Stok: {{ accessory.available_quantity || 0 }}
+                <div class="picker-stock">
+                  Stok: {{ accessory.stock_quantity ?? 0 }}
+                  <span class="stock-available">Tersedia {{ accessory.available_quantity ?? 0 }}</span>
+                </div>
                 <span
                   v-if="accessory.discount_percentage > 0 || accessory.discount_amount > 0"
                   class="discount-badge"
@@ -276,6 +279,20 @@ export default {
 .picker-detail {
   font-size: 0.85rem;
   color: #6b7280;
+}
+
+.picker-stock {
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.stock-available {
+  font-weight: 600;
+  color: #10b981;
 }
 
 .picker-actions {

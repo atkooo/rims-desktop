@@ -207,6 +207,21 @@ export default {
     const showErrorNotification = ref(false);
     const errorNotificationMessage = ref("");
 
+    const resolveRedirectPathForAdmin = () => {
+      const rawRedirect = route.query.redirect;
+      const candidate = Array.isArray(rawRedirect)
+        ? rawRedirect[0]
+        : typeof rawRedirect === "string"
+        ? rawRedirect
+        : "";
+
+      if (!candidate || candidate.startsWith("/cashier")) {
+        return "/";
+      }
+
+      return candidate;
+    };
+
     const handleSubmit = async () => {
       if (loading.value) return;
       loading.value = true;
@@ -223,8 +238,7 @@ export default {
           if (user?.role === "kasir") {
             router.push("/cashier");
           } else {
-            const redirect = route.query.redirect || "/";
-            router.push(redirect);
+            router.push(resolveRedirectPathForAdmin());
           }
         }, 2000);
       } catch (error) {

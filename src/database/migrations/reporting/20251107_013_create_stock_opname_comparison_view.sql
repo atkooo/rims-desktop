@@ -23,10 +23,23 @@ FROM items i
 LEFT JOIN (
   SELECT
     item_id,
-    COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS calculated_stock_quantity,
     COALESCE(SUM(
       CASE
-        WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') THEN quantity
+        WHEN movement_type = 'IN' THEN quantity
+        WHEN movement_type = 'OUT' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE 'rental_transaction%'
+        ) THEN -quantity
+        ELSE 0
+      END
+    ), 0) AS calculated_stock_quantity,
+    COALESCE(SUM(
+      CASE
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        ) THEN quantity
         WHEN movement_type = 'OUT' THEN -quantity
         ELSE 0
       END
@@ -59,10 +72,23 @@ FROM accessories a
 LEFT JOIN (
   SELECT
     accessory_id,
-    COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS calculated_stock_quantity,
     COALESCE(SUM(
       CASE
-        WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') THEN quantity
+        WHEN movement_type = 'IN' THEN quantity
+        WHEN movement_type = 'OUT' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE 'rental_transaction%'
+        ) THEN -quantity
+        ELSE 0
+      END
+    ), 0) AS calculated_stock_quantity,
+    COALESCE(SUM(
+      CASE
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        ) THEN quantity
         WHEN movement_type = 'OUT' THEN -quantity
         ELSE 0
       END
@@ -95,10 +121,23 @@ FROM bundles b
 LEFT JOIN (
   SELECT
     bundle_id,
-    COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS calculated_stock_quantity,
     COALESCE(SUM(
       CASE
-        WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') THEN quantity
+        WHEN movement_type = 'IN' THEN quantity
+        WHEN movement_type = 'OUT' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE 'rental_transaction%'
+        ) THEN -quantity
+        ELSE 0
+      END
+    ), 0) AS calculated_stock_quantity,
+    COALESCE(SUM(
+      CASE
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        ) THEN quantity
         WHEN movement_type = 'OUT' THEN -quantity
         ELSE 0
       END

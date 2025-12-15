@@ -46,6 +46,10 @@
               <div class="picker-detail">
                 {{ bundle.code }} · 
                 {{ getBundlePriceDisplay(bundle) }}
+                <div class="picker-stock">
+                  Stok: {{ bundle.stock_quantity ?? 0 }}
+                  <span class="stock-available">Tersedia {{ bundle.available_quantity ?? 0 }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -332,6 +336,23 @@ export default {
 .picker-detail {
   font-size: 0.85rem;
   color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.picker-stock {
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.stock-available {
+  font-weight: 600;
+  color: #10b981;
 }
 
 .picker-actions {

@@ -142,6 +142,32 @@ async function updateStock(entityId, quantity, tableName = "items", decreaseStoc
 }
 
 /**
+ * Deduct stock quantity (without touching available)
+ */
+async function deductStockQuantity(entityId, quantity, tableName = "items", entityLabel = "Item") {
+  const record = await database.queryOne(
+    `SELECT stock_quantity FROM ${tableName} WHERE id = ?`,
+    [entityId],
+  );
+  if (!record) {
+    throw new Error(`${entityLabel} tidak ditemukan`);
+  }
+
+  const stockBefore = record.stock_quantity || 0;
+  if (stockBefore < quantity) {
+    throw new Error(`Stok ${entityLabel.toLowerCase()} tidak cukup untuk dipotong`);
+  }
+
+  const stockAfter = stockBefore - quantity;
+  await database.execute(
+    `UPDATE ${tableName} SET stock_quantity = ? WHERE id = ?`,
+    [stockAfter, entityId],
+  );
+
+  return { stockBefore, stockAfter };
+}
+
+/**
  * Restore stock for item or accessory
  */
 async function restoreStock(entityId, quantity, tableName = "items", increaseStockQuantity = false) {
@@ -314,4 +340,5 @@ module.exports = {
   getTransactionPaymentStatus,
   validateCashierSession,
   expandBundleSelections,
+  deductStockQuantity,
 };

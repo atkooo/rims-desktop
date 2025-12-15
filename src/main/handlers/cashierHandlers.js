@@ -53,8 +53,8 @@ async function calculateExpectedBalance(session) {
       FROM sales_transactions st
       LEFT JOIN sales_payments p ON p.transaction_id = st.id AND p.payment_method = 'cash'
       WHERE st.user_id = ? 
-        AND st.sale_date >= date(?) 
-        AND st.sale_date <= date('now', '+1 day')
+        AND st.sale_date >= ?
+        AND st.sale_date <= CURRENT_TIMESTAMP
         AND p.id IS NOT NULL`,
       [session.user_id, session.opening_date]
     );
@@ -65,8 +65,8 @@ async function calculateExpectedBalance(session) {
       FROM rental_transactions rt
       LEFT JOIN rental_payments p ON p.transaction_id = rt.id AND p.payment_method = 'cash'
       WHERE rt.user_id = ? 
-        AND rt.rental_date >= date(?) 
-        AND rt.rental_date <= date('now', '+1 day')
+        AND rt.rental_date >= ?
+        AND rt.rental_date <= CURRENT_TIMESTAMP
         AND p.id IS NOT NULL`,
       [session.user_id, session.opening_date]
     );

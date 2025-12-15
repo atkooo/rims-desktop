@@ -14,8 +14,10 @@ CREATE TABLE users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure legacy installations without the role column get it before indexing
+ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'kasir' NOT NULL CHECK (role IN ('admin', 'kasir'));
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
-

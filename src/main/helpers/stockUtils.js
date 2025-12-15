@@ -15,13 +15,27 @@ async function repairStockFromMovements(itemId) {
     const calculated = await database.queryOne(
       `
       SELECT 
-        COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS stock_qty,
+        COALESCE(SUM(
+          CASE
+            WHEN movement_type = 'IN' THEN quantity
+            WHEN movement_type = 'OUT' AND (
+              reference_type IS NULL
+              OR reference_type NOT LIKE 'rental_transaction%'
+            )
+            THEN -quantity
+            ELSE 0
+          END
+        ), 0) AS stock_qty,
         COALESCE(SUM(CASE 
-          WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') 
-          THEN quantity 
-          WHEN movement_type = 'OUT' 
-          THEN -quantity 
-          ELSE 0 
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        )
+        THEN quantity 
+        WHEN movement_type = 'OUT' 
+        THEN -quantity 
+        ELSE 0 
         END), 0) AS available_qty
       FROM stock_movements
       WHERE item_id = ?
@@ -56,13 +70,27 @@ async function repairBundleStockFromMovements(bundleId) {
     const calculated = await database.queryOne(
       `
       SELECT 
-        COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS stock_qty,
+        COALESCE(SUM(
+          CASE
+            WHEN movement_type = 'IN' THEN quantity
+            WHEN movement_type = 'OUT' AND (
+              reference_type IS NULL
+              OR reference_type NOT LIKE 'rental_transaction%'
+            )
+            THEN -quantity
+            ELSE 0
+          END
+        ), 0) AS stock_qty,
         COALESCE(SUM(CASE 
-          WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') 
-          THEN quantity 
-          WHEN movement_type = 'OUT' 
-          THEN -quantity 
-          ELSE 0 
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        )
+        THEN quantity 
+        WHEN movement_type = 'OUT' 
+        THEN -quantity 
+        ELSE 0 
         END), 0) AS available_qty
       FROM stock_movements
       WHERE bundle_id = ?
@@ -97,13 +125,27 @@ async function repairAccessoryStockFromMovements(accessoryId) {
     const calculated = await database.queryOne(
       `
       SELECT 
-        COALESCE(SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END), 0) AS stock_qty,
+        COALESCE(SUM(
+          CASE
+            WHEN movement_type = 'IN' THEN quantity
+            WHEN movement_type = 'OUT' AND (
+              reference_type IS NULL
+              OR reference_type NOT LIKE 'rental_transaction%'
+            )
+            THEN -quantity
+            ELSE 0
+          END
+        ), 0) AS stock_qty,
         COALESCE(SUM(CASE 
-          WHEN movement_type = 'IN' AND (reference_type IS NULL OR reference_type NOT LIKE '%rental%') 
-          THEN quantity 
-          WHEN movement_type = 'OUT' 
-          THEN -quantity 
-          ELSE 0 
+        WHEN movement_type = 'IN' AND (
+          reference_type IS NULL
+          OR reference_type NOT LIKE '%rental%'
+          OR reference_type IN ('rental_return', 'rental_cancellation')
+        )
+        THEN quantity 
+        WHEN movement_type = 'OUT' 
+        THEN -quantity 
+        ELSE 0 
         END), 0) AS available_qty
       FROM stock_movements
       WHERE accessory_id = ?
@@ -186,4 +228,3 @@ module.exports = {
   repairAccessoryStockFromMovements,
   validateStockConsistency,
 };
-

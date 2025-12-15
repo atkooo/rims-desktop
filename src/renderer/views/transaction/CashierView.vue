@@ -4,11 +4,27 @@
       <div class="header-content">
         <div>
           <h1>Buka Kasir</h1>
+          <div class="header-session">
+            <span class="header-session__label">Kasir</span>
+            <span
+              class="header-session__status"
+              :class="{ active: hasSession, inactive: !hasSession }"
+            >
+              {{ hasSession ? "Sesi Aktif" : "Sesi Tidak Aktif" }}
+            </span>
+            <span v-if="hasSession" class="header-session__code">
+              Kode: {{ currentSession.session_code }}
+            </span>
+          </div>
           <p class="subtitle">
             Kelola sesi kasir untuk memulai dan menutup shift harian.
           </p>
         </div>
         <div class="header-actions">
+          <div class="header-datetime">
+            <span class="header-datetime__date">{{ formattedHeaderDate }}</span>
+            <span class="header-datetime__time">{{ formattedHeaderTime }}</span>
+          </div>
           <AppButton variant="secondary" :loading="loading" @click="loadData">
             Refresh Data
           </AppButton>
@@ -278,7 +294,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
 import DataTable from "@/components/ui/DataTable.vue";
@@ -339,6 +355,33 @@ export default {
 
     const { formatCurrency } = useCurrency();
 
+    const currentTime = ref(new Date());
+    const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+      weekday: "short",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+    const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const formattedHeaderDate = computed(() => dateFormatter.format(currentTime.value));
+    const formattedHeaderTime = computed(() => timeFormatter.format(currentTime.value));
+
+    let clockInterval = null;
+    const startClock = () => {
+      if (clockInterval) return;
+      clockInterval = setInterval(() => {
+        currentTime.value = new Date();
+      }, 1000);
+    };
+    const stopClock = () => {
+      if (!clockInterval) return;
+      clearInterval(clockInterval);
+      clockInterval = null;
+    };
+
     // Use number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
 
@@ -351,6 +394,8 @@ export default {
     const handleActualBalanceInput = createInputHandler(
       (value) => (closeForm.value.actualBalance = value)
     );
+
+    const hasSession = computed(() => !!currentSession.value);
 
     const columns = [
       { key: "session_code", label: "Kode Sesi" },
@@ -511,10 +556,41 @@ export default {
       }
     };
 
+    watch(showCloseDialog, (value) => {
+      if (value) {
+        closeErrors.value = {};
+        closeError.value = "";
+        closeForm.value = {
+          actualBalance: Number(currentSession.value?.expected_balance || 0),
+          notes: "",
+        };
+      } else {
+        closeErrors.value = {};
+        closeError.value = "";
+      }
+    });
+
+    watch(currentSession, (session) => {
+      if (!session) {
+        errors.value = {};
+        closeErrors.value = {};
+        closeError.value = "";
+        closeForm.value = {
+          actualBalance: 0,
+          notes: "",
+        };
+      }
+    });
+
     onMounted(async () => {
+      startClock();
       const user = await getCurrentUser();
       currentUser.value = user;
       await loadData();
+    });
+
+    onBeforeUnmount(() => {
+      stopClock();
     });
 
     return {
@@ -543,12 +619,90 @@ export default {
       handleOpenSession,
       confirmOpenSession,
       handleCloseSession,
+      formattedHeaderDate,
+      formattedHeaderTime,
+      hasSession,
     };
   },
 };
 </script>
 
 <style scoped>
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-datetime {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.825rem;
+  color: #6b7280;
+}
+
+.header-datetime__time {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.header-session {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.header-session__label {
+  font-weight: 600;
+  color: #111827;
+}
+
+.header-session__status {
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.header-session__status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.header-session__status.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.header-session__code {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 0.25rem 0 0;
+}
+
 .session-active {
   border-left: 4px solid #16a34a;
 }

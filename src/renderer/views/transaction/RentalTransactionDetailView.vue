@@ -263,6 +263,7 @@ import {
 import { useNotification } from "@/composables/useNotification";
 import { getCurrentUser } from "@/services/auth";
 import { formatDate } from "@/utils/dateUtils";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "RentalTransactionDetailView",
@@ -471,6 +472,7 @@ export default {
           // Reload data to reflect changes
           await loadRental();
           await loadDetails(true);
+          eventBus.emit("inventory:updated");
         }
       } catch (err) {
         showError(err.message || "Gagal mengembalikan item");

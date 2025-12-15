@@ -60,7 +60,7 @@
                 <th>Tipe</th>
                 <th>Pelanggan</th>
                 <th>Jumlah</th>
-                <th>Waktu</th>
+                <th>Tanggal</th>
               </tr>
             </thead>
             <tbody>
@@ -73,7 +73,7 @@
                 </td>
                 <td>{{ trans.customer || '-' }}</td>
                 <td class="amount">{{ formatCurrency(trans.total) }}</td>
-                <td class="time">{{ formatTime(trans.date) }}</td>
+                <td class="time">{{ formatDate(trans.date) }}</td>
               </tr>
             </tbody>
           </table>
@@ -90,7 +90,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { fetchSalesTransactions, fetchRentalTransactions, fetchPayments } from "@/services/transactions";
 import { useCurrency } from "@/composables/useCurrency";
-import { formatTime } from "@/utils/dateUtils";
+import { formatDate } from "@/utils/dateUtils";
 
 export default {
   name: "CashierHome",
@@ -122,22 +122,22 @@ export default {
         if (salesData && Array.isArray(salesData)) {
           const today = new Date().toDateString();
           const todaysSales = salesData.filter((sale) => {
-            return new Date(sale.date).toDateString() === today;
+            return new Date(sale.sale_date).toDateString() === today;
           });
 
           summary.salesCount = todaysSales.length;
-          summary.salesTotal = todaysSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+          summary.salesTotal = todaysSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
         }
 
         // Process rental data
         if (rentalData && Array.isArray(rentalData)) {
           const today = new Date().toDateString();
           const todaysRentals = rentalData.filter((rental) => {
-            return new Date(rental.date).toDateString() === today;
+            return new Date(rental.rental_date).toDateString() === today;
           });
 
           summary.rentalCount = todaysRentals.length;
-          summary.rentalTotal = todaysRentals.reduce((sum, rental) => sum + (rental.total || 0), 0);
+          summary.rentalTotal = todaysRentals.reduce((sum, rental) => sum + (rental.total_amount || 0), 0);
         }
 
         // Process payments data
@@ -162,8 +162,8 @@ export default {
               id: s.id,
               type: "SALE",
               customer: s.customer_name || "-",
-              total: s.total || 0,
-              date: s.date,
+              total: s.total_amount || 0,
+              date: s.sale_date,
             }))
           );
         }
@@ -173,8 +173,8 @@ export default {
               id: r.id,
               type: "RENTAL",
               customer: r.customer_name || "-",
-              total: r.total || 0,
-              date: r.date,
+              total: r.total_amount || 0,
+              date: r.rental_date,
             }))
           );
         }
@@ -198,7 +198,7 @@ export default {
       recentTransactions,
       loading,
       formatCurrency,
-      formatTime,
+      formatDate,
     };
   },
 };

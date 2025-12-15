@@ -11,6 +11,7 @@ const {
   restoreStock,
   restoreStockWithMovement,
   createStockMovement,
+  deductStockQuantity,
   validateStock,
   validateAccessoryStock,
   getTransactionPaymentStatus,
@@ -934,15 +935,20 @@ function setupTransactionHandlers() {
               notes: `Return rental item: ${rental.transaction_code} (Condition: ${validReturnCondition})`,
             });
           } else {
-            // Item is lost - create stock movement record but don't restore stock
+            // Item is lost - deduct stock and log movement as OUT
+            const {
+              stockBefore: lostStockBefore,
+              stockAfter: lostStockAfter,
+            } = await deductStockQuantity(item.item_id, item.quantity, "items", "Item");
+
             await createStockMovement({
               itemId: item.item_id,
-              movementType: "IN",
+              movementType: "OUT",
               referenceType: "rental_return_lost",
               referenceId: rentalTransactionId,
               quantity: item.quantity,
-              stockBefore,
-              stockAfter: stockBefore, // Stock tidak bertambah karena item hilang
+              stockBefore: lostStockBefore,
+              stockAfter: lostStockAfter,
               userId: returnUserId,
               notes: `Return rental item (LOST): ${rental.transaction_code}`,
             });
