@@ -27,6 +27,10 @@ function getEnvironment() {
 
 // Get environment early
 const environment = getEnvironment();
+if (!process.env.NODE_ENV) {
+  // Ensure packaged apps report production so activation gating runs
+  process.env.NODE_ENV = environment;
+}
 console.log(`=== ENVIRONMENT: ${environment.toUpperCase()} ===`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
 
