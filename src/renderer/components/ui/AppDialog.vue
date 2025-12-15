@@ -16,8 +16,14 @@
             <slot></slot>
           </div>
 
-          <div v-if="showFooter" class="dialog-footer">
-            <AppButton v-if="showCancel" variant="secondary" @click="handleCancel">
+        <div v-if="showFooter" class="dialog-footer">
+          <slot name="footer-extra"></slot>
+          <div class="dialog-footer-actions">
+            <AppButton
+              v-if="showCancel"
+              variant="secondary"
+              @click="handleCancel"
+            >
               {{ cancelText }}
             </AppButton>
             <AppButton
@@ -30,6 +36,7 @@
               {{ confirmText }}
             </AppButton>
           </div>
+        </div>
         </div>
       </div>
     </Transition>
@@ -161,11 +168,18 @@ export default {
 
 .dialog-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
   padding: 1rem;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
+}
+
+.dialog-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .fade-enter-active,

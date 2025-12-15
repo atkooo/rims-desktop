@@ -46,55 +46,57 @@
         </div>
       </div>
 
-      <div class="action-buttons">
-        <AppButton
-          variant="primary"
-          size="large"
-          :loading="printing"
-          :disabled="previewLoading || !previewUrl"
-          @click="handlePrint"
-        >
-          <Icon name="printer" :size="18" /> Cetak Label
-        </AppButton>
-        <AppButton
-          variant="secondary"
-          size="large"
-          :loading="generating"
-          :disabled="previewLoading || !previewUrl"
-          @click="handleDownload"
-        >
-          <Icon name="save" :size="18" /> Download PDF
-        </AppButton>
-      </div>
-
-      <div class="printer-note">
-        <div>
-          <p class="printer-info">
-            <strong>Printer struk default:</strong>
-            <span v-if="defaultPrinterName">{{ defaultPrinterName }}</span>
-            <span v-else>Belum dipilih</span>
-          </p>
-          <p class="hint-text">
-            Gunakan printer yang sama agar label mengikuti ukuran 58mm dan kertas tidak boros.
-          </p>
-        </div>
-        <AppButton
-          variant="secondary"
-          size="small"
-          class="manual-printer-btn"
-          @click="openPrinterDialog"
-        >
-          Pilih printer lain
-        </AppButton>
-      </div>
+    <div class="action-buttons">
+      <AppButton
+        variant="primary"
+        size="large"
+        :loading="printing"
+        :disabled="previewLoading || !previewUrl"
+        @click="handlePrint"
+      >
+        <Icon name="printer" :size="18" /> Cetak Label
+      </AppButton>
+      <AppButton
+        variant="secondary"
+        size="large"
+        :loading="generating"
+        :disabled="previewLoading || !previewUrl"
+        @click="handleDownload"
+      >
+        <Icon name="save" :size="18" /> Download PDF
+      </AppButton>
     </div>
+  </div>
 
-    <PrinterSelectDialog
-      v-model="showPrinterDialog"
-      :initial-printer-name="defaultPrinterName"
-      @print="handlePrintToPrinter"
-    />
-  </AppDialog>
+  <PrinterSelectDialog
+    v-model="showPrinterDialog"
+    :initial-printer-name="defaultPrinterName"
+    @print="handlePrintToPrinter"
+  />
+
+  <template #footer-extra>
+    <div class="printer-note">
+      <div>
+        <p class="printer-info">
+          <strong>Printer struk default:</strong>
+          <span v-if="defaultPrinterName">{{ defaultPrinterName }}</span>
+          <span v-else>Belum dipilih</span>
+        </p>
+        <p class="hint-text">
+          Gunakan printer yang sama agar label mengikuti ukuran 58mm dan kertas tidak boros.
+        </p>
+      </div>
+      <AppButton
+        variant="secondary"
+        size="small"
+        class="manual-printer-btn"
+        @click="openPrinterDialog"
+      >
+        Pilih printer lain
+      </AppButton>
+    </div>
+  </template>
+</AppDialog>
 </template>
 
 <script>
@@ -314,9 +316,9 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  min-width: 600px;
   width: 100%;
   padding: 1.5rem 0.5rem 0.5rem;
+  box-sizing: border-box;
 }
 
 .preview-header {
@@ -392,6 +394,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  width: 100%;
 }
 
 .printer-info {

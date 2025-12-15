@@ -29,7 +29,7 @@ INSERT INTO items (
   updated_at
 ) VALUES
   (
-    'IT-001',
+    'ITM001',
     'Kebaya Klasik Jawa',
     (SELECT id FROM categories WHERE name = 'Pakaian Pernikahan'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -51,7 +51,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-002',
+    'ITM002',
     'Set Baju Adat Bali',
     (SELECT id FROM categories WHERE name = 'Pakaian Adat'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -73,7 +73,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-003',
+    'ITM003',
     'Gaun Formal Modern',
     (SELECT id FROM categories WHERE name = 'Pakaian Acara / Formal'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -95,7 +95,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-004',
+    'ITM004',
     'Kostum Anak Putri',
     (SELECT id FROM categories WHERE name = 'Pakaian Anak-anak'),
     (SELECT id FROM item_sizes WHERE code = 'XS'),
@@ -117,7 +117,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-005',
+    'ITM005',
     'Dress Casual Batik',
     (SELECT id FROM categories WHERE name = 'Pakaian Casual / Modern'),
     (SELECT id FROM item_sizes WHERE code = 'M'),
@@ -139,7 +139,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-006',
+    'ITM006',
     'Properti Dekorasi Fotobooth',
     (SELECT id FROM categories WHERE name = 'Dekorasi / Properti'),
     NULL,
@@ -161,7 +161,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-007',
+    'ITM007',
     'Peralatan Pendukung Serbaguna',
     (SELECT id FROM categories WHERE name = 'Peralatan Pendukung'),
     NULL,
@@ -183,7 +183,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-008',
+    'ITM008',
     'Set Jas Modern',
     (SELECT id FROM categories WHERE name = 'Pakaian Acara / Formal'),
     (SELECT id FROM item_sizes WHERE code = 'L'),
@@ -205,7 +205,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-009',
+    'ITM009',
     'Kostum Anak Laki',
     (SELECT id FROM categories WHERE name = 'Pakaian Anak-anak'),
     (SELECT id FROM item_sizes WHERE code = 'S'),
@@ -227,7 +227,7 @@ INSERT INTO items (
     CURRENT_TIMESTAMP
   ),
   (
-    'IT-010',
+    'ITM010',
     'Set Dekorasi Elegan',
     (SELECT id FROM categories WHERE name = 'Dekorasi / Properti'),
     NULL,
