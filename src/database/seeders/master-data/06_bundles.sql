@@ -23,7 +23,7 @@ INSERT INTO bundles (
   updated_at
 ) VALUES
   (
-    'BD-001',
+    'BD001',
     'Paket Adat Bali Lengkap',
     'Setelan baju adat Bali, syal batik, dan tas nasional untuk sesi foto tradisional.',
     'rental',
@@ -38,7 +38,7 @@ INSERT INTO bundles (
     CURRENT_TIMESTAMP
   ),
   (
-    'BD-002',
+    'BD002',
     'Paket Pengantin Jawa',
     'Kebaya pengantin lengkap dengan tiara dan gelang perak, sudah termasuk perhiasan.',
     'both',
@@ -53,7 +53,7 @@ INSERT INTO bundles (
     CURRENT_TIMESTAMP
   ),
   (
-    'BD-003',
+    'BD003',
     'Paket Styling Modern',
     'Dress casual batik, peralatan pendukung, dan syal untuk sesi event gaya urban.',
     'both',
@@ -68,7 +68,7 @@ INSERT INTO bundles (
     CURRENT_TIMESTAMP
   ),
   (
-    'BD-004',
+    'BD004',
     'Paket Anak & Properti',
     'Kostum anak, dekorasi meja, dan kipas anyaman untuk sesi pesta keluarga lengkap.',
     'rental',
@@ -83,7 +83,7 @@ INSERT INTO bundles (
     CURRENT_TIMESTAMP
   ),
   (
-    'BD-005',
+    'BD005',
     'Paket Aksesori Elegan',
     'Kompilasi tiara, bros, dan kalung untuk tampilan ceremonial dengan aksen mewah.',
     'sale',
@@ -106,98 +106,98 @@ INSERT INTO bundle_details (
   quantity
 ) VALUES
   (
-    (SELECT id FROM bundles WHERE code = 'BD-001'),
-    (SELECT id FROM items WHERE code = 'IT-002'),
+    (SELECT id FROM bundles WHERE code = 'BD001'),
+    (SELECT id FROM items WHERE code = 'ITM002'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-001'),
+    (SELECT id FROM bundles WHERE code = 'BD001'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-002'),
+    (SELECT id FROM accessories WHERE code = 'AC002'),
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-001'),
+    (SELECT id FROM bundles WHERE code = 'BD001'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-004'),
+    (SELECT id FROM accessories WHERE code = 'AC004'),
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-002'),
-    (SELECT id FROM items WHERE code = 'IT-001'),
-    NULL,
-    1
-  ),
-  (
-    (SELECT id FROM bundles WHERE code = 'BD-002'),
-    NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-001'),
-    1
-  ),
-  (
-    (SELECT id FROM bundles WHERE code = 'BD-002'),
-    NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-003'),
-    1
-  ),
-  (
-    (SELECT id FROM bundles WHERE code = 'BD-003'),
-    (SELECT id FROM items WHERE code = 'IT-005'),
+    (SELECT id FROM bundles WHERE code = 'BD002'),
+    (SELECT id FROM items WHERE code = 'ITM001'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-003'),
-    (SELECT id FROM items WHERE code = 'IT-007'),
+    (SELECT id FROM bundles WHERE code = 'BD002'),
+    NULL,
+    (SELECT id FROM accessories WHERE code = 'AC001'),
+    1
+  ),
+  (
+    (SELECT id FROM bundles WHERE code = 'BD002'),
+    NULL,
+    (SELECT id FROM accessories WHERE code = 'AC003'),
+    1
+  ),
+  (
+    (SELECT id FROM bundles WHERE code = 'BD003'),
+    (SELECT id FROM items WHERE code = 'ITM005'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-003'),
-    NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-002'),
-    1
-  ),
-  (
-    (SELECT id FROM bundles WHERE code = 'BD-004'),
-    (SELECT id FROM items WHERE code = 'IT-004'),
+    (SELECT id FROM bundles WHERE code = 'BD003'),
+    (SELECT id FROM items WHERE code = 'ITM007'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-004'),
-    (SELECT id FROM items WHERE code = 'IT-009'),
+    (SELECT id FROM bundles WHERE code = 'BD003'),
+    NULL,
+    (SELECT id FROM accessories WHERE code = 'AC002'),
+    1
+  ),
+  (
+    (SELECT id FROM bundles WHERE code = 'BD004'),
+    (SELECT id FROM items WHERE code = 'ITM004'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-004'),
-    (SELECT id FROM items WHERE code = 'IT-010'),
+    (SELECT id FROM bundles WHERE code = 'BD004'),
+    (SELECT id FROM items WHERE code = 'ITM009'),
     NULL,
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-004'),
+    (SELECT id FROM bundles WHERE code = 'BD004'),
+    (SELECT id FROM items WHERE code = 'ITM010'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-005'),
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-005'),
+    (SELECT id FROM bundles WHERE code = 'BD004'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-001'),
+    (SELECT id FROM accessories WHERE code = 'AC005'),
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-005'),
+    (SELECT id FROM bundles WHERE code = 'BD005'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-003'),
+    (SELECT id FROM accessories WHERE code = 'AC001'),
     1
   ),
   (
-    (SELECT id FROM bundles WHERE code = 'BD-005'),
+    (SELECT id FROM bundles WHERE code = 'BD005'),
     NULL,
-    (SELECT id FROM accessories WHERE code = 'AC-007'),
+    (SELECT id FROM accessories WHERE code = 'AC003'),
+    1
+  ),
+  (
+    (SELECT id FROM bundles WHERE code = 'BD005'),
+    NULL,
+    (SELECT id FROM accessories WHERE code = 'AC007'),
     1
   );

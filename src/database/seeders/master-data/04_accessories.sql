@@ -25,7 +25,7 @@ INSERT INTO accessories (
   updated_at
 ) VALUES
   (
-    'AC-001',
+    'AC001',
     'Tiara Emas Klasik',
     'Tiara beraksen emas untuk pengantin wanita, cocok dipadukan dengan kebaya tradisional.',
     180000,
@@ -43,7 +43,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
   ),
   (
-    'AC-002',
+    'AC002',
     'Syal Batik Mega Mendung',
     'Syal sutra dengan motif megamendung untuk memperkaya tampilan foto pre-wedding.',
     22000,
@@ -61,7 +61,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
   ),
   (
-    'AC-003',
+    'AC003',
     'Gelang Perak Motif Klasik',
     'Gelang perak dengan detail ukiran tradisional untuk menambah estetika pakaian adat.',
     35000,
@@ -79,7 +79,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP
   ),
   (
-    'AC-004',
+    'AC004',
     'Tas Nasional',
     'Tas rajut etnik dari bahan alam yang bisa menjadi tambahan praktis untuk penyimpanan properti.',
     42000,
@@ -116,7 +116,7 @@ INSERT INTO accessories (
     updated_at
   ) VALUES
     (
-      'AC-005',
+      'AC005',
       'Kipas Anyaman Etnik',
       'Kipas anyaman dari rotan dengan motif tradisional, cocok untuk properti foto dan event.',
       15000,
@@ -134,7 +134,7 @@ INSERT INTO accessories (
       CURRENT_TIMESTAMP
     ),
     (
-      'AC-006',
+      'AC006',
       'Sepatu Pengantin Klasik',
       'Sepatu hak rendah beraksen emas untuk dipadukan dengan kebaya pengantin Jawa.',
       75000,
@@ -152,7 +152,7 @@ INSERT INTO accessories (
       CURRENT_TIMESTAMP
     ),
     (
-      'AC-007',
+      'AC007',
       'Bros Kaca Kristal',
       'Bros vintage dengan kristal untuk memberi aksen elegan pada jas atau kebaya.',
       32000,
