@@ -67,6 +67,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    initialPrinterName: {
+      type: String,
+      default: "",
+    },
   },
   emits: ["update:modelValue", "print"],
   setup(props, { emit }) {
@@ -86,13 +90,24 @@ export default {
         const printerList = await ipcRenderer.invoke("printer:list");
         printers.value = printerList;
 
-        // Select default printer if available
-        const defaultPrinter = printerList.find((p) => p.isDefault);
-        if (defaultPrinter) {
-          selectedPrinter.value = defaultPrinter;
-        } else if (printerList.length > 0) {
-          selectedPrinter.value = printerList[0];
+        let preferredPrinter = null;
+        if (props.initialPrinterName) {
+          preferredPrinter = printerList.find(
+            (printer) =>
+              printer.name === props.initialPrinterName ||
+              printer.displayName === props.initialPrinterName,
+          );
         }
+
+        if (!preferredPrinter) {
+          preferredPrinter = printerList.find((printer) => printer.isDefault);
+        }
+
+        if (!preferredPrinter && printerList.length > 0) {
+          preferredPrinter = printerList[0];
+        }
+
+        selectedPrinter.value = preferredPrinter || null;
       } catch (error) {
         console.error("Error loading printers:", error);
       } finally {

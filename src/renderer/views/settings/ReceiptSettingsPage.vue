@@ -99,6 +99,18 @@
                 <span>Auto-print setelah transaksi</span>
               </label>
             </div>
+            <div class="checkbox-wrapper">
+              <label class="checkbox-item">
+                <input
+                  type="checkbox"
+                  v-model="settings.useReceiptPrinterForLabels"
+                />
+                <span>Gunakan printer struk untuk label barcode (58mm)</span>
+              </label>
+              <small class="form-hint">
+                Cetak label barcode di printer yang sama dengan struk agar layout menyesuaikan ukuran 58mm dan kertas tidak terbuang.
+              </small>
+            </div>
           </div>
 
           <!-- Receipt Display Settings Section -->
@@ -361,6 +373,7 @@ export default {
       thermalPrintDensity: "normal", // light, normal, dark
       thermalAutoCut: false,
       autoPrint: true,
+      useReceiptPrinterForLabels: true,
       receiptSettings: {
         showCompanyName: true,
         showAddress: true,

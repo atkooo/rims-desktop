@@ -6,6 +6,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const { printPDF, openPDF } = require("../helpers/printUtils");
 const { formatCurrency } = require("../helpers/formatUtils");
+const { loadSettings } = require("../helpers/settingsUtils");
 const ExcelJS = require("exceljs");
 const {
   normalizeCode,
@@ -22,27 +23,31 @@ const {
  * @param {number} rentedQuantity - Currently rented quantity (from rental_transaction_details)
  * @returns {string} Status: 'OUT_OF_STOCK', 'AVAILABLE', 'RENTED', or 'MAINTENANCE'
  */
-function calculateItemStatus(stockQuantity, availableQuantity, rentedQuantity = 0) {
+function calculateItemStatus(
+  stockQuantity,
+  availableQuantity,
+  rentedQuantity = 0
+) {
   // If no stock at all, item is out of stock
   if (stockQuantity === 0) {
     return "OUT_OF_STOCK";
   }
-  
+
   // If has available items, status is available
   if (availableQuantity > 0) {
     return "AVAILABLE";
   }
-  
+
   // If items are rented out, status is rented
   if (rentedQuantity > 0) {
     return "RENTED";
   }
-  
+
   // If stock > 0 but available = 0 and not rented, assume maintenance
   if (stockQuantity > 0 && availableQuantity === 0) {
     return "MAINTENANCE";
   }
-  
+
   // Default fallback
   return "OUT_OF_STOCK";
 }
@@ -90,7 +95,7 @@ function setupItemHandlers() {
       if (!code || typeof code !== "string") {
         return null;
       }
-      
+
       const normalizedCode = normalizeCode(code.trim());
       const item = await database.queryOne(
         `
@@ -119,9 +124,9 @@ function setupItemHandlers() {
         GROUP BY i.id
         LIMIT 1
       `,
-        [normalizedCode, code.trim()],
+        [normalizedCode, code.trim()]
       );
-      
+
       return item || null;
     } catch (error) {
       logger.error("Error fetching item by code:", error);
@@ -165,10 +170,10 @@ function setupItemHandlers() {
       // Map dailyRate to rental_price_per_day
       const rentalPricePerDay =
         itemData.dailyRate ?? itemData.rental_price_per_day ?? 0;
-      
+
       // Get sale_price from itemData
       const salePrice = itemData.sale_price ?? 0;
-      
+
       // Get purchase_price from itemData
       const purchasePrice = Math.max(0, Number(itemData.purchase_price ?? 0));
 
@@ -189,29 +194,30 @@ function setupItemHandlers() {
         }
         return { is_available_for_rent: true, is_available_for_sale: false };
       };
-      
+
       const availability = getAvailabilityByType(itemType);
       const isAvailableForRent = availability.is_available_for_rent;
       const isAvailableForSale = availability.is_available_for_sale;
 
       // Validate discount_group_id if provided
       const discountGroupId = await validator.validateDiscountGroupId(
-        itemData.discount_group_id,
+        itemData.discount_group_id
       );
 
       // Stok selalu 0 saat create, diatur melalui manajemen stok
       // Force stock_quantity dan available_quantity = 0
       const stockQuantity = 0;
       const availableQuantity = 0;
-      
+
       // Get min_stock_alert from itemData, default to 1 agar tidak nol saat awal
       const minStockAlert = Math.max(
         0,
         toInteger(
-          itemData.min_stock_alert === undefined || itemData.min_stock_alert === null
+          itemData.min_stock_alert === undefined ||
+            itemData.min_stock_alert === null
             ? 1
-            : itemData.min_stock_alert,
-        ),
+            : itemData.min_stock_alert
+        )
       );
 
       // Get deposit from itemData, default to 0
@@ -255,7 +261,7 @@ function setupItemHandlers() {
           isAvailableForRent ? 1 : 0,
           isAvailableForSale ? 1 : 0,
           (itemData.is_active ?? true) ? 1 : 0,
-        ],
+        ]
       );
 
       // Return item yang baru dibuat dengan JOIN untuk category_name dan size_name
@@ -285,7 +291,7 @@ function setupItemHandlers() {
         WHERE i.id = ?
         GROUP BY i.id
         `,
-        [result.id],
+        [result.id]
       );
       return newItem;
     } catch (error) {
@@ -327,7 +333,7 @@ function setupItemHandlers() {
         WHERE i.id = ?
         GROUP BY i.id
       `,
-        [id],
+        [id]
       );
 
       if (!item) {
@@ -392,7 +398,9 @@ function setupItemHandlers() {
 
       // Jika ada percobaan untuk mengubah type, tolak dengan error
       if (updates.type !== undefined && updates.type !== existingItem.type) {
-        throw new Error("Jenis item (type) tidak dapat diubah. Item yang sudah dibuat dengan jenis tertentu tidak dapat diubah jenisnya.");
+        throw new Error(
+          "Jenis item (type) tidak dapat diubah. Item yang sudah dibuat dengan jenis tertentu tidak dapat diubah jenisnya."
+        );
       }
 
       // Map dailyRate or rental_price_per_day to rental_price_per_day
@@ -405,16 +413,15 @@ function setupItemHandlers() {
 
       // Validate discount_group_id if provided
       if (updates.discount_group_id !== undefined) {
-        normalizedUpdates.discount_group_id = await validator.validateDiscountGroupId(
-          updates.discount_group_id,
-        );
+        normalizedUpdates.discount_group_id =
+          await validator.validateDiscountGroupId(updates.discount_group_id);
       }
 
       // Handle min_stock_alert if provided
       if (updates.min_stock_alert !== undefined) {
         normalizedUpdates.min_stock_alert = Math.max(
           0,
-          toInteger(updates.min_stock_alert),
+          toInteger(updates.min_stock_alert)
         );
       }
 
@@ -427,15 +434,21 @@ function setupItemHandlers() {
       // Hapus stock_quantity dan available_quantity jika ada di updates
       // Stok hanya bisa diubah melalui manajemen stok
       if (updates.stock_quantity !== undefined) {
-        logger.warn(`Ignoring stock_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`);
+        logger.warn(
+          `Ignoring stock_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`
+        );
       }
       if (updates.available_quantity !== undefined) {
-        logger.warn(`Ignoring available_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`);
+        logger.warn(
+          `Ignoring available_quantity update for item ${id} - stok hanya bisa diubah melalui manajemen stok`
+        );
       }
-      
+
       // Status dihitung otomatis berdasarkan stok, tidak bisa diubah manual
       if (updates.status !== undefined) {
-        logger.warn(`Ignoring status update for item ${id} - status dihitung otomatis berdasarkan stok`);
+        logger.warn(
+          `Ignoring status update for item ${id} - status dihitung otomatis berdasarkan stok`
+        );
       }
 
       // Copy other valid fields
@@ -461,25 +474,30 @@ function setupItemHandlers() {
 
       // Validasi: harga beli tidak boleh lebih dari harga jual
       // Perlu mengambil nilai dari database jika salah satu tidak di-update
-      if (normalizedUpdates.purchase_price !== undefined || normalizedUpdates.sale_price !== undefined) {
+      if (
+        normalizedUpdates.purchase_price !== undefined ||
+        normalizedUpdates.sale_price !== undefined
+      ) {
         // Ambil item yang ada untuk mendapatkan nilai yang tidak di-update
         const existingItem = await database.queryOne(
           "SELECT purchase_price, sale_price FROM items WHERE id = ?",
           [id]
         );
-        
-        const finalPurchasePrice = normalizedUpdates.purchase_price !== undefined 
-          ? Math.max(0, Number(normalizedUpdates.purchase_price))
-          : (existingItem?.purchase_price ?? 0);
-        
-        const finalSalePrice = normalizedUpdates.sale_price !== undefined
-          ? Math.max(0, Number(normalizedUpdates.sale_price))
-          : (existingItem?.sale_price ?? 0);
-        
+
+        const finalPurchasePrice =
+          normalizedUpdates.purchase_price !== undefined
+            ? Math.max(0, Number(normalizedUpdates.purchase_price))
+            : (existingItem?.purchase_price ?? 0);
+
+        const finalSalePrice =
+          normalizedUpdates.sale_price !== undefined
+            ? Math.max(0, Number(normalizedUpdates.sale_price))
+            : (existingItem?.sale_price ?? 0);
+
         if (finalSalePrice > 0 && finalPurchasePrice > finalSalePrice) {
           throw new Error("Harga beli tidak boleh lebih dari harga jual");
         }
-        
+
         // Set nilai yang sudah dinormalisasi
         if (normalizedUpdates.purchase_price !== undefined) {
           normalizedUpdates.purchase_price = finalPurchasePrice;
@@ -531,7 +549,7 @@ function setupItemHandlers() {
         WHERE i.id = ?
         GROUP BY i.id
         `,
-        [id],
+        [id]
       );
       return updatedItem;
     } catch (error) {
@@ -546,33 +564,33 @@ function setupItemHandlers() {
       // Check if item is used in rental transactions
       const rentalCheck = await database.queryOne(
         "SELECT COUNT(*) as count FROM rental_transaction_details WHERE item_id = ?",
-        [id],
+        [id]
       );
       if ((rentalCheck?.count ?? 0) > 0) {
         throw new Error(
-          "Tidak dapat menghapus item yang digunakan dalam transaksi sewa",
+          "Tidak dapat menghapus item yang digunakan dalam transaksi sewa"
         );
       }
 
       // Check if item is used in sales transactions
       const salesCheck = await database.queryOne(
         "SELECT COUNT(*) as count FROM sales_transaction_details WHERE item_id = ?",
-        [id],
+        [id]
       );
       if ((salesCheck?.count ?? 0) > 0) {
         throw new Error(
-          "Tidak dapat menghapus item yang digunakan dalam transaksi penjualan",
+          "Tidak dapat menghapus item yang digunakan dalam transaksi penjualan"
         );
       }
 
       // Check if item is used in stock movements
       const stockMovementCheck = await database.queryOne(
         "SELECT COUNT(*) as count FROM stock_movements WHERE item_id = ?",
-        [id],
+        [id]
       );
       if ((stockMovementCheck?.count ?? 0) > 0) {
         throw new Error(
-          "Tidak dapat menghapus item yang memiliki riwayat pergerakan stok",
+          "Tidak dapat menghapus item yang memiliki riwayat pergerakan stok"
         );
       }
 
@@ -593,7 +611,7 @@ function setupItemHandlers() {
 
       if (!jsPDF || typeof jsPDF !== "function") {
         throw new Error(
-          "jsPDF constructor not found. Please check jsPDF installation.",
+          "jsPDF constructor not found. Please check jsPDF installation."
         );
       }
 
@@ -610,7 +628,7 @@ function setupItemHandlers() {
         LEFT JOIN item_sizes s ON i.size_id = s.id
         WHERE i.id = ?
       `,
-        [itemId],
+        [itemId]
       );
 
       if (!item) {
@@ -623,7 +641,7 @@ function setupItemHandlers() {
 
       // Create canvas for barcode
       const canvas = createCanvas(200, 100);
-      
+
       // Use JsBarcode - it works with node-canvas
       try {
         JsBarcode(canvas, item.code, {
@@ -671,7 +689,7 @@ function setupItemHandlers() {
       doc.setTextColor(30, 30, 30);
       const nameY = 20;
       const maxNameWidth = labelWidth - 20;
-      
+
       // Force single line - truncate if too long
       let itemNameText = item.name || "N/A";
       const itemNameLines = doc.splitTextToSize(itemNameText, maxNameWidth);
@@ -680,13 +698,19 @@ function setupItemHandlers() {
         // Use getTextWidth to find exact truncation point
         let truncated = itemNameText;
         const ellipsis = "...";
-        while (doc.getTextWidth(truncated + ellipsis) > maxNameWidth && truncated.length > 0) {
+        while (
+          doc.getTextWidth(truncated + ellipsis) > maxNameWidth &&
+          truncated.length > 0
+        ) {
           truncated = truncated.substring(0, truncated.length - 1);
         }
         itemNameText = truncated + ellipsis;
       }
       const nameHeight = 13; // Single line height
-      doc.text(itemNameText, labelWidth / 2, nameY, { align: "center", maxWidth: maxNameWidth });
+      doc.text(itemNameText, labelWidth / 2, nameY, {
+        align: "center",
+        maxWidth: maxNameWidth,
+      });
 
       // Price - positioned after item name with proper spacing
       const priceY = nameY + nameHeight + 6; // Spacing after name
@@ -707,10 +731,15 @@ function setupItemHandlers() {
         doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(75, 85, 99);
-        doc.text(`Ukuran: ${sizeLabel}`, labelWidth / 2, priceY + priceHeight + sizeSpacing, {
-          align: "center",
-          maxWidth: maxNameWidth,
-        });
+        doc.text(
+          `Ukuran: ${sizeLabel}`,
+          labelWidth / 2,
+          priceY + priceHeight + sizeSpacing,
+          {
+            align: "center",
+            maxWidth: maxNameWidth,
+          }
+        );
       }
 
       // Barcode image - fixed size, consistent, within border
@@ -720,22 +749,23 @@ function setupItemHandlers() {
       const borderRight = labelWidth - 5;
       const barcodeSpacing = 6; // Spacing after price/size
       const marginBottom = 5; // Margin from bottom border
-     
+
       // Calculate available space for barcode
-      const codeY = priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
+      const codeY =
+        priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
       const availableHeight = borderBottom - codeY - marginBottom;
-      
+
       // Fixed barcode size (consistent) but ensure it fits within border
       let barcodeHeight = 40; // Preferred height
       let barcodeWidth = (barcodeHeight / 50) * 150; // Maintain aspect ratio
-      
+
       // Check if barcode fits vertically
       if (codeY + barcodeHeight > borderBottom - marginBottom) {
         // Adjust height to fit
         barcodeHeight = Math.max(25, borderBottom - codeY - marginBottom);
         barcodeWidth = (barcodeHeight / 50) * 150;
       }
-      
+
       // Check if barcode fits horizontally
       let barcodeX = (labelWidth - barcodeWidth) / 2;
       if (barcodeX < borderLeft) {
@@ -754,15 +784,29 @@ function setupItemHandlers() {
           barcodeHeight = (barcodeWidth / 150) * 50;
         }
       }
-      
+
       // Ensure barcode doesn't exceed bottom border
       if (codeY + barcodeHeight > borderBottom - marginBottom) {
         // Adjust Y position to fit
         const adjustedCodeY = borderBottom - marginBottom - barcodeHeight;
-        doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedCodeY, barcodeWidth, barcodeHeight);
+        doc.addImage(
+          barcodeDataUrl,
+          "PNG",
+          barcodeX,
+          adjustedCodeY,
+          barcodeWidth,
+          barcodeHeight
+        );
       } else {
         // Add barcode at calculated position
-        doc.addImage(barcodeDataUrl, "PNG", barcodeX, codeY, barcodeWidth, barcodeHeight);
+        doc.addImage(
+          barcodeDataUrl,
+          "PNG",
+          barcodeX,
+          codeY,
+          barcodeWidth,
+          barcodeHeight
+        );
       }
 
       // Save PDF
@@ -819,13 +863,12 @@ function setupItemHandlers() {
         logger.error("Error printing barcode label:", error);
         throw error;
       }
-    },
+    }
   );
 
   // Helper function to generate bulk labels in one PDF
-  async function generateBulkLabelsPDF(itemIds) {
+  async function generateBulkLabelsPDF(itemIds, options = {}) {
     try {
-      // Import dependencies
       const jsPDFModule = require("jspdf");
       const jsPDF = jsPDFModule.jsPDF;
       const JsBarcode = require("jsbarcode");
@@ -833,11 +876,20 @@ function setupItemHandlers() {
 
       if (!jsPDF || typeof jsPDF !== "function") {
         throw new Error(
-          "jsPDF constructor not found. Please check jsPDF installation.",
+          "jsPDF constructor not found. Please check jsPDF installation."
         );
       }
 
-      // Get all items data
+      const resolvedOptions = {
+        paperWidth: 58,
+        labelHeight: 38,
+        spacing: 1.5,
+        margin: 3,
+        saveFile: true,
+        previewPadding: 0,
+        ...options,
+      };
+
       const placeholders = itemIds.map(() => "?").join(",");
       const items = await database.query(
         `
@@ -852,224 +904,171 @@ function setupItemHandlers() {
         WHERE i.id IN (${placeholders})
         ORDER BY i.code
       `,
-        itemIds,
+        itemIds
       );
 
       if (items.length === 0) {
         throw new Error("Tidak ada item yang ditemukan");
       }
 
-      // Label dimensions (50mm x 30mm in points) - smaller for 4x5 layout (20 labels per page)
-      const labelWidth = 50 * 2.83465; // ~142 points
-      const labelHeight = 30 * 2.83465; // ~85 points
+      const {
+        paperWidth,
+        labelHeight,
+        spacing,
+        margin,
+        saveFile,
+        previewPadding,
+      } = resolvedOptions;
 
-      // A4 page dimensions in landscape (842 x 595 points)
-      const pageWidth = 842;
-      const pageHeight = 595;
+      const totalHeight =
+        margin * 2 +
+        items.length * labelHeight +
+        Math.max(0, items.length - 1) * spacing +
+        2 +
+        previewPadding;
 
-      // Calculate grid layout: 4 labels per row, 5 labels per column on A4 (20 labels per page)
-      const labelsPerRow = 4;
-      const labelsPerCol = 5;
-      const labelsPerPage = labelsPerRow * labelsPerCol;
-
-      // Spacing between labels (reduced for more labels per page)
-      const spacingX = 8;
-      const spacingY = 8;
-
-      // Calculate start position to center labels
-      const totalWidth = labelsPerRow * labelWidth + (labelsPerRow - 1) * spacingX;
-      const totalHeight = labelsPerCol * labelHeight + (labelsPerCol - 1) * spacingY;
-      const startX = (pageWidth - totalWidth) / 2;
-      const startY = (pageHeight - totalHeight) / 2;
-
-      // Create PDF
       const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: "a4",
+        orientation: "portrait",
+        unit: "mm",
+        format: [
+          paperWidth,
+          Math.max(totalHeight, labelHeight + margin * 2 + 2),
+        ],
       });
 
-      // Process each item
-      let itemIndex = 0;
-      let currentPage = 0;
-      let rowIndex = 0;
-      let colIndex = 0;
+      // Draw labels vertically to mimic a thermal roll
+      let currentY = margin;
 
       for (const item of items) {
-        // Add new page if needed
-        if (itemIndex > 0 && itemIndex % labelsPerPage === 0) {
-          doc.addPage();
-          currentPage++;
-          rowIndex = 0;
-          colIndex = 0;
+        const labelTop = currentY;
+        const labelBottom = labelTop + labelHeight;
+        const effectiveMargin =
+          items.length === 1 ? Math.min(margin, 2) : margin;
+        const contentWidth = paperWidth - effectiveMargin * 2;
+        const centerX = paperWidth / 2;
+
+        // Background
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, labelTop, paperWidth, labelHeight, "F");
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.5);
+        doc.rect(
+          effectiveMargin / 2,
+          labelTop + effectiveMargin / 2,
+          paperWidth - effectiveMargin,
+          labelHeight - effectiveMargin,
+          "S"
+        );
+
+        let cursorY = labelTop + 4;
+        const maxNameLines = 2;
+        const nameText = (item.name || "N/A").trim();
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(20, 20, 20);
+
+        const nameLines = doc
+          .splitTextToSize(nameText, contentWidth - 2)
+          .slice(0, maxNameLines);
+        for (const line of nameLines) {
+          doc.text(line, centerX, cursorY, { align: "center" });
+          cursorY += 3.5;
         }
 
-        // Calculate position for current label
-        const x = startX + colIndex * (labelWidth + spacingX);
-        const y = startY + rowIndex * (labelHeight + spacingY);
+        // Price
+        const displayPrice = item.sale_price || item.rental_price_per_day || 0;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(0, 100, 0);
+        doc.text(formatCurrency(displayPrice), centerX, cursorY, {
+          align: "center",
+        });
+        cursorY += 3.5;
 
-        // Generate barcode
-        const canvas = createCanvas(200, 100);
+        // Size info
+        const sizeLabel = (item.size_name || item.size_code || "").trim();
+        if (sizeLabel) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7);
+          doc.setTextColor(75, 75, 75);
+          doc.text(`Ukuran: ${sizeLabel}`, centerX, cursorY, {
+            align: "center",
+          });
+          cursorY += 3;
+        }
+
+        // Barcode area
+        const barcodeHeight = 20;
+        const barcodeTop = Math.max(
+          cursorY + 1,
+          labelBottom - effectiveMargin - barcodeHeight - 1
+        );
+        const barcodeWidth = contentWidth;
+        const barcodeCanvas = createCanvas(400, 120);
         try {
-          JsBarcode(canvas, item.code, {
+          JsBarcode(barcodeCanvas, item.code, {
             format: "CODE128",
             width: 2,
             height: 60,
             displayValue: true,
-            fontSize: 14,
+            fontSize: 12,
             margin: 10,
           });
         } catch (barcodeError) {
-          logger.error(`Error generating barcode for item ${item.id}:`, barcodeError);
-          // Continue with next item
-          itemIndex++;
-          colIndex++;
-          if (colIndex >= labelsPerRow) {
-            colIndex = 0;
-            rowIndex++;
-          }
-          continue;
+          logger.error(
+            `Error generating barcode for item ${item.id}:`,
+            barcodeError
+          );
         }
+        const barcodeBuffer = barcodeCanvas.toBuffer("image/png");
+        const barcodeDataUrl = `data:image/png;base64,${barcodeBuffer.toString(
+          "base64"
+        )}`;
+        const maxBarcodeWidth = Math.max(contentWidth - 4, 1);
+        const barcodeDrawWidth = Math.min(barcodeWidth, maxBarcodeWidth);
+        doc.addImage(
+          barcodeDataUrl,
+          "PNG",
+          effectiveMargin + (contentWidth - barcodeDrawWidth) / 2,
+          barcodeTop,
+          barcodeDrawWidth,
+          barcodeHeight
+        );
 
-        // Convert canvas to data URL
-        const buffer = canvas.toBuffer("image/png");
-        const barcodeDataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
-
-        // Background color for label
-        doc.setFillColor(245, 245, 245);
-        doc.rect(x, y, labelWidth, labelHeight, "F");
-
-        // Border
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(1);
-        doc.rect(x + 5, y + 5, labelWidth - 10, labelHeight - 10, "S");
-
-        // Title - Item Name (forced to single line)
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 30, 30);
-        const nameY = y + 20;
-        const maxNameWidth = labelWidth - 20;
-        
-        // Force single line - truncate if too long
-        let itemNameText = item.name || "N/A";
-        const itemNameLines = doc.splitTextToSize(itemNameText, maxNameWidth);
-        if (itemNameLines.length > 1) {
-          // If name is too long, truncate to fit one line
-          // Use getTextWidth to find exact truncation point
-          let truncated = itemNameText;
-          const ellipsis = "...";
-          while (doc.getTextWidth(truncated + ellipsis) > maxNameWidth && truncated.length > 0) {
-            truncated = truncated.substring(0, truncated.length - 1);
-          }
-          itemNameText = truncated + ellipsis;
-        }
-        const nameHeight = 12; // Single line height
-        doc.text(itemNameText, x + labelWidth / 2, nameY, { align: "center", maxWidth: maxNameWidth });
-
-        // Price - positioned after item name with proper spacing
-        const priceY = nameY + nameHeight + 5; // Spacing after name
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0, 100, 0);
-        // Use sale_price if available, otherwise rental_price_per_day, or 0
-        const displayPrice = item.sale_price || item.rental_price_per_day || 0;
-        const priceText = formatCurrency(displayPrice);
-        const priceHeight = 9; // Height for price line
-        doc.text(priceText, x + labelWidth / 2, priceY, { align: "center" });
-
-        const sizeLabel = (item.size_name || item.size_code || "").trim();
-        const hasSizeLabel = sizeLabel.length > 0;
-        const sizeLineHeight = hasSizeLabel ? 8 : 0;
-        const sizeSpacing = hasSizeLabel ? 3 : 0;
-        if (hasSizeLabel) {
-          doc.setFontSize(7);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(75, 85, 99);
-          doc.text(`Ukuran: ${sizeLabel}`, x + labelWidth / 2, priceY + priceHeight + sizeSpacing, {
-            align: "center",
-            maxWidth: labelWidth - 10,
-          });
-        }
-
-        // Barcode image - fixed size, consistent, within border
-        const borderTop = y + 5;
-        const borderBottom = y + labelHeight - 5;
-        const borderLeft = x + 5;
-        const borderRight = x + labelWidth - 5;
-        const barcodeSpacing = 5; // Spacing after price
-        const marginBottom = 5; // Margin from bottom border
-        
-        // Calculate available space for barcode
-        const codeY = priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
-        
-        // Fixed barcode size (consistent) but ensure it fits within border
-        let barcodeImgHeight = 30; // Preferred height for bulk labels
-        let barcodeImgWidth = (barcodeImgHeight / 50) * 150; // Maintain aspect ratio
-        
-        // Check if barcode fits vertically
-        if (codeY + barcodeImgHeight > borderBottom - marginBottom) {
-          // Adjust height to fit
-          barcodeImgHeight = Math.max(20, borderBottom - codeY - marginBottom);
-          barcodeImgWidth = (barcodeImgHeight / 50) * 150;
-        }
-        
-        // Check if barcode fits horizontally
-        let barcodeX = x + (labelWidth - barcodeImgWidth) / 2;
-        if (barcodeX < borderLeft) {
-          barcodeX = borderLeft;
-          // If still too wide, reduce size
-          if (barcodeX + barcodeImgWidth > borderRight) {
-            barcodeImgWidth = borderRight - borderLeft;
-            barcodeImgHeight = (barcodeImgWidth / 150) * 50;
-          }
-        } else if (barcodeX + barcodeImgWidth > borderRight) {
-          barcodeX = borderRight - barcodeImgWidth;
-          // If still too wide, reduce size
-          if (barcodeX < borderLeft) {
-            barcodeX = borderLeft;
-            barcodeImgWidth = borderRight - borderLeft;
-            barcodeImgHeight = (barcodeImgWidth / 150) * 50;
-          }
-        }
-        
-        // Ensure barcode doesn't exceed bottom border
-        if (codeY + barcodeImgHeight > borderBottom - marginBottom) {
-          // Adjust Y position to fit
-          const adjustedCodeY = borderBottom - marginBottom - barcodeImgHeight;
-          doc.addImage(barcodeDataUrl, "PNG", barcodeX, adjustedCodeY, barcodeImgWidth, barcodeImgHeight);
-        } else {
-          // Add barcode at calculated position
-          doc.addImage(barcodeDataUrl, "PNG", barcodeX, codeY, barcodeImgWidth, barcodeImgHeight);
-        }
-
-        // Move to next position
-        itemIndex++;
-        colIndex++;
-        if (colIndex >= labelsPerRow) {
-          colIndex = 0;
-          rowIndex++;
-        }
+        currentY += labelHeight + spacing;
       }
 
-      // Save PDF
-      const { app } = require("electron");
-      const userDataPath = app.getPath("userData");
-      const labelsDir = path.join(userDataPath, "labels");
-      await fs.mkdir(labelsDir, { recursive: true });
+      const pdfBase64 = doc.output("datauristring");
+      const pdfArrayBuffer = doc.output("arraybuffer");
+      const pdfBuffer = Buffer.from(pdfArrayBuffer);
 
-      const fileName = `bulk_labels_${Date.now()}.pdf`;
-      const filePath = path.join(labelsDir, fileName);
-
-      doc.save(filePath);
-
-      logger.info(`Generated bulk labels PDF with ${items.length} labels: ${filePath}`);
+      let filePath = null;
+      let fileName = null;
+      if (saveFile) {
+        const { app } = require("electron");
+        const userDataPath = app.getPath("userData");
+        const labelsDir = path.join(userDataPath, "labels");
+        await fs.mkdir(labelsDir, { recursive: true });
+        fileName = `bulk_labels_${Date.now()}.pdf`;
+        filePath = path.join(labelsDir, fileName);
+        await fs.writeFile(filePath, pdfBuffer);
+        logger.info(
+          `Generated bulk labels PDF with ${items.length} labels: ${filePath}`
+        );
+      } else {
+        logger.info(
+          `Generated bulk labels preview with ${items.length} labels`
+        );
+      }
 
       return {
         success: true,
         filePath,
         fileName,
         labelCount: items.length,
+        pdfBase64,
+        paperWidth,
+        totalHeight: Math.max(totalHeight, labelHeight + margin * 2 + 2),
       };
     } catch (error) {
       logger.error("Error generating bulk labels PDF:", error);
@@ -1078,27 +1077,48 @@ function setupItemHandlers() {
   }
 
   // Generate bulk labels (multiple items)
-  ipcMain.handle(
-    "items:generateBulkLabels",
-    async (event, { itemIds }) => {
-      try {
-        if (!Array.isArray(itemIds) || itemIds.length === 0) {
-          throw new Error("Item IDs harus berupa array yang tidak kosong");
-        }
-
-        const result = await generateBulkLabelsPDF(itemIds);
-
-        return {
-          success: true,
-          filePaths: [result.filePath],
-          labelCount: result.labelCount,
-        };
-      } catch (error) {
-        logger.error("Error in generateBulkLabels handler:", error);
-        throw error;
+  ipcMain.handle("items:generateBulkLabels", async (event, { itemIds }) => {
+    try {
+      if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        throw new Error("Item IDs harus berupa array yang tidak kosong");
       }
-    },
-  );
+
+      const result = await generateBulkLabelsPDF(itemIds);
+
+      return {
+        success: true,
+        filePaths: [result.filePath],
+        labelCount: result.labelCount,
+      };
+    } catch (error) {
+      logger.error("Error in generateBulkLabels handler:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("items:previewBulkLabels", async (event, { itemIds }) => {
+    try {
+      if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        throw new Error("Item IDs harus berupa array yang tidak kosong");
+      }
+
+      const preview = await generateBulkLabelsPDF(itemIds, {
+        saveFile: false,
+        previewPadding: 60,
+      });
+
+      return {
+        success: true,
+        pdfBase64: preview.pdfBase64,
+        paperWidth: preview.paperWidth,
+        totalHeight: preview.totalHeight,
+        labelCount: preview.labelCount,
+      };
+    } catch (error) {
+      logger.error("Error in previewBulkLabels handler:", error);
+      throw error;
+    }
+  });
 
   // Print bulk labels
   ipcMain.handle(
@@ -1111,16 +1131,39 @@ function setupItemHandlers() {
 
         // Generate single PDF with all labels
         const result = await generateBulkLabelsPDF(itemIds);
+        if (!result.filePath) {
+          throw new Error("Gagal membuat file label untuk dicetak");
+        }
+
+        const settings = await loadSettings();
+        const useSharedPrinter =
+          settings.useReceiptPrinterForLabels !== false &&
+          typeof settings.printer === "string" &&
+          settings.printer.trim().length > 0;
+        const receiptPrinterName = useSharedPrinter ? settings.printer : null;
+        const targetPrinter = printerName || receiptPrinterName;
 
         // Print the single PDF
         try {
-          if (printerName) {
-            await printPDF(result.filePath, printerName, silent);
+          if (targetPrinter) {
+            const thermalOptions = {
+              paperSize: settings.thermalPaperSize || "58",
+              autoCut: settings.thermalAutoCut || false,
+              printDensity: settings.thermalPrintDensity || "normal",
+            };
+            await printPDF(
+              result.filePath,
+              targetPrinter,
+              silent,
+              thermalOptions
+            );
           } else {
             await openPDF(result.filePath);
           }
 
-          logger.info(`Printed bulk labels PDF with ${result.labelCount} labels`);
+          logger.info(
+            `Printed bulk labels PDF with ${result.labelCount} labels`
+          );
 
           return {
             success: true,
@@ -1135,55 +1178,52 @@ function setupItemHandlers() {
         logger.error("Error in printBulkLabels handler:", error);
         throw error;
       }
-    },
+    }
   );
 
   // Download bulk labels
-  ipcMain.handle(
-    "items:downloadBulkLabels",
-    async (event, { itemIds }) => {
-      try {
-        if (!Array.isArray(itemIds) || itemIds.length === 0) {
-          throw new Error("Item IDs harus berupa array yang tidak kosong");
-        }
-
-        // Generate single PDF with all labels
-        const result = await generateBulkLabelsPDF(itemIds);
-
-        // Show save dialog
-        const timestamp = new Date().toISOString().split("T")[0];
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog({
-          title: "Download Label PDF",
-          defaultPath: `bulk_labels_${timestamp}.pdf`,
-          filters: [
-            { name: "PDF Files", extensions: ["pdf"] },
-            { name: "All Files", extensions: ["*"] },
-          ],
-        });
-
-        if (canceled || !savePath) {
-          return {
-            success: false,
-            error: "Download dibatalkan",
-          };
-        }
-
-        // Copy generated PDF to user-selected location
-        await fs.copyFile(result.filePath, savePath);
-
-        logger.info(`Downloaded bulk labels PDF to: ${savePath}`);
-
-        return {
-          success: true,
-          filePath: savePath,
-          labelCount: result.labelCount,
-        };
-      } catch (error) {
-        logger.error("Error in downloadBulkLabels handler:", error);
-        throw error;
+  ipcMain.handle("items:downloadBulkLabels", async (event, { itemIds }) => {
+    try {
+      if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        throw new Error("Item IDs harus berupa array yang tidak kosong");
       }
-    },
-  );
+
+      // Generate single PDF with all labels
+      const result = await generateBulkLabelsPDF(itemIds);
+
+      // Show save dialog
+      const timestamp = new Date().toISOString().split("T")[0];
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+        title: "Download Label PDF",
+        defaultPath: `bulk_labels_${timestamp}.pdf`,
+        filters: [
+          { name: "PDF Files", extensions: ["pdf"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (canceled || !savePath) {
+        return {
+          success: false,
+          error: "Download dibatalkan",
+        };
+      }
+
+      // Copy generated PDF to user-selected location
+      await fs.copyFile(result.filePath, savePath);
+
+      logger.info(`Downloaded bulk labels PDF to: ${savePath}`);
+
+      return {
+        success: true,
+        filePath: savePath,
+        labelCount: result.labelCount,
+      };
+    } catch (error) {
+      logger.error("Error in downloadBulkLabels handler:", error);
+      throw error;
+    }
+  });
 
   // Download template Excel for bulk import
   ipcMain.handle("items:downloadTemplate", async () => {
@@ -1192,9 +1232,15 @@ function setupItemHandlers() {
       const worksheet = workbook.addWorksheet("Items Template");
 
       // Get categories, sizes, and discount groups for reference
-      const categories = await database.query("SELECT id, name FROM categories WHERE is_active = 1 ORDER BY name");
-      const sizes = await database.query("SELECT id, code, name FROM item_sizes WHERE is_active = 1 ORDER BY name");
-      const discountGroups = await database.query("SELECT id, name FROM discount_groups WHERE is_active = 1 ORDER BY name");
+      const categories = await database.query(
+        "SELECT id, name FROM categories WHERE is_active = 1 ORDER BY name"
+      );
+      const sizes = await database.query(
+        "SELECT id, code, name FROM item_sizes WHERE is_active = 1 ORDER BY name"
+      );
+      const discountGroups = await database.query(
+        "SELECT id, name FROM discount_groups WHERE is_active = 1 ORDER BY name"
+      );
 
       // Define headers
       const headers = [
@@ -1218,7 +1264,7 @@ function setupItemHandlers() {
       const headerRow = worksheet.getRow(1);
       headerRow.font = { bold: true };
       headerRow.alignment = { vertical: "middle", horizontal: "center" };
-      
+
       // Set warna background hanya untuk sel yang digunakan (kolom A sampai L = 12 kolom)
       for (let col = 1; col <= headers.length; col++) {
         const cell = headerRow.getCell(col);
@@ -1250,7 +1296,7 @@ function setupItemHandlers() {
       worksheet.dataValidations.add("B2:B1000", {
         type: "list",
         allowBlank: true,
-        formulae: [`"${categories.map(c => c.name).join(",")}"`],
+        formulae: [`"${categories.map((c) => c.name).join(",")}"`],
         showErrorMessage: true,
         errorStyle: "error",
         errorTitle: "Invalid Category",
@@ -1261,11 +1307,12 @@ function setupItemHandlers() {
       worksheet.dataValidations.add("C2:C1000", {
         type: "list",
         allowBlank: true,
-        formulae: [`"${sizes.map(s => s.code).join(",")}"`],
+        formulae: [`"${sizes.map((s) => s.code).join(",")}"`],
         showErrorMessage: true,
         errorStyle: "error",
         errorTitle: "Invalid Size",
-        error: "Pilih ukuran dari daftar yang tersedia (gunakan code: M, L, XXL, dll)",
+        error:
+          "Pilih ukuran dari daftar yang tersedia (gunakan code: M, L, XXL, dll)",
       });
 
       // Add data validation for type
@@ -1284,7 +1331,7 @@ function setupItemHandlers() {
         worksheet.dataValidations.add("K2:K1000", {
           type: "list",
           allowBlank: true,
-          formulae: [`"${discountGroups.map(dg => dg.name).join(",")}"`],
+          formulae: [`"${discountGroups.map((dg) => dg.name).join(",")}"`],
           showErrorMessage: true,
           errorStyle: "error",
           errorTitle: "Invalid Discount Group",
@@ -1324,16 +1371,26 @@ function setupItemHandlers() {
       noteSheet.addRow([]);
       noteSheet.addRow(["Nama: Nama item (wajib)"]);
       noteSheet.addRow(["Kategori: Pilih dari dropdown (wajib)"]);
-      noteSheet.addRow(["Ukuran: Pilih code ukuran dari dropdown (opsional) - contoh: M, L, XL, XXL"]);
+      noteSheet.addRow([
+        "Ukuran: Pilih code ukuran dari dropdown (opsional) - contoh: M, L, XL, XXL",
+      ]);
       noteSheet.addRow(["Tipe: RENTAL, SALE, atau BOTH (wajib)"]);
-      noteSheet.addRow(["CATATAN: Status dihitung otomatis berdasarkan stok (AVAILABLE/RENTED/MAINTENANCE)"]);
-      noteSheet.addRow(["CATATAN: Tersedia untuk Sewa/Jual dan Aktif otomatis di-set berdasarkan Tipe"]);
+      noteSheet.addRow([
+        "CATATAN: Status dihitung otomatis berdasarkan stok (AVAILABLE/RENTED/MAINTENANCE)",
+      ]);
+      noteSheet.addRow([
+        "CATATAN: Tersedia untuk Sewa/Jual dan Aktif otomatis di-set berdasarkan Tipe",
+      ]);
       noteSheet.addRow([]);
       noteSheet.addRow(["CATATAN:"]);
       noteSheet.addRow(["1. Hapus baris contoh sebelum mengisi data"]);
-      noteSheet.addRow(["2. Stok akan diatur ke 0 saat import (atur melalui manajemen stok)"]);
+      noteSheet.addRow([
+        "2. Stok akan diatur ke 0 saat import (atur melalui manajemen stok)",
+      ]);
       noteSheet.addRow(["3. Kode akan dibuat otomatis oleh sistem"]);
-      noteSheet.addRow(["4. Pastikan format angka untuk harga menggunakan titik (.) sebagai desimal"]);
+      noteSheet.addRow([
+        "4. Pastikan format angka untuk harga menggunakan titik (.) sebagai desimal",
+      ]);
 
       // Save file
       const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1363,20 +1420,31 @@ function setupItemHandlers() {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
 
-      const worksheet = workbook.getWorksheet("Items Template") || workbook.worksheets[0];
+      const worksheet =
+        workbook.getWorksheet("Items Template") || workbook.worksheets[0];
       if (!worksheet) {
         throw new Error("Worksheet tidak ditemukan");
       }
 
       // Get reference data
-      const categories = await database.query("SELECT id, name FROM categories WHERE is_active = 1");
-      const sizes = await database.query("SELECT id, code, name FROM item_sizes WHERE is_active = 1");
-      const discountGroups = await database.query("SELECT id, name FROM discount_groups WHERE is_active = 1");
+      const categories = await database.query(
+        "SELECT id, name FROM categories WHERE is_active = 1"
+      );
+      const sizes = await database.query(
+        "SELECT id, code, name FROM item_sizes WHERE is_active = 1"
+      );
+      const discountGroups = await database.query(
+        "SELECT id, name FROM discount_groups WHERE is_active = 1"
+      );
 
-      const categoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
+      const categoryMap = new Map(
+        categories.map((c) => [c.name.toLowerCase(), c.id])
+      );
       // Gunakan code untuk ukuran (M, L, XXL, dll), bukan name
-      const sizeMap = new Map(sizes.map(s => [s.code.toUpperCase(), s.id]));
-      const discountGroupMap = new Map(discountGroups.map(dg => [dg.name.toLowerCase(), dg.id]));
+      const sizeMap = new Map(sizes.map((s) => [s.code.toUpperCase(), s.id]));
+      const discountGroupMap = new Map(
+        discountGroups.map((dg) => [dg.name.toLowerCase(), dg.id])
+      );
 
       const results = {
         success: 0,
@@ -1390,38 +1458,60 @@ function setupItemHandlers() {
         // Skip header and instruction rows (rows 1-2)
         for (let rowNum = 3; rowNum <= worksheet.rowCount; rowNum++) {
           const row = worksheet.getRow(rowNum);
-          
+
           // Skip empty rows
-          if (!row.getCell(1).value || !row.getCell(1).value.toString().trim()) {
+          if (
+            !row.getCell(1).value ||
+            !row.getCell(1).value.toString().trim()
+          ) {
             continue;
           }
 
           try {
             const name = (row.getCell(1).value || "").toString().trim();
             const categoryName = (row.getCell(2).value || "").toString().trim();
-            const sizeCode = (row.getCell(3).value || "").toString().trim() || null;
-            const description = (row.getCell(4).value || "").toString().trim() || null;
+            const sizeCode =
+              (row.getCell(3).value || "").toString().trim() || null;
+            const description =
+              (row.getCell(4).value || "").toString().trim() || null;
             const purchasePrice = parseFloat(row.getCell(5).value || 0) || 0;
-            const rentalPricePerDay = parseFloat(row.getCell(6).value || 0) || 0;
+            const rentalPricePerDay =
+              parseFloat(row.getCell(6).value || 0) || 0;
             const salePrice = parseFloat(row.getCell(7).value || 0) || 0;
             const deposit = parseFloat(row.getCell(8).value || 0) || 0;
-            const type = (row.getCell(9).value || "RENTAL").toString().trim().toUpperCase();
+            const type = (row.getCell(9).value || "RENTAL")
+              .toString()
+              .trim()
+              .toUpperCase();
             // Status dihitung otomatis berdasarkan stok, tidak perlu dari Excel
             const minStockAlert = parseInt(row.getCell(10).value || 1) || 1;
-            const discountGroupName = (row.getCell(11).value || "").toString().trim() || null;
+            const discountGroupName =
+              (row.getCell(11).value || "").toString().trim() || null;
 
             // Auto-set is_available_for_rent dan is_available_for_sale berdasarkan tipe item
             const getAvailabilityByType = (type) => {
               if (type === "RENTAL") {
-                return { is_available_for_rent: true, is_available_for_sale: false };
+                return {
+                  is_available_for_rent: true,
+                  is_available_for_sale: false,
+                };
               } else if (type === "SALE") {
-                return { is_available_for_rent: false, is_available_for_sale: true };
+                return {
+                  is_available_for_rent: false,
+                  is_available_for_sale: true,
+                };
               } else if (type === "BOTH") {
-                return { is_available_for_rent: true, is_available_for_sale: true };
+                return {
+                  is_available_for_rent: true,
+                  is_available_for_sale: true,
+                };
               }
-              return { is_available_for_rent: true, is_available_for_sale: false };
+              return {
+                is_available_for_rent: true,
+                is_available_for_sale: false,
+              };
             };
-            
+
             const availability = getAvailabilityByType(type);
             const isAvailableForRent = availability.is_available_for_rent;
             const isAvailableForSale = availability.is_available_for_sale;
@@ -1449,15 +1539,21 @@ function setupItemHandlers() {
               // Gunakan code (M, L, XXL, dll) untuk mencocokkan ukuran
               sizeId = sizeMap.get(sizeCode.toUpperCase());
               if (!sizeId) {
-                throw new Error(`Ukuran dengan code "${sizeCode}" tidak ditemukan`);
+                throw new Error(
+                  `Ukuran dengan code "${sizeCode}" tidak ditemukan`
+                );
               }
             }
 
             let discountGroupId = null;
             if (discountGroupName) {
-              discountGroupId = discountGroupMap.get(discountGroupName.toLowerCase());
+              discountGroupId = discountGroupMap.get(
+                discountGroupName.toLowerCase()
+              );
               if (!discountGroupId) {
-                throw new Error(`Grup diskon "${discountGroupName}" tidak ditemukan`);
+                throw new Error(
+                  `Grup diskon "${discountGroupName}" tidak ditemukan`
+                );
               }
             }
 

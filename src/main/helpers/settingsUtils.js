@@ -25,9 +25,10 @@ async function loadSettings() {
         thermalPaperSize: "80", // 58, 80, or custom
         thermalFontSize: "medium", // small, medium, large
         thermalPrintDensity: "normal", // light, normal, dark
-        thermalAutoCut: false,
-        autoPrint: true,
-        taxPercentage: 0,
+      thermalAutoCut: false,
+      useReceiptPrinterForLabels: true,
+      autoPrint: true,
+      taxPercentage: 0,
         sync: {
           autoSyncEnabled: false,
           autoSyncInterval: 300000, // Default: 5 minutes
@@ -62,6 +63,7 @@ async function loadSettings() {
       thermalFontSize: "medium",
       thermalPrintDensity: "normal",
       thermalAutoCut: false,
+      useReceiptPrinterForLabels: true,
       sync: {
         autoSyncEnabled: false,
         autoSyncInterval: 300000, // Default: 5 minutes
@@ -91,7 +93,6 @@ async function loadSettings() {
 module.exports = {
   loadSettings,
 };
-
 
 
 
