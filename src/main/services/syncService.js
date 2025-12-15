@@ -299,7 +299,7 @@ async function syncPayment(paymentId) {
     // If not found, try sales_payments
     if (!payment) {
       payment = await database.queryOne(
-        `SELECT *, 'sale' as transaction_type FROM sales_payments WHERE id = ?`,
+        `SELECT *, 'sales' as transaction_type FROM sales_payments WHERE id = ?`,
         [paymentId]
       );
       paymentTable = 'sales_payments';
@@ -491,4 +491,3 @@ module.exports = {
   syncAllPending,
   checkSyncServiceStatus,
 };
-
