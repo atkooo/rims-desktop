@@ -1000,7 +1000,7 @@ function setupItemHandlers() {
         // Barcode area
         const barcodeHeight = 20;
         const barcodeTop = Math.max(
-          cursorY + 1,
+          cursorY + 4,
           labelBottom - effectiveMargin - barcodeHeight - 1
         );
         const barcodeWidth = contentWidth;
