@@ -18,6 +18,7 @@ async function loadSettings() {
       // Return default settings if file doesn't exist
       return {
         companyName: "",
+        companySubtitle: "",
         address: "",
         phone: "",
         printer: "",
@@ -54,9 +55,10 @@ async function loadSettings() {
       };
     }
     logger.warn("Could not load settings, using defaults:", error);
-    return {
-      companyName: "RIMS",
-      address: "-",
+      return {
+        companyName: "RIMS",
+        companySubtitle: "",
+        address: "-",
       phone: "-",
       paperWidth: 80,
       thermalPaperSize: "80",
@@ -93,7 +95,6 @@ async function loadSettings() {
 module.exports = {
   loadSettings,
 };
-
 
 
 

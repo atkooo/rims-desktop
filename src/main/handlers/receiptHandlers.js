@@ -8,6 +8,15 @@ const { loadSettings } = require("../helpers/settingsUtils");
 const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
 const { getDataDir } = require("../helpers/pathUtils");
 
+const PAPER_FEED_SPACING = {
+  SMALL: 12,
+  STANDARD: 15,
+};
+
+function getExtraPaperFeed(paperWidthMM) {
+  return paperWidthMM <= 58 ? PAPER_FEED_SPACING.SMALL : PAPER_FEED_SPACING.STANDARD;
+}
+
 // Helper function to calculate content height without creating PDF
 function calculateReceiptHeight(
   settings,
@@ -34,6 +43,7 @@ function calculateReceiptHeight(
   
   let yPos = margin;
   yPos += 1; // Top spacing (reduced for closer logo position)
+  const companySubtitleText = String(settings.companySubtitle || "").trim();
   
   // Logo height (if shown)
   if (settings.receiptSettings.showLogo && settings.logoPath) {
@@ -46,6 +56,14 @@ function calculateReceiptHeight(
   if (settings.receiptSettings.showCompanyName && settings.companyName) {
     tempDoc.setFontSize(fontSize.title || 12);
     yPos += (fontSize.title || 12) * 0.4 + 2;
+  }
+
+  if (
+    settings.receiptSettings.showCompanyName &&
+    companySubtitleText
+  ) {
+    tempDoc.setFontSize(fontSize.normal || 8);
+    yPos += (fontSize.normal || 8) * 0.4 + 1;
   }
   
   // Company Address
@@ -188,9 +206,10 @@ function calculateReceiptHeight(
     yPos += (fontSize.medium || 9) * 0.4; // "Terima Kasih"
   }
   
-  // Add bottom margin
+  // Add bottom margin + extra paper feed so the printer can advance before stopping
   const bottomMargin = 5;
-  const finalHeight = Math.max(yPos + bottomMargin, 50);
+  const extraPaperFeed = getExtraPaperFeed(paperWidthMM);
+  const finalHeight = Math.max(yPos + bottomMargin + extraPaperFeed, 50);
   
   return finalHeight;
 }
@@ -232,6 +251,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         settings.receiptSettings.showLogo = true;
       }
     }
+    const companySubtitleText = String(settings.companySubtitle || "").trim();
 
     let transaction;
     let transactionDetails = [];
@@ -347,6 +367,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     }
     
     const paperWidthMM = paperWidth; // Already in mm
+    const extraPaperFeed = getExtraPaperFeed(paperWidthMM);
     
     // Adjust margin based on paper size (smaller paper = smaller margin)
     let margin = 5;
@@ -551,6 +572,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Header - Company Name
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
       addCenteredText(settings.companyName, 12, true);
+      if (companySubtitleText) {
+        addCenteredText(companySubtitleText, "normal");
+      }
       yPos += 2;
     }
 
@@ -806,6 +830,9 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       addCenteredText("Terima Kasih", fontSize.medium, true);
     }
 
+    // Add blank feed area so the printer advances before stopping
+    yPos += extraPaperFeed;
+
     // Remove extra pages if any (content should fit on one page for receipts)
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = totalPages; i > 1; i--) {
@@ -858,6 +885,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     
     const settings = {
       companyName: companySettings?.companyName || "TOKO CONTOH",
+      companySubtitle: companySettings?.companySubtitle || "",
       address: companySettings?.address || "Jl. Contoh No. 123, Jakarta",
       phone: companySettings?.phone || "0812-3456-7890",
       paperWidth: companySettings?.paperWidth || 80,
@@ -880,6 +908,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         showFooter: true,
       },
     };
+    const companySubtitleText = String(settings.companySubtitle || "").trim();
 
     // Calculate paper width based on thermal paper size
     let paperWidth = settings.paperWidth || 80;
@@ -964,6 +993,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = margin;
+    const extraPaperFeed = getExtraPaperFeed(paperWidth);
     
     // Add extra top spacing for better appearance
     yPos += 1; // Add 1mm extra space at the top (reduced for closer logo position)
@@ -1116,6 +1146,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     // Header
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
       addCenteredText(settings.companyName, 12, true);
+      if (companySubtitleText) {
+        addCenteredText(companySubtitleText, "normal");
+      }
       yPos += 2;
     }
 
@@ -1327,6 +1360,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       yPos += paperWidth <= 58 ? 2 : 3;
       addCenteredText("Terima Kasih", fontSize.medium, true);
     }
+
+    // Add blank feed area so the printer advances before stopping
+    yPos += extraPaperFeed;
 
     // Remove extra pages if any (content should fit on one page for receipts)
     const totalPages = doc.internal.getNumberOfPages();

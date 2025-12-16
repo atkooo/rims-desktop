@@ -44,6 +44,13 @@
             placeholder="Masukkan nama toko"
           />
           <FormInput
+            id="companySubtitle"
+            label="Slogan / Sub Judul Struk"
+            v-model="settings.companySubtitle"
+            placeholder="Contoh: Pelayanan Cepat, Selalu Tersenyum"
+            hint="Teks ini dicetak di bawah nama toko pada struk transaksi."
+          />
+          <FormInput
             id="address"
             label="Alamat"
             type="textarea"
@@ -406,6 +413,7 @@ export default {
 
     const settings = ref({
       companyName: "",
+      companySubtitle: "",
       address: "",
       phone: "",
       taxPercentage: 0,
@@ -606,6 +614,7 @@ export default {
       try {
         await ipcRenderer.invoke("settings:save", {
           companyName: settings.value.companyName,
+          companySubtitle: settings.value.companySubtitle,
           address: settings.value.address,
           phone: settings.value.phone,
         });

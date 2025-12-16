@@ -159,6 +159,13 @@
                     <span>Logo</span>
                   </label>
                 </div>
+                <FormInput
+                  id="companySubtitle"
+                  label="Slogan / Sub Judul Struk"
+                  v-model="settings.companySubtitle"
+                  placeholder="Contoh: Pelayanan Cepat, Selalu Tersenyum"
+                  hint="Teks ini dicetak di bawah nama toko ketika tampil di struk."
+                />
               </div>
 
               <div class="settings-group">
@@ -347,12 +354,14 @@
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { ipcRenderer } from "@/services/ipc";
 import AppButton from "@/components/ui/AppButton.vue";
+import FormInput from "@/components/ui/FormInput.vue";
 
 export default {
   name: "ReceiptSettingsPage",
 
   components: {
     AppButton,
+    FormInput,
   },
 
   setup() {
@@ -365,6 +374,7 @@ export default {
 
     const settings = ref({
       companyName: "",
+      companySubtitle: "",
       address: "",
       phone: "",
       printer: "",
@@ -442,6 +452,7 @@ export default {
         // Convert reactive objects to plain objects for IPC
         const companySettings = {
           companyName: String(settings.value.companyName || ""),
+          companySubtitle: String(settings.value.companySubtitle || ""),
           address: String(settings.value.address || ""),
           phone: String(settings.value.phone || ""),
           paperWidth: Number(settings.value.paperWidth || 80),
@@ -506,6 +517,7 @@ export default {
 
         await ipcRenderer.invoke("settings:save", {
           printer: settings.value.printer,
+          companySubtitle: settings.value.companySubtitle,
           paperWidth: settings.value.paperWidth,
           thermalPaperSize: settings.value.thermalPaperSize,
           thermalPrintDensity: settings.value.thermalPrintDensity,
@@ -542,6 +554,7 @@ export default {
     watch(
       () => [
         settings.value.companyName,
+        settings.value.companySubtitle,
         settings.value.address,
         settings.value.phone,
         settings.value.paperWidth,
