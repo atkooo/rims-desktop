@@ -6,6 +6,12 @@
     </div>
 
     <div class="filters-section">
+      <input
+        type="text"
+        v-model="filters.search"
+        class="filter-input"
+        placeholder="Cari kode transaksi atau nama customer"
+      />
       <select v-model="filters.status" class="filter-select">
         <option value="">Semua Status</option>
         <option value="pending">Pending</option>
@@ -116,6 +122,7 @@ export default {
     const loading = ref(false);
     const error = ref("");
     const filters = ref({
+      search: "",
       status: "",
       paymentStatus: "",
     });
@@ -166,7 +173,16 @@ export default {
 
     const filteredRentals = computed(() => {
       let items = rentals.value;
-      
+
+      const searchTerm = (filters.value.search || "").trim().toLowerCase();
+      if (searchTerm) {
+        items = items.filter((item) => {
+          const code = (item.transaction_code || "").toString().toLowerCase();
+          const customer = (item.customer_name || "").toString().toLowerCase();
+          return code.includes(searchTerm) || customer.includes(searchTerm);
+        });
+      }
+
       if (filters.value.status) {
         items = items.filter((item) => {
           if (isCancelled(item) && filters.value.status !== "cancelled") return false;
@@ -286,6 +302,15 @@ export default {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-input {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
 }
 
 .filter-select {

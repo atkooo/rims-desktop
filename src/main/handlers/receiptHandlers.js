@@ -13,6 +13,8 @@ const PAPER_FEED_SPACING = {
   STANDARD: 15,
 };
 
+const LOGO_BOTTOM_SPACING = 6;
+
 function getExtraPaperFeed(paperWidthMM) {
   return paperWidthMM <= 58 ? PAPER_FEED_SPACING.SMALL : PAPER_FEED_SPACING.STANDARD;
 }
@@ -44,14 +46,14 @@ function calculateReceiptHeight(
   let yPos = margin;
   yPos += 1; // Top spacing (reduced for closer logo position)
   const companySubtitleText = String(settings.companySubtitle || "").trim();
-  
+
   // Logo height (if shown)
   if (settings.receiptSettings.showLogo && settings.logoPath) {
     const logoWidth = 40;
     const logoHeight = Math.min(logoWidth * 0.6, 20);
-    yPos += logoHeight + 3;
+    yPos += logoHeight + LOGO_BOTTOM_SPACING;
   }
-  
+
   // Company Name
   if (settings.receiptSettings.showCompanyName && settings.companyName) {
     tempDoc.setFontSize(fontSize.title || 12);
@@ -551,7 +553,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         );
         
         logger.info("Logo added successfully to receipt");
-        yPos += logoHeight + 3; // Move down after logo
+        yPos += logoHeight + LOGO_BOTTOM_SPACING; // Move down after logo
       } catch (error) {
         logger.error("Error adding logo to receipt:", error);
         logger.error("Error stack:", error.stack);
@@ -1130,7 +1132,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         );
         
         logger.info("Logo added successfully to receipt");
-        yPos += logoHeight + 3; // Move down after logo
+        yPos += logoHeight + LOGO_BOTTOM_SPACING; // Move down after logo
       } catch (error) {
         logger.error("Error adding logo to receipt:", error);
         logger.error("Error stack:", error.stack);

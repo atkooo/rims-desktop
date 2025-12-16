@@ -54,12 +54,27 @@ export default {
       }
     };
 
+    const handleFullscreenShortcut = (event) => {
+      if (event.key === "F11") {
+        event.preventDefault();
+        if (typeof window !== "undefined") {
+          window.api?.invoke?.("window:toggleFullscreen");
+        }
+      }
+    };
+
     onMounted(() => {
       eventBus.on("global-search", handleGlobalSearch);
+      if (typeof window !== "undefined") {
+        window.addEventListener("keydown", handleFullscreenShortcut);
+      }
     });
 
     onBeforeUnmount(() => {
       eventBus.off("global-search", handleGlobalSearch);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", handleFullscreenShortcut);
+      }
     });
 
     return {

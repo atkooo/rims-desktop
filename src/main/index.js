@@ -315,6 +315,13 @@ ipcMain.handle("window:focus", () => {
   return false;
 });
 
+ipcMain.handle("window:toggleFullscreen", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const shouldEnter = !mainWindow.isFullScreen();
+  mainWindow.setFullScreen(shouldEnter);
+  return shouldEnter;
+});
+
 // Handler to get log directory path
 ipcMain.handle("app:getLogPath", () => {
   try {
