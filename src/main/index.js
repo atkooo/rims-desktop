@@ -84,7 +84,7 @@ if (!envLoaded) {
   console.log(`Tried paths: ${envPaths.join(", ")}`);
 }
 
-const { BrowserWindow, ipcMain, globalShortcut, dialog } = require("electron");
+const { BrowserWindow, ipcMain, globalShortcut, dialog, Menu } = require("electron");
 const database = require("./helpers/database");
 const logger = require("./helpers/logger");
 
@@ -359,6 +359,57 @@ ipcMain.handle("dialog:showOpenDialog", async (event, options) => {
 });
 
 app.whenReady().then(async () => {
+  // Setup menu - hide Edit menu in production
+  const isDevelopment = process.env.NODE_ENV === "development" && !app.isPackaged;
+  
+  if (!isDevelopment) {
+    // Production: Create menu without Edit menu
+    const template = [];
+    
+    // On macOS, add app menu
+    if (process.platform === "darwin") {
+      template.push({
+        label: app.getName(),
+        submenu: [
+          { role: "about" },
+          { type: "separator" },
+          { role: "services" },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      });
+      
+      // Add Window menu for macOS
+      template.push({
+        label: "Window",
+        submenu: [
+          { role: "close" },
+          { role: "minimize" },
+          { role: "zoom" },
+          { type: "separator" },
+          { role: "front" },
+        ],
+      });
+    }
+    
+    // Set menu (no Edit menu included)
+    // For Windows/Linux, setting null will hide menu bar completely
+    // For macOS, we need to set menu (macOS requires menu bar)
+    if (process.platform === "darwin") {
+      Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    } else {
+      // Windows/Linux: Hide menu bar completely (no Edit menu)
+      Menu.setApplicationMenu(null);
+    }
+  } else {
+    // Development: Use default menu (includes Edit menu for debugging)
+    // Don't set menu, let Electron use default
+  }
+  
   if (process.env.NODE_ENV === "development") {
     try {
       const {
