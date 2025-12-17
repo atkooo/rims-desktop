@@ -684,13 +684,20 @@ function setupItemHandlers() {
       doc.setLineWidth(1);
       doc.rect(5, 5, labelWidth - 10, labelHeight - 10, "S");
 
-      // Title - Item Name (forced to single line)
-      const nameY = 20;
-      const nameFontSize = 13;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(nameFontSize);
-      doc.setTextColor(30, 30, 30);
+      // Title block (align vertically centered)
       const maxNameWidth = labelWidth - 20;
+      const nameFontSize = 13;
+      const nameLineHeight = 16;
+      const priceFontSize = 11;
+      const priceLineHeight = 12;
+      const sizeFontSize = 10;
+      const sizeLineHeight = 12;
+      const gapAfterName = 4;
+      const gapAfterPriceWhenSize = 3;
+      const barcodeSpacing = 10;
+      const borderPadding = 5;
+      const preferredBarcodeHeight = 48;
+      const drawableHeight = labelHeight - borderPadding * 2;
 
       // Force single line - truncate if too long
       let itemNameText = item.name || "N/A";
@@ -706,81 +713,100 @@ function setupItemHandlers() {
         }
         itemNameText = truncated + ellipsis;
       }
-      const nameHeight = 16;
-      doc.text(itemNameText, labelWidth / 2, nameY, {
-        align: "center",
-        maxWidth: maxNameWidth,
-      });
-
-      // Price - positioned after item name with proper spacing
-      const priceY = nameY + nameHeight + 8;
-      const priceFontSize = 11;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(priceFontSize);
-      doc.setTextColor(0, 100, 0);
-      const displayPrice = item.sale_price || item.rental_price_per_day || 0;
-      const priceText = formatCurrency(displayPrice);
-      const priceHeight = 12;
-      doc.text(priceText, labelWidth / 2, priceY, {
-        align: "center",
-      });
 
       const sizeLabel = (item.size_name || item.size_code || "").trim();
       const hasSizeLabel = sizeLabel.length > 0;
-      const sizeFontSize = 10;
-      const sizeLineHeight = hasSizeLabel ? sizeFontSize + 4 : 0;
-      const sizeSpacing = hasSizeLabel ? 7 : 0;
+      const priceGapAfter = hasSizeLabel ? gapAfterPriceWhenSize : barcodeSpacing;
+      const textBlockHeight =
+        nameLineHeight +
+        gapAfterName +
+        priceLineHeight +
+        (hasSizeLabel
+          ? priceGapAfter + sizeLineHeight + barcodeSpacing
+          : priceGapAfter);
+      const totalContentHeight = textBlockHeight + preferredBarcodeHeight;
+      const extraSpace =
+        drawableHeight - totalContentHeight >= 0
+          ? drawableHeight - totalContentHeight
+          : 0;
+      const topExtraLimit = 6;
+      const topExtra = Math.min(extraSpace, topExtraLimit);
+      const bottomExtra = Math.max(extraSpace - topExtra, 0);
+      const contentTop = borderPadding + topExtra;
+
+      let cursorY = contentTop;
+      const writeLine = (lineHeight, gapAfter, drawLine) => {
+        cursorY += lineHeight;
+        drawLine(cursorY);
+        cursorY += gapAfter;
+      };
+
+      writeLine(nameLineHeight, gapAfterName, (y) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(nameFontSize);
+        doc.setTextColor(30, 30, 30);
+        doc.text(itemNameText, labelWidth / 2, y, {
+          align: "center",
+          maxWidth: maxNameWidth,
+        });
+      });
+
+      writeLine(priceLineHeight, priceGapAfter, (y) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(priceFontSize);
+        doc.setTextColor(0, 100, 0);
+        doc.text(formatCurrency(item.sale_price || item.rental_price_per_day || 0), labelWidth / 2, y, {
+          align: "center",
+        });
+      });
+
       if (hasSizeLabel) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(sizeFontSize);
-        doc.setTextColor(75, 85, 99);
-        doc.text(
-          `Ukuran: ${sizeLabel}`,
-          labelWidth / 2,
-          priceY + priceHeight + sizeSpacing,
-          {
+        writeLine(sizeLineHeight, barcodeSpacing, (y) => {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(sizeFontSize);
+          doc.setTextColor(75, 85, 99);
+          doc.text(`Ukuran: ${sizeLabel}`, labelWidth / 2, y, {
             align: "center",
             maxWidth: maxNameWidth,
-          }
-        );
+          });
+        });
+        doc.setTextColor(30, 30, 30);
       }
 
-      // Barcode image - fixed size, consistent, within border
-      const borderTop = 5;
-      const borderBottom = labelHeight - 5;
-      const borderLeft = 5;
-      const borderRight = labelWidth - 5;
-      const barcodeSpacing = 14; // Spacing after price/size
-      const marginBottom = 5; // Margin from bottom border
 
-      // Calculate available space for barcode
-      const codeY =
-        priceY + priceHeight + sizeSpacing + sizeLineHeight + barcodeSpacing;
-      const availableHeight = borderBottom - codeY - marginBottom;
+      // Barcode image - fixed size, centered vertically within remaining area
+      const borderTop = borderPadding;
+      const borderBottom = labelHeight - borderPadding;
+      const borderLeft = borderPadding;
+      const borderRight = labelWidth - borderPadding;
+      const marginBottom = 5;
 
-      // Fixed barcode size (consistent) but ensure it fits within border
-      let barcodeHeight = 48; // Preferred height
-      let barcodeWidth = (barcodeHeight / 50) * 150; // Maintain aspect ratio
+      let barcodeHeight = preferredBarcodeHeight;
+      let barcodeWidth = (barcodeHeight / 50) * 150;
+      const codeY = cursorY;
 
-      // Check if barcode fits vertically
-      if (codeY + barcodeHeight > borderBottom - marginBottom) {
-        // Adjust height to fit
-        barcodeHeight = Math.max(25, borderBottom - codeY - marginBottom);
+      const barcodeBottomLimit = Math.max(
+        borderBottom - marginBottom - bottomExtra,
+        borderTop + marginBottom,
+      );
+
+      if (codeY + barcodeHeight > barcodeBottomLimit) {
+        barcodeHeight = Math.max(
+          25,
+          borderBottom - codeY - marginBottom - bottomExtra,
+        );
         barcodeWidth = (barcodeHeight / 50) * 150;
       }
 
-      // Check if barcode fits horizontally
       let barcodeX = (labelWidth - barcodeWidth) / 2;
       if (barcodeX < borderLeft) {
         barcodeX = borderLeft;
-        // If still too wide, reduce size
         if (barcodeX + barcodeWidth > borderRight) {
           barcodeWidth = borderRight - borderLeft;
           barcodeHeight = (barcodeWidth / 150) * 50;
         }
       } else if (barcodeX + barcodeWidth > borderRight) {
         barcodeX = borderRight - barcodeWidth;
-        // If still too wide, reduce size
         if (barcodeX < borderLeft) {
           barcodeX = borderLeft;
           barcodeWidth = borderRight - borderLeft;
@@ -788,29 +814,14 @@ function setupItemHandlers() {
         }
       }
 
-      // Ensure barcode doesn't exceed bottom border
-      if (codeY + barcodeHeight > borderBottom - marginBottom) {
-        // Adjust Y position to fit
-        const adjustedCodeY = borderBottom - marginBottom - barcodeHeight;
-        doc.addImage(
-          barcodeDataUrl,
-          "PNG",
-          barcodeX,
-          adjustedCodeY,
-          barcodeWidth,
-          barcodeHeight
-        );
-      } else {
-        // Add barcode at calculated position
-        doc.addImage(
-          barcodeDataUrl,
-          "PNG",
-          barcodeX,
-          codeY,
-          barcodeWidth,
-          barcodeHeight
-        );
-      }
+      doc.addImage(
+        barcodeDataUrl,
+        "PNG",
+        barcodeX,
+        codeY,
+        barcodeWidth,
+        barcodeHeight
+      );
 
       // Save PDF
       const { app } = require("electron");
