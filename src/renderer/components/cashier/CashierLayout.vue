@@ -1,7 +1,7 @@
 <template>
   <div class="cashier-layout">
     <!-- Header with Navigation -->
-    <header class="cashier-header">
+    <header class="cashier-header" :class="{ collapsed: isCollapsed }">
       <div class="cashier-header-top">
         <div class="cashier-header-left">
           <h1 class="cashier-title">Kasir</h1>
@@ -15,6 +15,9 @@
           </div>
         </div>
         <div class="cashier-header-right">
+          <button class="collapse-toggle" @click="toggleCollapse" :aria-label="isCollapsed ? 'Expand' : 'Collapse'">
+            <Icon :name="isCollapsed ? 'chevron-down' : 'chevron-up'" :size="20" />
+          </button>
           <button class="cashier-btn-secondary" @click="handleLogout">
             Logout
           </button>
@@ -22,7 +25,7 @@
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="cashier-nav">
+      <nav v-show="!isCollapsed" class="cashier-nav">
         <router-link v-for="item in navItems" :key="item.path" :to="item.path"
           :class="['nav-item', { active: isActive(item) }]">
           <Icon :name="item.icon" :size="18" class="nav-icon" />
@@ -55,6 +58,28 @@ export default {
     const router = useRouter();
     const route = useRoute();
     const cashierStatus = ref(null);
+    
+    // Load collapsed state from localStorage
+    const STORAGE_KEY = "cashier:headerCollapsed";
+    const loadCollapsedState = () => {
+      try {
+        const stored = window.localStorage?.getItem(STORAGE_KEY);
+        return stored === "true";
+      } catch (error) {
+        console.warn("Error loading collapsed state:", error);
+        return false;
+      }
+    };
+    
+    const saveCollapsedState = (collapsed) => {
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, String(collapsed));
+      } catch (error) {
+        console.warn("Error saving collapsed state:", error);
+      }
+    };
+    
+    const isCollapsed = ref(loadCollapsedState());
 
     const navItems = [
       { path: "/cashier", icon: "dashboard", label: "Beranda", exact: true },
@@ -63,6 +88,14 @@ export default {
       { path: "/cashier/customers", icon: "users", label: "Pelanggan" },
       { path: "/cashier/session", icon: "credit-card", label: "Sesi Kasir" },
     ];
+
+    const toggleCollapse = () => {
+      isCollapsed.value = !isCollapsed.value;
+      // Save to localStorage
+      saveCollapsedState(isCollapsed.value);
+      // Emit event untuk memberitahu child components
+      eventBus.emit("cashier:headerToggle", isCollapsed.value);
+    };
 
     // Check if a nav item should be active
     const isActive = (item) => {
@@ -122,6 +155,8 @@ export default {
 
     onMounted(() => {
       loadCashierStatus();
+      // Emit initial state to child components
+      eventBus.emit("cashier:headerToggle", isCollapsed.value);
       // Listen for cashier session open/close events
       eventBus.on("cashier:sessionOpened", handleCashierSessionUpdate);
       eventBus.on("cashier:sessionClosed", handleCashierSessionUpdate);
@@ -137,6 +172,8 @@ export default {
       navItems,
       handleLogout,
       isActive,
+      isCollapsed,
+      toggleCollapse,
     };
   },
 };
@@ -163,6 +200,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: padding 0.3s ease;
+}
+
+.cashier-header.collapsed .cashier-header-top {
+  padding: 0.75rem 2rem;
 }
 
 .cashier-header-left {
@@ -208,7 +250,29 @@ export default {
 
 .cashier-header-right {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collapse-toggle:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #4f46e5;
 }
 
 .cashier-btn-secondary {
@@ -235,6 +299,7 @@ export default {
   gap: 0;
   overflow-x: auto;
   border-bottom: 1px solid #e5e7eb;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
 .nav-item {
