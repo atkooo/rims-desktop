@@ -551,10 +551,16 @@ function setupSettingsHandlers() {
       }
 
       // Delete logo file if exists
-      if (existingSettings.logoPath) {
-        const logoPath = path.join(DATA_DIR, existingSettings.logoPath);
+      const logoRelativePath =
+        typeof existingSettings.logoPath === "string"
+          ? existingSettings.logoPath
+          : null;
+
+      if (logoRelativePath) {
+        const baseDir = getDataDirectory();
+        const logoFilePath = path.join(baseDir, logoRelativePath);
         try {
-          await fs.unlink(logoPath);
+          await fs.unlink(logoFilePath);
         } catch (error) {
           if (error.code !== "ENOENT") {
             logger.warn("Could not delete logo file:", error);

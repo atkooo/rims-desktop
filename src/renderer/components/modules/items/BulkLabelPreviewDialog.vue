@@ -373,7 +373,7 @@ export default {
 }
 
 .item-name {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #111827;
   margin-bottom: 0.2rem;
@@ -382,7 +382,7 @@ export default {
 }
 
 .item-code {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: #6b7280;
 }
 
@@ -405,12 +405,11 @@ export default {
 }
 
 .footer-info {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: #6b7280;
   margin: 0.15rem 0;
   line-height: 1.3;
 }
 </style>
-
 
 

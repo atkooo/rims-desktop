@@ -7,6 +7,7 @@ const { printPDF, openPDF } = require("../helpers/printUtils");
 const { loadSettings } = require("../helpers/settingsUtils");
 const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
 const { getDataDir } = require("../helpers/pathUtils");
+const { Image } = require("canvas");
 
 const PAPER_FEED_SPACING = {
   SMALL: 12,
@@ -14,6 +15,20 @@ const PAPER_FEED_SPACING = {
 };
 
 const LOGO_BOTTOM_SPACING = 6;
+const MAX_LOGO_WIDTH_MM = 32;
+
+function resolveLogoDimensions(logoBuffer, pageWidth, margin) {
+  const img = new Image();
+  img.src = logoBuffer;
+  const usableWidth = Math.max(pageWidth - margin * 2, 1);
+  const availableWidth = Math.min(MAX_LOGO_WIDTH_MM, usableWidth);
+  const naturalWidth = img.width || availableWidth;
+  const naturalHeight = img.height || availableWidth;
+  const ratio = naturalHeight ? naturalWidth / naturalHeight : 1;
+  const width = Math.min(availableWidth, naturalWidth);
+  const height = Math.max(width / (ratio || 1), 1);
+  return { width, height };
+}
 
 function getExtraPaperFeed(paperWidthMM) {
   return paperWidthMM <= 58 ? PAPER_FEED_SPACING.SMALL : PAPER_FEED_SPACING.STANDARD;
@@ -532,24 +547,32 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
         if (ext === ".webp") mimeType = "image/webp";
         
         const logoDataUrl = `data:${mimeType};base64,${base64}`;
-        
-        // Logo dimensions (max width 40mm for 80mm paper, centered)
-        const logoWidth = 40; // mm
-        const logoHeight = Math.min(logoWidth * 0.6, 20); // Maintain aspect ratio, max height 20mm
-        
-        logger.info("Adding logo to PDF at position:", yPos, "size:", logoWidth, "x", logoHeight);
-        
+        const { width: logoWidth, height: logoHeight } = resolveLogoDimensions(
+          logoBuffer,
+          pageWidth,
+          margin,
+        );
+
+        logger.info(
+          "Adding logo to PDF at position:",
+          yPos,
+          "size:",
+          logoWidth,
+          "x",
+          logoHeight,
+        );
+
         // Add logo at top, centered
         doc.addImage(
           logoDataUrl,
-          "PNG", // jsPDF will handle conversion
+          mimeType.includes("png") ? "PNG" : "JPEG",
           (pageWidth - logoWidth) / 2, // Center horizontally
           yPos,
           logoWidth,
           logoHeight,
           undefined,
           "FAST", // Fast rendering for thermal printer
-          0 // Rotation
+          0, // Rotation
         );
         
         logger.info("Logo added successfully to receipt");
@@ -575,7 +598,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
       addCenteredText(settings.companyName, 12, true);
       if (companySubtitleText) {
-        addCenteredText(companySubtitleText, "normal");
+        addCenteredText(companySubtitleText, 12, true);
       }
       yPos += 2;
     }
@@ -1111,24 +1134,32 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
         if (ext === ".webp") mimeType = "image/webp";
         
         const logoDataUrl = `data:${mimeType};base64,${base64}`;
-        
-        // Logo dimensions (max width 40mm for 80mm paper, centered)
-        const logoWidth = 40; // mm
-        const logoHeight = Math.min(logoWidth * 0.6, 20); // Maintain aspect ratio, max height 20mm
-        
-        logger.info("Adding logo to PDF at position:", yPos, "size:", logoWidth, "x", logoHeight);
-        
+        const { width: logoWidth, height: logoHeight } = resolveLogoDimensions(
+          logoBuffer,
+          pageWidth,
+          margin,
+        );
+
+        logger.info(
+          "Adding logo to PDF at position:",
+          yPos,
+          "size:",
+          logoWidth,
+          "x",
+          logoHeight,
+        );
+
         // Add logo at top, centered
         doc.addImage(
           logoDataUrl,
-          "PNG", // jsPDF will handle conversion
+          mimeType.includes("png") ? "PNG" : "JPEG",
           (pageWidth - logoWidth) / 2, // Center horizontally
           yPos,
           logoWidth,
           logoHeight,
           undefined,
           "FAST", // Fast rendering for thermal printer
-          0 // Rotation
+          0, // Rotation
         );
         
         logger.info("Logo added successfully to receipt");
@@ -1149,7 +1180,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     if (settings.receiptSettings.showCompanyName && settings.companyName) {
       addCenteredText(settings.companyName, 12, true);
       if (companySubtitleText) {
-        addCenteredText(companySubtitleText, "normal");
+        addCenteredText(companySubtitleText, 12, true);
       }
       yPos += 2;
     }

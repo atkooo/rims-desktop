@@ -1309,8 +1309,10 @@ export default {
 }
 
 .logo-preview-image {
-  max-width: 150px;
-  max-height: 100px;
+  max-width: 120px;
+  max-height: 90px;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border: 1px solid #d1d5db;
   border-radius: 4px;

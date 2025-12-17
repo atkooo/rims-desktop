@@ -646,11 +646,12 @@ function setupItemHandlers() {
       try {
         JsBarcode(canvas, item.code, {
           format: "CODE128",
-          width: 2,
-          height: 60,
+          width: 2.4,
+          height: 70,
           displayValue: true,
-          fontSize: 14,
-          margin: 10,
+          fontSize: 16,
+          fontOptions: "bold",
+          margin: 8,
         });
       } catch (barcodeError) {
         logger.error("Error generating barcode:", barcodeError);
@@ -684,18 +685,17 @@ function setupItemHandlers() {
       doc.rect(5, 5, labelWidth - 10, labelHeight - 10, "S");
 
       // Title - Item Name (forced to single line)
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 30, 30);
       const nameY = 20;
+      const nameFontSize = 13;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(nameFontSize);
+      doc.setTextColor(30, 30, 30);
       const maxNameWidth = labelWidth - 20;
 
       // Force single line - truncate if too long
       let itemNameText = item.name || "N/A";
       const itemNameLines = doc.splitTextToSize(itemNameText, maxNameWidth);
       if (itemNameLines.length > 1) {
-        // If name is too long, truncate to fit one line
-        // Use getTextWidth to find exact truncation point
         let truncated = itemNameText;
         const ellipsis = "...";
         while (
@@ -706,30 +706,33 @@ function setupItemHandlers() {
         }
         itemNameText = truncated + ellipsis;
       }
-      const nameHeight = 13; // Single line height
+      const nameHeight = 16;
       doc.text(itemNameText, labelWidth / 2, nameY, {
         align: "center",
         maxWidth: maxNameWidth,
       });
 
       // Price - positioned after item name with proper spacing
-      const priceY = nameY + nameHeight + 6; // Spacing after name
-      doc.setFontSize(9);
+      const priceY = nameY + nameHeight + 8;
+      const priceFontSize = 11;
       doc.setFont("helvetica", "bold");
+      doc.setFontSize(priceFontSize);
       doc.setTextColor(0, 100, 0);
-      // Use sale_price if available, otherwise rental_price_per_day, or 0
       const displayPrice = item.sale_price || item.rental_price_per_day || 0;
       const priceText = formatCurrency(displayPrice);
-      const priceHeight = 10; // Height for price line
-      doc.text(priceText, labelWidth / 2, priceY, { align: "center" });
+      const priceHeight = 12;
+      doc.text(priceText, labelWidth / 2, priceY, {
+        align: "center",
+      });
 
       const sizeLabel = (item.size_name || item.size_code || "").trim();
       const hasSizeLabel = sizeLabel.length > 0;
-      const sizeLineHeight = hasSizeLabel ? 9 : 0;
-      const sizeSpacing = hasSizeLabel ? 4 : 0;
+      const sizeFontSize = 10;
+      const sizeLineHeight = hasSizeLabel ? sizeFontSize + 4 : 0;
+      const sizeSpacing = hasSizeLabel ? 7 : 0;
       if (hasSizeLabel) {
-        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
+        doc.setFontSize(sizeFontSize);
         doc.setTextColor(75, 85, 99);
         doc.text(
           `Ukuran: ${sizeLabel}`,
@@ -747,7 +750,7 @@ function setupItemHandlers() {
       const borderBottom = labelHeight - 5;
       const borderLeft = 5;
       const borderRight = labelWidth - 5;
-      const barcodeSpacing = 6; // Spacing after price/size
+      const barcodeSpacing = 14; // Spacing after price/size
       const marginBottom = 5; // Margin from bottom border
 
       // Calculate available space for barcode
@@ -756,7 +759,7 @@ function setupItemHandlers() {
       const availableHeight = borderBottom - codeY - marginBottom;
 
       // Fixed barcode size (consistent) but ensure it fits within border
-      let barcodeHeight = 40; // Preferred height
+      let barcodeHeight = 48; // Preferred height
       let barcodeWidth = (barcodeHeight / 50) * 150; // Maintain aspect ratio
 
       // Check if barcode fits vertically
@@ -960,12 +963,12 @@ function setupItemHandlers() {
           "S"
         );
 
-        const topPadding = Math.max(effectiveMargin + 2, 5) + 8;
+        const topPadding = Math.max(effectiveMargin + 2, 5) + 6;
         let cursorY = labelTop + topPadding;
         const maxNameLines = 2;
         const nameText = (item.name || "N/A").trim();
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         doc.setTextColor(20, 20, 20);
 
         const nameLines = doc
@@ -973,37 +976,38 @@ function setupItemHandlers() {
           .slice(0, maxNameLines);
         for (const line of nameLines) {
           doc.text(line, centerX, cursorY, { align: "center" });
-          cursorY += 3.5;
+          cursorY += 4.5;
         }
 
         // Price
         const displayPrice = item.sale_price || item.rental_price_per_day || 0;
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
+        doc.setFontSize(12);
         doc.setTextColor(0, 100, 0);
         doc.text(formatCurrency(displayPrice), centerX, cursorY, {
           align: "center",
         });
-        cursorY += 3.5;
+        cursorY += 5;
 
         // Size info
         const sizeLabel = (item.size_name || item.size_code || "").trim();
         if (sizeLabel) {
           doc.setFont("helvetica", "normal");
-          doc.setFontSize(7);
+          doc.setFontSize(10);
           doc.setTextColor(75, 75, 75);
           doc.text(`Ukuran: ${sizeLabel}`, centerX, cursorY, {
             align: "center",
           });
-          cursorY += 1.2;
+          cursorY += 6;
         }
 
         // Barcode area
-        const barcodeHeight = 16;
+        const barcodeSpacing = 5;
+        const barcodeHeight = 20;
         const barcodeBottomLimit =
           labelBottom - effectiveMargin - barcodeHeight - 0.5;
         const barcodeTop = Math.min(
-          Math.max(cursorY + 1, labelTop + topPadding + 1),
+          Math.max(cursorY + barcodeSpacing, labelTop + topPadding + 1),
           barcodeBottomLimit
         );
         const barcodeWidth = contentWidth;
@@ -1011,10 +1015,11 @@ function setupItemHandlers() {
         try {
           JsBarcode(barcodeCanvas, item.code, {
             format: "CODE128",
-            width: 2,
-            height: 60,
+            width: 2.3,
+            height: 70,
             displayValue: true,
-            fontSize: 12,
+            fontSize: 18,
+            fontOptions: "bold",
             margin: 2,
           });
         } catch (barcodeError) {
