@@ -13,7 +13,7 @@
       <div class="preview-header">
         <div>
           <p class="info-text">
-            <strong>{{ items.length }}</strong> label barcode akan dicetak. Pastikan
+            <strong>{{ totalLabelCount }}</strong> label barcode akan dicetak dari <strong>{{ items.length }}</strong> item. Pastikan
             preview sesuai sebelum mencetak.
           </p>
           <p class="subtext">
@@ -29,6 +29,50 @@
         >
           Refresh Preview
         </AppButton>
+      </div>
+
+      <div class="items-quantity-section">
+        <h4 class="section-title">Atur Jumlah Label per Item</h4>
+        <div class="items-quantity-table">
+          <div class="table-header">
+            <div class="col-item">Item</div>
+            <div class="col-stock">Stok</div>
+            <div class="col-quantity">Jumlah Label</div>
+          </div>
+          <div class="table-body">
+            <div
+              v-for="item in itemsWithQuantity"
+              :key="item.id"
+              class="table-row"
+            >
+              <div class="col-item">
+                <div class="item-info">
+                  <span class="item-code">{{ item.code }}</span>
+                  <span class="item-name">{{ item.name }}</span>
+                </div>
+              </div>
+              <div class="col-stock">
+                <span class="stock-badge">{{ item.stock_quantity || 0 }}</span>
+              </div>
+              <div class="col-quantity">
+                <input
+                  type="number"
+                  v-model.number="item.labelQuantity"
+                  min="1"
+                  class="quantity-input"
+                  @input="updateItemQuantity(item.id, $event.target.value)"
+                />
+                <button
+                  class="btn-set-stock"
+                  @click="setQuantityToStock(item)"
+                  title="Set sesuai stok"
+                >
+                  = Stok
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="preview-area">
@@ -142,6 +186,7 @@ export default {
     const showPrinterDialog = ref(false);
     const defaultPrinterName = ref("");
     const useReceiptPrinterForLabels = ref(true);
+    const itemsWithQuantity = ref([]);
 
     const cleanupPreview = () => {
       if (previewBlobUrl.value) {
@@ -162,6 +207,32 @@ export default {
       }
     };
 
+    const initializeItemsWithQuantity = () => {
+      itemsWithQuantity.value = props.items.map((item) => ({
+        ...item,
+        labelQuantity: Math.max(1, item.stock_quantity || 1),
+      }));
+    };
+
+    const updateItemQuantity = (itemId, value) => {
+      const item = itemsWithQuantity.value.find((i) => i.id === itemId);
+      if (item) {
+        const numValue = parseInt(value) || 1;
+        item.labelQuantity = Math.max(1, numValue);
+      }
+    };
+
+    const setQuantityToStock = (item) => {
+      item.labelQuantity = Math.max(1, item.stock_quantity || 1);
+    };
+
+    const totalLabelCount = computed(() => {
+      return itemsWithQuantity.value.reduce(
+        (sum, item) => sum + (item.labelQuantity || 1),
+        0
+      );
+    });
+
     const generatePreview = async () => {
       if (!props.items || props.items.length === 0) {
         previewError.value = "Tidak ada item yang dipilih";
@@ -173,9 +244,13 @@ export default {
       cleanupPreview();
 
       try {
-        const itemIds = props.items.map((item) => item.id);
+        const itemsData = itemsWithQuantity.value.map((item) => ({
+          productType: item.productType || item.product_type || 'item',
+          id: item.id,
+          quantity: item.labelQuantity || 1,
+        }));
         const result = await ipcRenderer.invoke("items:previewBulkLabels", {
-          itemIds,
+          items: itemsData,
         });
 
         if (result.success && result.pdfBase64) {
@@ -220,9 +295,13 @@ export default {
     const handlePrintToPrinter = async (printer) => {
       printing.value = true;
       try {
-        const itemIds = props.items.map((item) => item.id);
+        const itemsData = itemsWithQuantity.value.map((item) => ({
+          productType: item.productType || item.product_type || 'item',
+          id: item.id,
+          quantity: item.labelQuantity || 1,
+        }));
         await ipcRenderer.invoke("items:printBulkLabels", {
-          itemIds,
+          items: itemsData,
           printerName: printer?.name || null,
           silent: false,
         });
@@ -241,9 +320,13 @@ export default {
 
       generating.value = true;
       try {
-        const itemIds = props.items.map((item) => item.id);
+        const itemsData = itemsWithQuantity.value.map((item) => ({
+          productType: item.productType || item.product_type || 'item',
+          id: item.id,
+          quantity: item.labelQuantity || 1,
+        }));
         const result = await ipcRenderer.invoke("items:downloadBulkLabels", {
-          itemIds,
+          items: itemsData,
         });
 
         if (result.success) {
@@ -270,6 +353,7 @@ export default {
 
     watch(visible, (newVal) => {
       if (newVal) {
+        initializeItemsWithQuantity();
         loadSettings();
         generatePreview();
       } else {
@@ -279,6 +363,17 @@ export default {
 
     watch(
       () => props.items,
+      () => {
+        if (visible.value) {
+          initializeItemsWithQuantity();
+          generatePreview();
+        }
+      },
+      { deep: true },
+    );
+
+    watch(
+      () => itemsWithQuantity.value,
       () => {
         if (visible.value) {
           generatePreview();
@@ -300,6 +395,10 @@ export default {
       previewUrl,
       defaultPrinterName,
       showPrinterDialog,
+      itemsWithQuantity,
+      totalLabelCount,
+      updateItemQuantity,
+      setQuantityToStock,
       handlePrint,
       handlePrintToPrinter,
       handleDownload,
@@ -413,6 +512,140 @@ export default {
   min-width: 150px;
 }
 
+.items-quantity-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.section-title {
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.items-quantity-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 80px 180px;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f3f4f6;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: white;
+  border-radius: 0 0 6px 6px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 180px;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.col-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item-code {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #3b82f6;
+}
+
+.item-name {
+  font-size: 0.875rem;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.col-stock {
+  text-align: center;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: #e0e7ff;
+  color: #4338ca;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.col-quantity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-input {
+  width: 70px;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.quantity-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-set-stock {
+  padding: 0.375rem 0.75rem;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-set-stock:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
 @media (max-width: 768px) {
   .preview-header {
     flex-direction: column;
@@ -426,6 +659,17 @@ export default {
   .printer-note {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .col-stock,
+  .col-quantity {
+    justify-content: flex-start;
   }
 }
 </style>

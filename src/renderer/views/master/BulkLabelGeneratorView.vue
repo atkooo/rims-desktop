@@ -5,87 +5,101 @@
         <div>
           <h1>Generate Label Barcode</h1>
           <p class="subtitle">
-            Pilih item yang ingin dicetak label barcodenya. Pastikan preview
+            Pilih produk (Item, Aksesoris, atau Paket) yang ingin dicetak label barcodenya. Pastikan preview
             sebelum mencetak.
           </p>
         </div>
         <div class="header-actions">
-          <AppButton variant="secondary" :loading="loading" @click="loadItems">
+          <AppButton variant="secondary" :loading="loading" @click="loadProducts">
             Refresh
           </AppButton>
           <AppButton
             variant="primary"
-            :disabled="selectedItems.length === 0"
+            :disabled="selectedProducts.length === 0"
             @click="showPreviewDialog = true"
           >
-            <Icon name="eye" :size="16" /> Preview ({{ selectedItems.length }})
+            <Icon name="eye" :size="16" /> Preview ({{ selectedProducts.length }})
           </AppButton>
         </div>
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Main Content Card -->
     <section class="card-section">
-      <div class="filters">
-        <select v-model="filters.category" class="filter-select">
-          <option value="">Semua Kategori</option>
-          <option
-            v-for="category in categories"
-            :key="category.id"
-            :value="category.id"
-          >
-            {{ category.name }}
-          </option>
-        </select>
+      <!-- Product Type Tabs -->
+      <div class="product-type-tabs">
+        <button
+          v-for="tab in productTabs"
+          :key="tab.value"
+          :class="['tab-button', { active: activeTab === tab.value }]"
+          @click="activeTab = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
 
-        <select v-model="filters.size" class="filter-select">
-          <option value="">Semua Ukuran</option>
-          <option v-for="size in sizes" :key="size.id" :value="size.id">
-            {{ size.code || size.name }}
-          </option>
-        </select>
+      <!-- Filters -->
+      <div class="filters-section">
+        <div class="filters">
+          <select v-if="activeTab === 'item'" v-model="filters.category" class="filter-select">
+            <option value="">Semua Kategori</option>
+            <option
+              v-for="category in categories"
+              :key="category.id"
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
+          </select>
 
-        <select v-model="filters.type" class="filter-select">
-          <option value="">Semua Tipe</option>
-          <option v-for="type in ITEM_TYPE" :key="type" :value="type">
-            {{ type }}
-          </option>
-        </select>
+          <select v-if="activeTab === 'item'" v-model="filters.size" class="filter-select">
+            <option value="">Semua Ukuran</option>
+            <option v-for="size in sizes" :key="size.id" :value="size.id">
+              {{ size.code || size.name }}
+            </option>
+          </select>
 
-        <select v-model="filters.status" class="filter-select">
-          <option value="">Semua Status</option>
-          <option value="AVAILABLE">Available</option>
-          <option value="OUT_OF_STOCK">Out of Stock</option>
-          <option value="RENTED">Rented</option>
-          <option value="MAINTENANCE">Maintenance</option>
-        </select>
+          <select v-if="activeTab === 'item'" v-model="filters.type" class="filter-select">
+            <option value="">Semua Tipe</option>
+            <option v-for="type in ITEM_TYPE" :key="type" :value="type">
+              {{ type }}
+            </option>
+          </select>
 
-        <div class="filter-actions">
-          <AppButton variant="secondary" size="small" @click="selectAll">
-            Pilih Semua
-          </AppButton>
-          <AppButton variant="secondary" size="small" @click="deselectAll">
-            Batal Pilih
-          </AppButton>
+          <select v-if="activeTab === 'item'" v-model="filters.status" class="filter-select">
+            <option value="">Semua Status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="OUT_OF_STOCK">Out of Stock</option>
+            <option value="RENTED">Rented</option>
+            <option value="MAINTENANCE">Maintenance</option>
+          </select>
+
+          <div class="filter-actions">
+            <AppButton variant="secondary" size="small" @click="selectAll">
+              Pilih Semua
+            </AppButton>
+            <AppButton variant="secondary" size="small" @click="deselectAll">
+              Batal Pilih
+            </AppButton>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- Items Table with Checkboxes -->
-    <section class="card-section">
-      <div v-if="loading && items.length === 0" class="loading-container">
-        <p>Memuat data...</p>
-      </div>
+      <!-- Products Table with Checkboxes -->
+      <div class="table-section">
+        <div v-if="loading && products.length === 0" class="loading-container">
+          <p>Memuat data...</p>
+        </div>
 
-      <div v-else-if="error" class="error-banner">{{ error }}</div>
+        <div v-else-if="error" class="error-banner">{{ error }}</div>
 
-      <div v-else>
-        <AppTable
+        <div v-else>
+          <AppTable
           :columns="tableColumns"
-          :rows="filteredItems"
+          :rows="filteredProducts"
           :loading="loading"
           :show-search="true"
-          :searchable-keys="['code', 'name', 'category_name', 'size_name']"
+          :searchable-keys="activeTab === 'item' ? ['code', 'name', 'category_name', 'size_name'] : ['code', 'name']"
           :default-page-size="10"
           :page-sizes="[5, 10, 20, 50, 100]"
           row-key="id"
@@ -104,38 +118,47 @@
           <template #cell-name="{ row }">
             <span class="name-text">{{ row.name }}</span>
           </template>
-          <template #cell-category_name="{ row }">
+          <template v-if="activeTab === 'item'" #cell-category_name="{ row }">
             {{ row.category_name || "-" }}
           </template>
-          <template #cell-size_name="{ row }">
+          <template v-if="activeTab === 'item'" #cell-size_name="{ row }">
             {{ row.size_name || "-" }}
           </template>
-          <template #cell-type="{ row }">
+          <template v-if="activeTab === 'item'" #cell-type="{ row }">
             <span class="type-badge" :class="getTypeClass(row.type)">
               {{ row.type }}
             </span>
           </template>
-          <template #cell-status="{ row }">
+          <template v-if="activeTab === 'item'" #cell-status="{ row }">
             <span class="status-badge" :class="getStatusBadge(row).class">
               {{ getStatusBadge(row).label }}
             </span>
           </template>
           <template #cell-price="{ row }">
-            {{ formatCurrency(row.sale_price || row.rental_price_per_day || 0) }}
+            <span v-if="activeTab === 'item'">
+              {{ formatCurrency(row.sale_price || row.rental_price_per_day || 0) }}
+            </span>
+            <span v-else-if="activeTab === 'accessory'">
+              {{ formatCurrency(row.sale_price || row.rental_price_per_day || 0) }}
+            </span>
+            <span v-else-if="activeTab === 'bundle'">
+              {{ formatCurrency(row.price || row.rental_price_per_day || 0) }}
+            </span>
           </template>
-        </AppTable>
+          </AppTable>
 
-        <!-- Select All Controls -->
-        <div class="table-controls">
-          <div class="select-all-controls">
-            <input
-              type="checkbox"
-              :checked="allSelected"
-              :indeterminate="someSelected"
-              @change="toggleSelectAll"
-              class="select-all-checkbox"
-            />
-            <span class="select-all-label">Pilih Semua ({{ selectedItems.length }} dipilih)</span>
+          <!-- Select All Controls -->
+          <div class="table-controls">
+            <div class="select-all-controls">
+              <input
+                type="checkbox"
+                :checked="allSelected"
+                :indeterminate="someSelected"
+                @change="toggleSelectAll"
+                class="select-all-checkbox"
+              />
+              <span class="select-all-label">Pilih Semua ({{ selectedProducts.length }} dipilih)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -144,7 +167,7 @@
     <!-- Preview Dialog -->
     <LabelPreviewDialog
       v-model="showPreviewDialog"
-      :items="selectedItemsData"
+      :items="selectedProductsData"
     />
   </div>
 </template>
@@ -171,11 +194,18 @@ export default {
     const { getStatusBadge } = useItemStatus();
     const loading = ref(false);
     const error = ref("");
-    const items = ref([]);
+    const products = ref([]);
     const categories = ref([]);
     const sizes = ref([]);
-    const selectedItemIds = ref(new Set());
+    const selectedProductIds = ref(new Set());
     const showPreviewDialog = ref(false);
+    const activeTab = ref("item");
+
+    const productTabs = [
+      { label: "Item", value: "item" },
+      { label: "Aksesoris", value: "accessory" },
+      { label: "Paket/Bundle", value: "bundle" },
+    ];
 
     const filters = ref({
       category: "",
@@ -184,77 +214,93 @@ export default {
       status: "",
     });
 
-    // Load items
-    const loadItems = async () => {
+    // Load products based on active tab
+    const loadProducts = async () => {
       loading.value = true;
       error.value = "";
       try {
-        await itemStore.fetchItems();
-        items.value = itemStore.items || [];
+        if (activeTab.value === "item") {
+          await itemStore.fetchItems();
+          products.value = itemStore.items || [];
 
-        // Load categories and sizes
-        const [categoriesData, sizesData] = await Promise.all([
-          ipcRenderer.invoke("categories:getAll"),
-          fetchItemSizes(),
-        ]);
-        categories.value = categoriesData || [];
-        sizes.value = sizesData || [];
+          // Load categories and sizes
+          const [categoriesData, sizesData] = await Promise.all([
+            ipcRenderer.invoke("categories:getAll"),
+            fetchItemSizes(),
+          ]);
+          categories.value = categoriesData || [];
+          sizes.value = sizesData || [];
+        } else if (activeTab.value === "accessory") {
+          const accessories = await ipcRenderer.invoke("master:getAccessories");
+          products.value = accessories || [];
+        } else if (activeTab.value === "bundle") {
+          const bundles = await ipcRenderer.invoke("master:getBundles");
+          products.value = bundles || [];
+        }
       } catch (err) {
-        error.value = err.message || "Gagal memuat data item.";
-        items.value = [];
+        error.value = err.message || "Gagal memuat data produk.";
+        products.value = [];
       } finally {
         loading.value = false;
       }
     };
 
-    // Filtered items
-    const filteredItems = computed(() => {
-      let filtered = items.value;
+    // Watch for tab changes
+    watch(activeTab, () => {
+      selectedProductIds.value.clear();
+      loadProducts();
+    });
 
-      if (filters.value.category) {
-        filtered = filtered.filter(
-          (item) => item.category_id === parseInt(filters.value.category),
-        );
-      }
+    // Filtered products
+    const filteredProducts = computed(() => {
+      let filtered = products.value;
 
-      if (filters.value.size) {
-        filtered = filtered.filter(
-          (item) => item.size_id === parseInt(filters.value.size),
-        );
-      }
+      if (activeTab.value === "item") {
+        if (filters.value.category) {
+          filtered = filtered.filter(
+            (item) => item.category_id === parseInt(filters.value.category),
+          );
+        }
 
-      if (filters.value.type) {
-        filtered = filtered.filter((item) => item.type === filters.value.type);
-      }
+        if (filters.value.size) {
+          filtered = filtered.filter(
+            (item) => item.size_id === parseInt(filters.value.size),
+          );
+        }
 
-      if (filters.value.status) {
-        filtered = filtered.filter(
-          (item) => item.status === filters.value.status,
-        );
+        if (filters.value.type) {
+          filtered = filtered.filter((item) => item.type === filters.value.type);
+        }
+
+        if (filters.value.status) {
+          filtered = filtered.filter(
+            (item) => item.status === filters.value.status,
+          );
+        }
       }
 
       return filtered;
     });
 
     // Selection helpers
-    const isSelected = (itemId) => selectedItemIds.value.has(itemId);
+    const isSelected = (productId) => selectedProductIds.value.has(productId);
 
-    const toggleSelect = (itemId) => {
-      if (selectedItemIds.value.has(itemId)) {
-        selectedItemIds.value.delete(itemId);
+    const toggleSelect = (productId) => {
+      if (selectedProductIds.value.has(productId)) {
+        selectedProductIds.value.delete(productId);
       } else {
-        selectedItemIds.value.add(itemId);
+        selectedProductIds.value.add(productId);
       }
     };
 
     const selectAll = () => {
-      filteredItems.value.forEach((item) => {
-        selectedItemIds.value.add(item.id);
+      filteredProducts.value.forEach((product) => {
+        selectedProductIds.value.add(product.id);
       });
     };
 
     const deselectAll = () => {
-      selectedItemIds.value.clear();
+      selectedProductIds.value.clear();
     };
 
     const toggleSelectAll = (event) => {
@@ -266,27 +312,30 @@ export default {
     };
 
     const allSelected = computed(() => {
-      if (filteredItems.value.length === 0) return false;
-      return filteredItems.value.every((item) =>
-        selectedItemIds.value.has(item.id),
+      if (filteredProducts.value.length === 0) return false;
+      return filteredProducts.value.every((product) =>
+        selectedProductIds.value.has(product.id),
       );
     });
 
     const someSelected = computed(() => {
-      const selectedCount = filteredItems.value.filter((item) =>
-        selectedItemIds.value.has(item.id),
+      const selectedCount = filteredProducts.value.filter((product) =>
+        selectedProductIds.value.has(product.id),
       ).length;
-      return selectedCount > 0 && selectedCount < filteredItems.value.length;
+      return selectedCount > 0 && selectedCount < filteredProducts.value.length;
     });
 
-    const selectedItems = computed(() => {
-      return Array.from(selectedItemIds.value);
+    const selectedProducts = computed(() => {
+      return Array.from(selectedProductIds.value);
     });
 
-    const selectedItemsData = computed(() => {
-      return items.value.filter((item) =>
-        selectedItemIds.value.has(item.id),
-      );
+    const selectedProductsData = computed(() => {
+      return products.value
+        .filter((product) => selectedProductIds.value.has(product.id))
+        .map((product) => ({
+          ...product,
+          productType: activeTab.value,
+        }));
     });
 
     // Style helpers
@@ -311,52 +360,62 @@ export default {
     };
 
     // Table columns configuration
-    const tableColumns = computed(() => [
-      {
-        key: "checkbox",
-        label: "",
-        sortable: false,
-        align: "center",
-      },
-      {
-        key: "code",
-        label: "Kode",
-        sortable: true,
-      },
-      {
-        key: "name",
-        label: "Nama Item",
-        sortable: true,
-      },
-      {
-        key: "category_name",
-        label: "Kategori",
-        sortable: true,
-      },
-      {
-        key: "size_name",
-        label: "Ukuran",
-        sortable: true,
-      },
-      {
-        key: "type",
-        label: "Tipe",
-        sortable: true,
-      },
-      {
-        key: "status",
-        label: "Status",
-        sortable: true,
-      },
-      {
+    const tableColumns = computed(() => {
+      const baseColumns = [
+        {
+          key: "checkbox",
+          label: "",
+          sortable: false,
+          align: "center",
+        },
+        {
+          key: "code",
+          label: "Kode",
+          sortable: true,
+        },
+        {
+          key: "name",
+          label: activeTab.value === "item" ? "Nama Item" : activeTab.value === "accessory" ? "Nama Aksesoris" : "Nama Paket",
+          sortable: true,
+        },
+      ];
+
+      if (activeTab.value === "item") {
+        baseColumns.push(
+          {
+            key: "category_name",
+            label: "Kategori",
+            sortable: true,
+          },
+          {
+            key: "size_name",
+            label: "Ukuran",
+            sortable: true,
+          },
+          {
+            key: "type",
+            label: "Tipe",
+            sortable: true,
+          },
+          {
+            key: "status",
+            label: "Status",
+            sortable: true,
+          }
+        );
+      }
+
+      baseColumns.push({
         key: "price",
         label: "Harga",
         sortable: true,
         align: "right",
-      },
-    ]);
+      });
 
-    // Watch for dialog close to deselect items
+      return baseColumns;
+    });
+
+    // Watch for dialog close to deselect products
     watch(showPreviewDialog, (newVal) => {
       if (!newVal) {
         deselectAll();
@@ -364,21 +423,23 @@ export default {
     });
 
     onMounted(() => {
-      loadItems();
+      loadProducts();
     });
 
     return {
       loading,
       error,
-      items,
+      products,
       categories,
       sizes,
       filters,
-      filteredItems,
-      selectedItemIds,
-      selectedItems,
-      selectedItemsData,
+      filteredProducts,
+      selectedProductIds,
+      selectedProducts,
+      selectedProductsData,
       showPreviewDialog,
+      activeTab,
+      productTabs,
       ITEM_TYPE,
       formatCurrency,
       isSelected,
@@ -392,7 +453,7 @@ export default {
       getStatusClass,
       getStatusBadge,
       tableColumns,
-      loadItems,
+      loadProducts,
     };
   },
 };
@@ -423,11 +484,55 @@ export default {
   margin-bottom: 1.5rem;
 }
 
+.product-type-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.tab-button:hover {
+  color: #111827;
+  background: #f9fafb;
+}
+
+.tab-button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+.filters-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .filters {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.table-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Using global utility class for form-select */

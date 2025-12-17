@@ -70,7 +70,7 @@
                   <td class="subtotal-cell">{{ formatCurrency(line.subtotal) }}</td>
                   <td class="action-cell">
     <button class="remove-btn" @click="removeLine(line)" title="Hapus">
-      <Icon name="trash-2" :size="16" />
+      <Icon name="x-circle" :size="16" />
     </button>
                   </td>
                 </tr>
@@ -204,6 +204,7 @@ import { useBarcodeScanner } from "@/composables/useBarcodeScanner";
 import { useItemStore } from "@/store/items";
 import { toDateInput } from "@/utils/dateUtils";
 import { useCashierSale } from "@/composables/cashier/useCashierSale";
+import { useItemType } from "@/composables/useItemType";
 
 const createDefaultForm = () => ({
   customerId: "",
@@ -233,6 +234,7 @@ export default {
     const transactionStore = useTransactionStore();
     const itemStore = useItemStore();
     const { showSuccess, showError } = useNotification();
+    const { canBeSold } = useItemType();
     const form = ref(createDefaultForm());
     const customers = ref([]);
     const loading = ref(false);
@@ -447,6 +449,18 @@ export default {
 
         if (item) {
           // Item ditemukan
+          // Validasi: cek apakah item bisa dijual (type SALE atau BOTH)
+          if (!canBeSold(item.type)) {
+            showError(`Item "${item.name}" tidak tersedia untuk dijual. Tipe item: ${item.type}`);
+            return;
+          }
+          
+          // Validasi: cek apakah item tersedia untuk dijual
+          if (!item.is_available_for_sale) {
+            showError(`Item "${item.name}" tidak tersedia untuk dijual`);
+            return;
+          }
+          
           if (item.status !== "AVAILABLE") {
             showError(`Item "${item.name}" tidak tersedia untuk dijual`);
             return;

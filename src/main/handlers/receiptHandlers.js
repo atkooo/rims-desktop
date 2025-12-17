@@ -5,7 +5,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const { printPDF, openPDF } = require("../helpers/printUtils");
 const { loadSettings } = require("../helpers/settingsUtils");
-const { formatCurrency, formatDateTime } = require("../helpers/formatUtils");
+const { formatCurrency, formatDateTime, formatDateShort, formatCurrentDateTime } = require("../helpers/formatUtils");
 const { getDataDir } = require("../helpers/pathUtils");
 const { Image } = require("canvas");
 
@@ -15,7 +15,7 @@ const PAPER_FEED_SPACING = {
 };
 
 const LOGO_BOTTOM_SPACING = 6;
-const MAX_LOGO_WIDTH_MM = 32;
+const MAX_LOGO_WIDTH_MM = 20;
 
 function resolveLogoDimensions(logoBuffer, pageWidth, margin) {
   const img = new Image();
@@ -64,8 +64,8 @@ function calculateReceiptHeight(
 
   // Logo height (if shown)
   if (settings.receiptSettings.showLogo && settings.logoPath) {
-    const logoWidth = 40;
-    const logoHeight = Math.min(logoWidth * 0.6, 20);
+    const logoWidth = 20;
+    const logoHeight = Math.min(logoWidth * 0.6, 12);
     yPos += logoHeight + LOGO_BOTTOM_SPACING;
   }
 
@@ -436,8 +436,8 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
     // Add extra top spacing for better appearance
     yPos += 1; // Add 1mm extra space at the top (reduced for closer logo position)
 
-    // Helper function to format date (for receipt, use formatDateTime)
-    const formatDate = formatDateTime;
+    // Helper function to format date (for receipt, use formatDateShort for DATE fields)
+    const formatDate = formatDateShort;
 
     // Helper to add centered text (backward compatible: accepts size string or numeric fontSize)
     const addCenteredText = (text, sizeOrFontSize = "medium", isBold = false) => {
@@ -627,13 +627,13 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       addLeftText(`No: ${transaction.transaction_code}`, 9);
     }
 
-    // Date
+    // Date - use created_at for full date and time, fallback to sale_date/rental_date if created_at not available
     if (settings.receiptSettings.showDate) {
-      const dateStr =
-        transactionType === "sale"
+      const dateStr = transaction.created_at || 
+        (transactionType === "sale"
           ? transaction.sale_date
-          : transaction.rental_date;
-      addLeftText(`Tgl: ${formatDate(dateStr)}`, 9);
+          : transaction.rental_date);
+      addLeftText(`Tgl: ${formatDateTime(dateStr)}`, 9);
     }
 
     // Cashier
@@ -821,7 +821,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
           const methodLabel =
             methodLabels[payment.payment_method] || payment.payment_method;
           doc.text(
-            `${formatDate(payment.payment_date)} - ${methodLabel}: ${formatCurrency(payment.amount)}`,
+            `${formatDateTime(payment.payment_date)} - ${methodLabel}: ${formatCurrency(payment.amount)}`,
             margin,
             yPos,
           );
@@ -850,7 +850,7 @@ async function generateReceipt(transactionId, transactionType, options = {}) {
       addLine();
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
-      addCenteredText(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 7);
+      addCenteredText(`Dicetak pada: ${formatCurrentDateTime()}`, 7);
       yPos += paperWidthMM <= 58 ? 2 : 3;
       addCenteredText("Terima Kasih", fontSize.medium, true);
     }
@@ -1024,7 +1024,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     yPos += 1; // Add 1mm extra space at the top (reduced for closer logo position)
 
     // Use format helpers from imports at top
-    const formatDate = formatDateTime;
+    const formatDate = formatDateShort;
 
     const addCenteredText = (text, sizeOrFontSize = "medium", isBold = false) => {
       let fontSizeValue;
@@ -1208,7 +1208,9 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
     }
 
     if (settings.receiptSettings.showDate) {
-      addLeftText(`Tgl: ${formatDate(sampleTransaction.sale_date)}`, 9);
+      // Use created_at for full date and time in sample receipt
+      const sampleDate = sampleTransaction.created_at || sampleTransaction.sale_date;
+      addLeftText(`Tgl: ${formatDateTime(sampleDate)}`, 9);
     }
 
     if (settings.receiptSettings.showCashier && sampleTransaction.user_name) {
@@ -1389,7 +1391,7 @@ async function generateSampleReceipt(receiptSettings, companySettings) {
       addLine();
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
-      addCenteredText(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 7);
+      addCenteredText(`Dicetak pada: ${formatCurrentDateTime()}`, 7);
       yPos += paperWidth <= 58 ? 2 : 3;
       addCenteredText("Terima Kasih", fontSize.medium, true);
     }

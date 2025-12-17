@@ -56,15 +56,15 @@
           </div>
           <div class="detail-item">
             <span>Tanggal Sewa</span>
-            <strong>{{ formatDate(rental.rental_date) }}</strong>
+            <strong>{{ formatDateShort(rental.rental_date) }}</strong>
           </div>
           <div class="detail-item">
             <span>Rencana Kembali</span>
-            <strong>{{ formatDate(rental.planned_return_date) }}</strong>
+            <strong>{{ formatDateShort(rental.planned_return_date) }}</strong>
           </div>
           <div class="detail-item" v-if="rental.actual_return_date">
             <span>Tanggal Kembali</span>
-            <strong>{{ formatDate(rental.actual_return_date) }}</strong>
+            <strong>{{ formatDateShort(rental.actual_return_date) }}</strong>
           </div>
           <div class="detail-item">
             <span>Kode</span>
@@ -262,7 +262,7 @@ import {
 } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
 import { getCurrentUser } from "@/services/auth";
-import { formatDate } from "@/utils/dateUtils";
+import { formatDateShort, formatDateTime } from "@/utils/dateUtils";
 import { eventBus } from "@/utils/eventBus";
 
 export default {

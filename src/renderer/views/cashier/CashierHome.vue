@@ -90,12 +90,13 @@
 import { ref, reactive, onMounted } from "vue";
 import { fetchSalesTransactions, fetchRentalTransactions, fetchPayments } from "@/services/transactions";
 import { useCurrency } from "@/composables/useCurrency";
-import { formatDate } from "@/utils/dateUtils";
+import { formatDateShort } from "@/utils/dateUtils";
 
 export default {
   name: "CashierHome",
   setup() {
     const { formatCurrency } = useCurrency();
+    const formatDate = formatDateShort;
     const loading = ref(false);
     const summary = reactive({
       salesTotal: 0,

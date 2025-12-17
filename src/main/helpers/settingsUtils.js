@@ -15,6 +15,9 @@ async function loadSettings() {
     return JSON.parse(data);
   } catch (error) {
     if (error.code === "ENOENT") {
+      // Get system timezone as default
+      const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       // Return default settings if file doesn't exist
       return {
         companyName: "",
@@ -30,6 +33,7 @@ async function loadSettings() {
       useReceiptPrinterForLabels: true,
       autoPrint: true,
       taxPercentage: 0,
+      timezone: systemTimezone, // Use system timezone as default
         sync: {
           autoSyncEnabled: false,
           autoSyncInterval: 300000, // Default: 5 minutes
@@ -55,6 +59,9 @@ async function loadSettings() {
       };
     }
     logger.warn("Could not load settings, using defaults:", error);
+      // Get system timezone as default
+      const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       return {
         companyName: "RIMS",
         companySubtitle: "",
@@ -66,6 +73,7 @@ async function loadSettings() {
       thermalPrintDensity: "normal",
       thermalAutoCut: false,
       useReceiptPrinterForLabels: true,
+      timezone: systemTimezone, // Use system timezone as default
       sync: {
         autoSyncEnabled: false,
         autoSyncInterval: 300000, // Default: 5 minutes

@@ -204,6 +204,52 @@
         </div>
       </div>
 
+      <!-- Timezone Settings Section -->
+      <div class="settings-section">
+        <header class="section-header">
+          <div class="section-icon">
+            <Icon name="calendar" :size="24" />
+          </div>
+          <div>
+            <h2>Pengaturan Zona Waktu</h2>
+            <p class="section-subtitle">
+              Atur zona waktu untuk semua tanggal dan waktu di aplikasi. Default menggunakan zona waktu sistem komputer Anda.
+            </p>
+          </div>
+        </header>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="timezone" class="form-label">
+              Zona Waktu
+              <span class="form-label-hint">(Wajib diatur sebelum login)</span>
+            </label>
+            <select
+              id="timezone"
+              v-model="settings.timezone"
+              class="form-select"
+            >
+              <option v-for="tz in commonTimezones" :key="tz.value" :value="tz.value">
+                {{ tz.label }}
+              </option>
+            </select>
+            <p class="form-hint">
+              Zona waktu saat ini: <strong>{{ currentSystemTimezone }}</strong>
+              <br />
+              Zona waktu yang dipilih akan digunakan untuk semua tanggal dan waktu di aplikasi, termasuk timestamp di database.
+            </p>
+          </div>
+        </div>
+        <div class="card-actions">
+          <AppButton
+            variant="primary"
+            :loading="loading"
+            @click="saveTimezoneSettings"
+          >
+            <Icon name="save" :size="16" /> Simpan Pengaturan Zona Waktu
+          </AppButton>
+        </div>
+      </div>
+
       <!-- Printer & Struk Section -->
       <div class="settings-section">
         <header class="section-header">
@@ -382,6 +428,7 @@ import Icon from "@/components/ui/Icon.vue";
 import { useNotification } from "@/composables/useNotification";
 import { checkSyncServiceStatus, syncAllPending } from "@/services/sync";
 import { formatDateTime } from "@/utils/dateUtils";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "SettingsPage",
@@ -428,6 +475,25 @@ export default {
     const logoPayload = ref(null);
     const logoFileInput = ref(null);
 
+    // Common timezones list
+    const commonTimezones = [
+      { value: "Asia/Jakarta", label: "WIB (Asia/Jakarta)" },
+      { value: "Asia/Makassar", label: "WITA (Asia/Makassar)" },
+      { value: "Asia/Jayapura", label: "WIT (Asia/Jayapura)" },
+      { value: "UTC", label: "UTC" },
+      { value: "America/New_York", label: "EST (America/New_York)" },
+      { value: "America/Los_Angeles", label: "PST (America/Los_Angeles)" },
+      { value: "Europe/London", label: "GMT (Europe/London)" },
+      { value: "Asia/Singapore", label: "SGT (Asia/Singapore)" },
+      { value: "Asia/Bangkok", label: "ICT (Asia/Bangkok)" },
+      { value: "Asia/Manila", label: "PHT (Asia/Manila)" },
+    ];
+
+    // Current system timezone
+    const currentSystemTimezone = computed(() => {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    });
+
     // Clear messages after 5 seconds
     const clearMessages = () => {
       setTimeout(() => {
@@ -440,6 +506,10 @@ export default {
         const savedSettings = await ipcRenderer.invoke("settings:get");
         if (savedSettings) {
           settings.value = { ...settings.value, ...savedSettings };
+          // If timezone not set, use system timezone
+          if (!settings.value.timezone) {
+            settings.value.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          }
           
           // Load existing logo if available
           if (savedSettings.logoPath) {
@@ -643,6 +713,36 @@ export default {
       } catch (error) {
         console.error("Error saving tax settings:", error);
         showError("Gagal menyimpan pengaturan pajak");
+        clearMessages();
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const saveTimezoneSettings = async () => {
+      if (!settings.value.timezone) {
+        showError("Zona waktu harus dipilih");
+        return;
+      }
+
+      loading.value = true;
+      try {
+        await ipcRenderer.invoke("settings:save", {
+          timezone: settings.value.timezone,
+        });
+        
+        // Update timezone in dateUtils
+        const { setTimezone } = await import("@/utils/dateUtils");
+        setTimezone(settings.value.timezone);
+        
+        // Emit event to notify other components
+        eventBus.emit("settings:timezoneUpdated");
+        
+        showSuccess("Pengaturan zona waktu berhasil disimpan. Perubahan akan diterapkan pada semua tanggal dan waktu.");
+        clearMessages();
+      } catch (error) {
+        console.error("Error saving timezone settings:", error);
+        showError("Gagal menyimpan pengaturan zona waktu");
         clearMessages();
       } finally {
         loading.value = false;
@@ -861,6 +961,9 @@ export default {
       deleteLogo,
       saveCompanyProfile,
       saveTaxSettings,
+      saveTimezoneSettings,
+      commonTimezones,
+      currentSystemTimezone,
       createBackup,
       restoreBackup,
       handleConfirmRestore,

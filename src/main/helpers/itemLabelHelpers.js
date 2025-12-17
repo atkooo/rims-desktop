@@ -272,7 +272,7 @@ async function generateBarcodeLabel(itemId, options = {}) {
  * @param {Object} options - Options for bulk label generation
  * @returns {Promise<Object>} Object with success, filePath, fileName, labelCount, pdfBase64, etc.
  */
-async function generateBulkLabelsPDF(itemIds, options = {}) {
+async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
   try {
     const jsPDFModule = require("jspdf");
     const jsPDF = jsPDFModule.jsPDF;
@@ -295,26 +295,127 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
       ...options,
     };
 
-    const placeholders = itemIds.map(() => "?").join(",");
-    const items = await database.query(
-      `
-      SELECT
-        i.*,
-        c.name AS category_name,
-        s.name AS size_name,
-        s.code AS size_code
-      FROM items i
-      LEFT JOIN categories c ON i.category_id = c.id
-      LEFT JOIN item_sizes s ON i.size_id = s.id
-      WHERE i.id IN (${placeholders})
-      ORDER BY i.code
-    `,
-      itemIds
-    );
-
-    if (items.length === 0) {
-      throw new Error("Tidak ada item yang ditemukan");
+    // Support multiple formats:
+    // 1. Old format: array of IDs (numbers/strings) - defaults to items
+    // 2. Format: array of {itemId, quantity} - defaults to items
+    // 3. New format: array of {productType: 'item'|'accessory'|'bundle', id: number, quantity: number}
+    let productsData = [];
+    
+    if (Array.isArray(itemIdsOrItems) && itemIdsOrItems.length > 0) {
+      if (typeof itemIdsOrItems[0] === "number" || typeof itemIdsOrItems[0] === "string") {
+        // Old format: array of IDs - default to items
+        productsData = itemIdsOrItems.map((id) => ({ productType: 'item', id, quantity: 1 }));
+      } else if (typeof itemIdsOrItems[0] === "object") {
+        if (itemIdsOrItems[0].itemId) {
+          // Format: array of {itemId, quantity} - default to items
+          productsData = itemIdsOrItems.map((item) => ({ 
+            productType: 'item', 
+            id: item.itemId, 
+            quantity: item.quantity || 1 
+          }));
+        } else if (itemIdsOrItems[0].productType && itemIdsOrItems[0].id) {
+          // New format: array of {productType, id, quantity}
+          productsData = itemIdsOrItems.map((item) => ({
+            productType: item.productType || 'item',
+            id: item.id,
+            quantity: item.quantity || 1
+          }));
+        } else {
+          throw new Error("Format data produk tidak valid");
+        }
+      } else {
+        throw new Error("Format data produk tidak valid");
+      }
+    } else {
+      throw new Error("Data produk harus berupa array yang tidak kosong");
     }
+
+    // Group by product type
+    const itemsData = productsData.filter(p => p.productType === 'item');
+    const accessoriesData = productsData.filter(p => p.productType === 'accessory');
+    const bundlesData = productsData.filter(p => p.productType === 'bundle');
+
+    let allProducts = [];
+
+    // Fetch items
+    if (itemsData.length > 0) {
+      const itemIds = itemsData.map(p => p.id);
+      const placeholders = itemIds.map(() => "?").join(",");
+      const items = await database.query(
+        `
+        SELECT
+          i.*,
+          c.name AS category_name,
+          s.name AS size_name,
+          s.code AS size_code,
+          'item' AS product_type
+        FROM items i
+        LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN item_sizes s ON i.size_id = s.id
+        WHERE i.id IN (${placeholders})
+        ORDER BY i.code
+      `,
+        itemIds
+      );
+      allProducts = allProducts.concat(items);
+    }
+
+    // Fetch accessories
+    if (accessoriesData.length > 0) {
+      const accessoryIds = accessoriesData.map(p => p.id);
+      const placeholders = accessoryIds.map(() => "?").join(",");
+      const accessories = await database.query(
+        `
+        SELECT
+          a.*,
+          NULL AS category_name,
+          NULL AS size_name,
+          NULL AS size_code,
+          'accessory' AS product_type
+        FROM accessories a
+        WHERE a.id IN (${placeholders})
+        ORDER BY a.code
+      `,
+        accessoryIds
+      );
+      allProducts = allProducts.concat(accessories);
+    }
+
+    // Fetch bundles
+    if (bundlesData.length > 0) {
+      const bundleIds = bundlesData.map(p => p.id);
+      const placeholders = bundleIds.map(() => "?").join(",");
+      const bundles = await database.query(
+        `
+        SELECT
+          b.*,
+          NULL AS category_name,
+          NULL AS size_name,
+          NULL AS size_code,
+          'bundle' AS product_type
+        FROM bundles b
+        WHERE b.id IN (${placeholders})
+        ORDER BY b.code
+      `,
+        bundleIds
+      );
+      allProducts = allProducts.concat(bundles);
+    }
+
+    if (allProducts.length === 0) {
+      throw new Error("Tidak ada produk yang ditemukan");
+    }
+
+    // Map quantities to products
+    const itemsWithQuantity = allProducts.map((product) => {
+      const productData = productsData.find((p) => 
+        p.productType === product.product_type && p.id === product.id
+      );
+      return {
+        ...product,
+        labelQuantity: productData ? Math.max(1, productData.quantity || 1) : 1,
+      };
+    });
 
     const {
       paperWidth,
@@ -325,10 +426,16 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
       previewPadding,
     } = resolvedOptions;
 
+    // Calculate total labels count
+    const totalLabels = itemsWithQuantity.reduce(
+      (sum, item) => sum + item.labelQuantity,
+      0
+    );
+
     const totalHeight =
       margin * 2 +
-      items.length * labelHeight +
-      Math.max(0, items.length - 1) * spacing +
+      totalLabels * labelHeight +
+      Math.max(0, totalLabels - 1) * spacing +
       2 +
       previewPadding;
 
@@ -344,11 +451,15 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
     // Draw labels vertically to mimic a thermal roll
     let currentY = margin;
 
-    for (const item of items) {
+    for (const item of itemsWithQuantity) {
+      // Generate multiple labels for this item based on quantity
+      const labelCount = item.labelQuantity || 1;
+      
+      for (let labelIndex = 0; labelIndex < labelCount; labelIndex++) {
       const labelTop = currentY;
       const labelBottom = labelTop + labelHeight;
       const effectiveMargin =
-        items.length === 1 ? Math.min(margin, 2) : margin;
+        totalLabels === 1 ? Math.min(margin, 2) : margin;
       const contentWidth = paperWidth - effectiveMargin * 2;
       const centerX = paperWidth / 2;
 
@@ -381,8 +492,15 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
         cursorY += 4.5;
       }
 
-      // Price
-      const displayPrice = item.sale_price || item.rental_price_per_day || 0;
+      // Price - handle different product types
+      let displayPrice = 0;
+      if (item.product_type === 'item') {
+        displayPrice = item.sale_price || item.rental_price_per_day || 0;
+      } else if (item.product_type === 'accessory') {
+        displayPrice = item.sale_price || item.rental_price_per_day || 0;
+      } else if (item.product_type === 'bundle') {
+        displayPrice = item.price || item.rental_price_per_day || 0;
+      }
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       doc.setTextColor(0, 100, 0);
@@ -445,7 +563,8 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
         barcodeHeight
       );
 
-      currentY += labelHeight + spacing;
+        currentY += labelHeight + spacing;
+      }
     }
 
     const pdfBase64 = doc.output("datauristring");
@@ -462,11 +581,11 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
       filePath = path.join(labelsDir, fileName);
       await fs.writeFile(filePath, pdfBuffer);
       logger.info(
-        `Generated bulk labels PDF with ${items.length} labels: ${filePath}`
+        `Generated bulk labels PDF with ${totalLabels} labels from ${allProducts.length} products: ${filePath}`
       );
     } else {
       logger.info(
-        `Generated bulk labels preview with ${items.length} labels`
+        `Generated bulk labels preview with ${totalLabels} labels from ${allProducts.length} products`
       );
     }
 
@@ -474,7 +593,7 @@ async function generateBulkLabelsPDF(itemIds, options = {}) {
       success: true,
       filePath,
       fileName,
-      labelCount: items.length,
+      labelCount: totalLabels,
       pdfBase64,
       paperWidth,
       totalHeight: Math.max(totalHeight, labelHeight + margin * 2 + 2),

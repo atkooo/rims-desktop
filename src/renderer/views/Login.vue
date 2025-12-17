@@ -141,7 +141,7 @@
                 />
               </circle>
             </svg>
-            Memproses...
+            Memproses & Memuat Data...
           </span>
           <span v-else class="button-content">
             Masuk
@@ -189,6 +189,9 @@ import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { login, getCurrentUser } from "@/services/auth.js";
 import AppNotification from "@/components/ui/AppNotification.vue";
+import { useItemStore } from "@/store/items";
+import { useTransactionStore } from "@/store/transactions";
+import { useBundleStore } from "@/store/bundles";
 
 export default {
   name: "LoginPage",
@@ -198,6 +201,9 @@ export default {
   setup() {
     const router = useRouter();
     const route = useRoute();
+    const itemStore = useItemStore();
+    const transactionStore = useTransactionStore();
+    const bundleStore = useBundleStore();
 
     const username = ref("");
     const password = ref("");
@@ -222,6 +228,21 @@ export default {
       return candidate;
     };
 
+    // Refresh all data stores
+    const refreshAllData = async () => {
+      try {
+        // Refresh all stores in parallel for better performance
+        await Promise.all([
+          itemStore.fetchItems(),
+          transactionStore.fetchTransactions(),
+          bundleStore.fetchBundles(true), // Force refresh bundles
+        ]);
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+        // Don't throw error, just log it - login should still succeed
+      }
+    };
+
     const handleSubmit = async () => {
       if (loading.value) return;
       loading.value = true;
@@ -229,6 +250,9 @@ export default {
 
       try {
         const user = await login(username.value, password.value);
+
+        // Refresh all data while showing loading/notification
+        await refreshAllData();
 
         showNotification.value = true;
         loading.value = false;

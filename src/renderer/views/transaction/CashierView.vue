@@ -60,7 +60,7 @@
           <strong>{{ formatCurrency(currentSession.opening_balance) }}</strong>
         </div>
         <div class="detail-row">
-          <span>Saldo Diharapkan:</span>
+          <span>Saldo akhir:</span>
           <strong>{{
             formatCurrency(currentSession.expected_balance || 0)
           }}</strong>
@@ -198,7 +198,7 @@
               }}</strong>
             </div>
             <div class="info-row">
-              <span>Saldo Diharapkan:</span>
+              <span>Saldo akhir:</span>
               <strong>{{
                 formatCurrency(currentSession?.expected_balance || 0)
               }}</strong>
@@ -308,6 +308,8 @@ import { getCurrentUser } from "@/services/auth";
 import { useNumberFormat } from "@/composables/useNumberFormat";
 import { useCurrency } from "@/composables/useCurrency";
 import { formatDateTime } from "@/utils/dateUtils";
+import { ipcRenderer } from "@/services/ipc";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "CashierView",
@@ -355,19 +357,39 @@ export default {
 
     const { formatCurrency } = useCurrency();
 
+    // Timezone from settings
+    const currentTimezone = ref("Asia/Jakarta");
+
+    // Load timezone from settings
+    const loadTimezone = async () => {
+      try {
+        const settings = await ipcRenderer.invoke("settings:get");
+        if (settings && settings.timezone) {
+          currentTimezone.value = settings.timezone;
+        } else {
+          currentTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        }
+      } catch (error) {
+        console.error("Error loading timezone:", error);
+        currentTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
+    };
+
     const currentTime = ref(new Date());
-    const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+    const dateFormatter = computed(() => new Intl.DateTimeFormat("id-ID", {
       weekday: "short",
       day: "2-digit",
       month: "long",
       year: "numeric",
-    });
-    const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+      timeZone: currentTimezone.value,
+    }));
+    const timeFormatter = computed(() => new Intl.DateTimeFormat("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
-    });
-    const formattedHeaderDate = computed(() => dateFormatter.format(currentTime.value));
-    const formattedHeaderTime = computed(() => timeFormatter.format(currentTime.value));
+      timeZone: currentTimezone.value,
+    }));
+    const formattedHeaderDate = computed(() => dateFormatter.value.format(currentTime.value));
+    const formattedHeaderTime = computed(() => timeFormatter.value.format(currentTime.value));
 
     let clockInterval = null;
     const startClock = () => {
@@ -494,6 +516,9 @@ export default {
         const newSession = await openSession(sessionData);
         currentSession.value = newSession;
 
+        // Emit event to notify CashierLayout to refresh status
+        eventBus.emit("cashier:sessionOpened");
+
         // Reset form
         openForm.value = {
           openingBalance: 0,
@@ -537,6 +562,9 @@ export default {
         };
 
         await closeSession(sessionData);
+
+        // Emit event to notify CashierLayout to refresh status
+        eventBus.emit("cashier:sessionClosed");
 
         // Reset
         currentSession.value = null;
@@ -583,6 +611,11 @@ export default {
     });
 
     onMounted(async () => {
+      // Load timezone from settings
+      await loadTimezone();
+      // Listen for timezone update events
+      eventBus.on("settings:timezoneUpdated", loadTimezone);
+      
       startClock();
       const user = await getCurrentUser();
       currentUser.value = user;
@@ -591,6 +624,7 @@ export default {
 
     onBeforeUnmount(() => {
       stopClock();
+      eventBus.off("settings:timezoneUpdated", loadTimezone);
     });
 
     return {

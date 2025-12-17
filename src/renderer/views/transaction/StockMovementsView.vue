@@ -48,6 +48,7 @@
           :rows="movements"
           :loading="loading"
           :searchable-keys="[
+            'product_code',
             'item_name',
             'product_type',
             'movement_type',
@@ -58,6 +59,9 @@
           row-key="id"
           :default-page-size="10"
         >
+          <template #cell-product_code="{ row }">
+            <span class="code-text">{{ row.product_code || "-" }}</span>
+          </template>
           <template #actions="{ row }">
             <AppButton
               variant="secondary"
@@ -185,6 +189,7 @@ export default {
     const formatDate = (value) => (value ? formatDateTime(value) : "-");
 
     const columns = [
+      { key: "product_code", label: "Kode", sortable: true },
       { key: "item_name", label: "Produk", sortable: true },
       { key: "product_type", label: "Jenis", sortable: true },
       { key: "movement_type", label: "Tipe", sortable: true },
@@ -384,5 +389,12 @@ export default {
 .status-badge.outbound {
   background-color: #fee2e2;
   color: #991b1b;
+}
+
+.code-text {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #3b82f6;
 }
 </style>

@@ -95,7 +95,7 @@ async function generateInvoicePDF(transactionId, transactionType) {
 
     // Get company settings
     const { loadSettings } = require("../helpers/settingsUtils");
-    const { formatCurrency, formatDate } = require("../helpers/formatUtils");
+    const { formatCurrency, formatDate, formatDateTime, formatCurrentDateTime } = require("../helpers/formatUtils");
     const settings = await loadSettings();
 
     // Generate PDF
@@ -136,8 +136,11 @@ async function generateInvoicePDF(transactionId, transactionType) {
     doc.setFont("helvetica", "normal");
     doc.text(`Kode: ${transaction.transaction_code}`, margin, yPos);
     yPos += 5;
+    // Use created_at for full date and time, fallback to sale_date/rental_date if created_at not available
+    const transactionDate = transaction.created_at || 
+      (transactionType === "sale" ? transaction.sale_date : transaction.rental_date);
     doc.text(
-      `Tanggal: ${formatDate(transactionType === "sale" ? transaction.sale_date : transaction.rental_date)}`,
+      `Tanggal: ${formatDateTime(transactionDate)}`,
       margin,
       yPos,
     );
@@ -278,7 +281,7 @@ async function generateInvoicePDF(transactionId, transactionType) {
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.text(
-      `Dicetak pada: ${new Date().toLocaleString("id-ID")}`,
+      `Dicetak pada: ${formatCurrentDateTime()}`,
       pageWidth / 2,
       pageHeight - 10,
       { align: "center" },

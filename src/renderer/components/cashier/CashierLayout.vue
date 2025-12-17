@@ -39,11 +39,12 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { getCurrentUser, logout } from "@/services/auth";
 import { getCurrentSession } from "@/services/cashier";
 import Icon from "@/components/ui/Icon.vue";
+import { eventBus } from "@/utils/eventBus";
 
 export default {
   name: "CashierLayout",
@@ -114,8 +115,21 @@ export default {
       }
     };
 
+    // Listen for cashier session events
+    const handleCashierSessionUpdate = () => {
+      loadCashierStatus();
+    };
+
     onMounted(() => {
       loadCashierStatus();
+      // Listen for cashier session open/close events
+      eventBus.on("cashier:sessionOpened", handleCashierSessionUpdate);
+      eventBus.on("cashier:sessionClosed", handleCashierSessionUpdate);
+    });
+
+    onBeforeUnmount(() => {
+      eventBus.off("cashier:sessionOpened", handleCashierSessionUpdate);
+      eventBus.off("cashier:sessionClosed", handleCashierSessionUpdate);
     });
 
     return {

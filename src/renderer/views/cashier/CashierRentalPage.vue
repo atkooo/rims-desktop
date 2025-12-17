@@ -74,7 +74,7 @@
                   <td class="subtotal-cell">{{ formatCurrency(line.subtotal) }}</td>
                   <td class="action-cell">
                     <button class="remove-btn" @click="removeLine(line)" title="Hapus">
-                      <Icon name="trash-2" :size="16" />
+                      <Icon name="x-circle" :size="16" />
                     </button>
                   </td>
                 </tr>
@@ -203,6 +203,7 @@ import { useNumberFormat } from "@/composables/useNumberFormat";
 import { useBarcodeScanner } from "@/composables/useBarcodeScanner";
 import { useItemStore } from "@/store/items";
 import { toDateInput } from "@/utils/dateUtils";
+import { useItemType } from "@/composables/useItemType";
 
 const createDefaultForm = () => {
   const today = new Date();
@@ -238,6 +239,7 @@ export default {
     const transactionStore = useTransactionStore();
     const itemStore = useItemStore();
     const { showSuccess, showError } = useNotification();
+    const { canBeRented } = useItemType();
     const form = ref(createDefaultForm());
     const customers = ref([]);
     const loading = ref(false);
@@ -496,6 +498,18 @@ export default {
 
         if (item) {
           // Item ditemukan
+          // Validasi: cek apakah item bisa disewa (type RENTAL atau BOTH)
+          if (!canBeRented(item.type)) {
+            showError(`Item "${item.name}" tidak tersedia untuk disewa. Tipe item: ${item.type}`);
+            return;
+          }
+          
+          // Validasi: cek apakah item tersedia untuk disewa
+          if (!item.is_available_for_rent) {
+            showError(`Item "${item.name}" tidak tersedia untuk disewa`);
+            return;
+          }
+          
           if (item.status !== "AVAILABLE") {
             showError(`Item "${item.name}" tidak tersedia untuk disewa`);
             return;

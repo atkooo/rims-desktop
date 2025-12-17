@@ -114,6 +114,13 @@ function setupSettingsHandlers() {
         settingsFile,
         JSON.stringify(mergedSettings, null, 2),
       );
+      
+      // Refresh timezone cache if timezone was updated
+      if (newSettings.timezone) {
+        const { refreshTimezoneCache } = require("../helpers/formatUtils");
+        refreshTimezoneCache();
+      }
+      
       logger.info("Settings saved successfully");
       return true;
     } catch (error) {

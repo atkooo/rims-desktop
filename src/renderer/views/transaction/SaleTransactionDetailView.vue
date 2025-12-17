@@ -53,7 +53,7 @@
           </div>
           <div class="detail-item">
             <span>Tanggal Penjualan</span>
-            <strong>{{ formatDate(sale.sale_date) }}</strong>
+            <strong>{{ formatDateShort(sale.sale_date) }}</strong>
           </div>
           <div class="detail-item">
             <span>Kode</span>
@@ -190,7 +190,7 @@ import {
   fetchSalesDetails,
 } from "@/services/transactions";
 import { useNotification } from "@/composables/useNotification";
-import { formatDate, formatDateTime } from "@/utils/dateUtils";
+import { formatDateShort, formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: "SaleTransactionDetailView",
@@ -367,7 +367,7 @@ export default {
       detailError,
       filteredDetails,
       formatCurrency,
-      formatDate,
+      formatDateShort,
       formatDateTime,
       loadDetails,
       loading,

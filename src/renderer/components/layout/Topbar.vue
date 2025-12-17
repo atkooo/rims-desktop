@@ -197,6 +197,7 @@ import { TRANSACTION_STATUS } from "@shared/constants";
 import { useStockAlerts } from "@/composables/useStockAlerts";
 import { formatDateRelative } from "@/utils/dateUtils";
 import { useCurrency } from "@/composables/useCurrency";
+import { ipcRenderer } from "@/services/ipc";
 
 const { collapsed } = defineProps({
   collapsed: { type: Boolean, default: false },
@@ -215,32 +216,47 @@ const stockAlertsActive = ref(false);
 const { formatCurrency } = useCurrency();
 const formatDate = formatDateRelative;
 
-const toWIB = (date) => {
-  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
-  return new Date(utc + 7 * 60 * 60 * 1000);
+// Timezone from settings
+const currentTimezone = ref("Asia/Jakarta");
+
+// Load timezone from settings
+const loadTimezone = async () => {
+  try {
+    const settings = await ipcRenderer.invoke("settings:get");
+    if (settings && settings.timezone) {
+      currentTimezone.value = settings.timezone;
+    } else {
+      currentTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+  } catch (error) {
+    console.error("Error loading timezone:", error);
+    currentTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
 };
 
-const currentTime = ref(toWIB(new Date()));
-const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+const currentTime = ref(new Date());
+const dateFormatter = computed(() => new Intl.DateTimeFormat("id-ID", {
   weekday: "short",
   day: "2-digit",
   month: "long",
   year: "numeric",
-});
-const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+  timeZone: currentTimezone.value,
+}));
+const timeFormatter = computed(() => new Intl.DateTimeFormat("id-ID", {
   hour: "2-digit",
   minute: "2-digit",
-});
+  timeZone: currentTimezone.value,
+}));
 
-const formattedTopbarDate = computed(() => dateFormatter.format(currentTime.value));
-const formattedTopbarTime = computed(() => timeFormatter.format(currentTime.value));
+const formattedTopbarDate = computed(() => dateFormatter.value.format(currentTime.value));
+const formattedTopbarTime = computed(() => timeFormatter.value.format(currentTime.value));
 
 let timeIntervalHandle = null;
 
 const startClock = () => {
   if (timeIntervalHandle) return;
   timeIntervalHandle = setInterval(() => {
-    currentTime.value = new Date(currentTime.value.getTime() + 1000);
+    currentTime.value = new Date();
   }, 1000);
 };
 
@@ -672,6 +688,12 @@ onMounted(async () => {
   };
   eventBus.on("user:profileUpdated", profileUpdateHandler);
   
+  // Listen for timezone update events
+  eventBus.on("settings:timezoneUpdated", loadTimezone);
+  
+  // Load timezone from settings
+  await loadTimezone();
+  
   if (!transactionStore.transactions.length) {
     transactionStore.fetchTransactions().catch(() => {});
   }
@@ -692,10 +714,11 @@ onBeforeUnmount(() => {
   detachNotificationListeners();
   
   stopClock();
-  // Remove event bus listener
+  // Remove event bus listeners
   if (profileUpdateHandler) {
     eventBus.off("user:profileUpdated", profileUpdateHandler);
   }
+  eventBus.off("settings:timezoneUpdated", loadTimezone);
 });
 
 watch(

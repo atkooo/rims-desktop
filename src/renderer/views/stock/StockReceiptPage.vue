@@ -22,8 +22,11 @@
       </div>
     </div>
 
+    <!-- Main Content Card -->
     <section class="card-section form-section">
-      <h3>Produk diterima</h3>
+      <!-- Produk diterima Section -->
+      <div class="form-content-section">
+        <h3>Produk diterima</h3>
       <div class="form-grid">
         <div class="field-group">
           <label>Tipe Produk</label>
@@ -89,7 +92,7 @@
             size="small"
             @click="openPicker"
           >
-            <Icon name="search" size="16" />
+            <Icon name="search" :size="16" />
             <span>{{ pickerBtnLabel }}</span>
           </AppButton>
         </div>
@@ -166,10 +169,11 @@
           {{ bundleAvailabilityError }}
         </div>
       </div>
-    </section>
+      </div>
 
-    <section class="card-section form-section">
-      <h3>Daftar Penerimaan</h3>
+      <!-- Daftar Penerimaan Section -->
+      <div class="list-section">
+        <h3>Daftar Penerimaan</h3>
       <div v-if="lines.length === 0" class="empty-state">
         Belum ada produk yang ditambahkan.
       </div>
@@ -204,10 +208,11 @@
           </tr>
         </tbody>
       </table>
-    </section>
+      </div>
 
-    <section class="card-section form-section">
-      <h3>Catatan</h3>
+      <!-- Catatan Section -->
+      <div class="notes-section">
+        <h3>Catatan</h3>
       <FormInput
         id="notes"
         label="Catatan"
@@ -216,6 +221,7 @@
         placeholder="Supplier, alasan penerimaan, atau referensi."
       />
       <p v-if="errors.submit" class="form-error">{{ errors.submit }}</p>
+      </div>
     </section>
 
     <ItemPickerDialog
@@ -233,7 +239,6 @@
     <AccessoryPickerDialog
       v-model="showAccessoryPicker"
       :restrict-stock="false"
-      :check-status="false"
       @select="handleAccessorySelect"
     />
   </div>
@@ -506,9 +511,36 @@ export default {
 .form-section {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  padding: 1.25rem;
+  padding: 1.5rem;
   background: #fff;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-content-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-content-section h3,
+.list-section h3,
+.notes-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.list-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.notes-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .form-grid {

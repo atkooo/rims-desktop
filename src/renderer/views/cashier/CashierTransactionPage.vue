@@ -20,19 +20,19 @@
         </div>
 
         <!-- Sale Transaction -->
-        <div v-show="transactionMode === 'sale'" class="transaction-content">
+        <div v-if="transactionMode === 'sale'" class="transaction-content" :key="'sale-' + saleKey">
             <CashierSalePage ref="salePageRef" />
         </div>
 
         <!-- Rental Transaction -->
-        <div v-show="transactionMode === 'rental'" class="transaction-content">
+        <div v-if="transactionMode === 'rental'" class="transaction-content" :key="'rental-' + rentalKey">
             <CashierRentalPage ref="rentalPageRef" />
         </div>
     </div>
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import CashierSalePage from "./CashierSalePage.vue";
 import CashierRentalPage from "./CashierRentalPage.vue";
 
@@ -46,8 +46,16 @@ export default {
         const transactionMode = ref("sale");
         const salePageRef = ref(null);
         const rentalPageRef = ref(null);
+        const saleKey = ref(0);
+        const rentalKey = ref(0);
 
         const setTransactionMode = (mode) => {
+            // Force recreate component dengan mengubah key untuk reset form
+            if (mode === "sale") {
+                saleKey.value += 1;
+            } else if (mode === "rental") {
+                rentalKey.value += 1;
+            }
             transactionMode.value = mode;
         };
 
@@ -56,6 +64,8 @@ export default {
             setTransactionMode,
             salePageRef,
             rentalPageRef,
+            saleKey,
+            rentalKey,
         };
     },
 };

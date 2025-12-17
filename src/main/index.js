@@ -379,6 +379,16 @@ app.whenReady().then(async () => {
     return;
   }
 
+  // Initialize timezone cache for formatUtils
+  try {
+    const { refreshTimezoneCache } = require("./helpers/formatUtils");
+    // Force initialization by calling refreshTimezoneCache (which resets cache)
+    // Then first call to format functions will load timezone
+    refreshTimezoneCache();
+  } catch (err) {
+    logger.warn("Failed to initialize timezone cache:", err);
+  }
+
   // Setup activation handlers first
   setupActivationHandlers();
 

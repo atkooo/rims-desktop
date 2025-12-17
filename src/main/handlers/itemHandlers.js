@@ -239,13 +239,16 @@ function setupItemHandlers() {
   );
 
   // Generate bulk labels (multiple items)
-  ipcMain.handle("items:generateBulkLabels", async (event, { itemIds }) => {
+  ipcMain.handle("items:generateBulkLabels", async (event, { itemIds, items }) => {
     try {
-      if (!Array.isArray(itemIds) || itemIds.length === 0) {
-        throw new Error("Item IDs harus berupa array yang tidak kosong");
+      // Support both old format (itemIds) and new format (items with quantity)
+      const itemsData = items || (itemIds ? itemIds.map((id) => ({ itemId: id, quantity: 1 })) : []);
+      
+      if (!Array.isArray(itemsData) || itemsData.length === 0) {
+        throw new Error("Item IDs atau items harus berupa array yang tidak kosong");
       }
 
-      const result = await generateBulkLabelsPDF(itemIds);
+      const result = await generateBulkLabelsPDF(itemsData);
 
       return {
         success: true,
@@ -259,13 +262,33 @@ function setupItemHandlers() {
   });
 
   // Preview bulk labels
-  ipcMain.handle("items:previewBulkLabels", async (event, { itemIds }) => {
+  ipcMain.handle("items:previewBulkLabels", async (event, params) => {
     try {
-      if (!Array.isArray(itemIds) || itemIds.length === 0) {
-        throw new Error("Item IDs harus berupa array yang tidak kosong");
+      // Support multiple formats:
+      // 1. Old format: itemIds (array of IDs) - defaults to items
+      // 2. Format: items with {itemId, quantity} - defaults to items
+      // 3. New format: items with {productType, id, quantity}
+      const { itemIds, items } = params || {};
+      let itemsData = [];
+      
+      if (items && Array.isArray(items) && items.length > 0) {
+        // New format with productType
+        if (items[0].productType && items[0].id) {
+          itemsData = items;
+        } else if (items[0].itemId) {
+          // Format with itemId - convert to new format
+          itemsData = items.map(item => ({ productType: 'item', id: item.itemId, quantity: item.quantity || 1 }));
+        } else {
+          throw new Error("Format items tidak valid");
+        }
+      } else if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
+        // Old format - default to items
+        itemsData = itemIds.map((id) => ({ productType: 'item', id, quantity: 1 }));
+      } else {
+        throw new Error("Item IDs atau items harus berupa array yang tidak kosong");
       }
 
-      const preview = await generateBulkLabelsPDF(itemIds, {
+      const preview = await generateBulkLabelsPDF(itemsData, {
         saveFile: false,
         previewPadding: 60,
       });
@@ -286,14 +309,28 @@ function setupItemHandlers() {
   // Print bulk labels
   ipcMain.handle(
     "items:printBulkLabels",
-    async (event, { itemIds, printerName, silent = false }) => {
+    async (event, params) => {
       try {
-        if (!Array.isArray(itemIds) || itemIds.length === 0) {
-          throw new Error("Item IDs harus berupa array yang tidak kosong");
+        const { itemIds, items, printerName, silent = false } = params || {};
+        // Support multiple formats (same as preview)
+        let itemsData = [];
+        
+        if (items && Array.isArray(items) && items.length > 0) {
+          if (items[0].productType && items[0].id) {
+            itemsData = items;
+          } else if (items[0].itemId) {
+            itemsData = items.map(item => ({ productType: 'item', id: item.itemId, quantity: item.quantity || 1 }));
+          } else {
+            throw new Error("Format items tidak valid");
+          }
+        } else if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
+          itemsData = itemIds.map((id) => ({ productType: 'item', id, quantity: 1 }));
+        } else {
+          throw new Error("Item IDs atau items harus berupa array yang tidak kosong");
         }
 
         // Generate single PDF with all labels
-        const result = await generateBulkLabelsPDF(itemIds);
+        const result = await generateBulkLabelsPDF(itemsData);
         if (!result.filePath) {
           throw new Error("Gagal membuat file label untuk dicetak");
         }
@@ -345,14 +382,28 @@ function setupItemHandlers() {
   );
 
   // Download bulk labels
-  ipcMain.handle("items:downloadBulkLabels", async (event, { itemIds }) => {
+  ipcMain.handle("items:downloadBulkLabels", async (event, params) => {
     try {
-      if (!Array.isArray(itemIds) || itemIds.length === 0) {
-        throw new Error("Item IDs harus berupa array yang tidak kosong");
+      const { itemIds, items } = params || {};
+      // Support multiple formats (same as preview)
+      let itemsData = [];
+      
+      if (items && Array.isArray(items) && items.length > 0) {
+        if (items[0].productType && items[0].id) {
+          itemsData = items;
+        } else if (items[0].itemId) {
+          itemsData = items.map(item => ({ productType: 'item', id: item.itemId, quantity: item.quantity || 1 }));
+        } else {
+          throw new Error("Format items tidak valid");
+        }
+      } else if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
+        itemsData = itemIds.map((id) => ({ productType: 'item', id, quantity: 1 }));
+      } else {
+        throw new Error("Item IDs atau items harus berupa array yang tidak kosong");
       }
 
       // Generate single PDF with all labels
-      const result = await generateBulkLabelsPDF(itemIds);
+      const result = await generateBulkLabelsPDF(itemsData);
 
       // Show save dialog
       const timestamp = new Date().toISOString().split("T")[0];

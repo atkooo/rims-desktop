@@ -38,6 +38,7 @@ import Topbar from "./components/layout/Topbar.vue";
 import Breadcrumbs from "./components/layout/Breadcrumbs.vue";
 import AppNotification from "./components/ui/AppNotification.vue";
 import { eventBus } from "./utils/eventBus";
+import { loadTimezoneFromSettings } from "./utils/dateUtils";
 
 export default {
   components: { Sidebar, Topbar, Breadcrumbs, AppNotification },
@@ -63,7 +64,14 @@ export default {
       }
     };
 
-    onMounted(() => {
+    onMounted(async () => {
+      // Load timezone from settings on app start
+      try {
+        await loadTimezoneFromSettings();
+      } catch (error) {
+        console.error("Error loading timezone from settings:", error);
+      }
+      
       eventBus.on("global-search", handleGlobalSearch);
       if (typeof window !== "undefined") {
         window.addEventListener("keydown", handleFullscreenShortcut);
