@@ -2,8 +2,8 @@
 -- Seeder: Users (SQLite Compatible)
 -- ============================================
 
--- Create default users
--- (passwords: Admin123!, Kasir123!)
+-- Buat user default
+-- (password: Admin123!, Kasir123!)
 INSERT INTO users (username, password_hash, full_name, email, role, is_active)
 VALUES
   ('admin',

@@ -1,5 +1,5 @@
--- Migration: Create validation triggers for bundle_details
--- Ensures that either item_id or accessory_id must be set (but not both null)
+-- Migration: Buat validation trigger untuk bundle_details
+-- Memastikan bahwa item_id atau accessory_id harus diset (tapi gak boleh keduanya null)
 PRAGMA foreign_keys = ON;
 
 CREATE TRIGGER IF NOT EXISTS validate_bundle_detail_item_or_accessory

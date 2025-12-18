@@ -1,4 +1,4 @@
--- Migration: Ensure sales_payments table exists (fix for older installations missing payments)
+-- Migration: Pastikan tabel sales_payments ada (fix buat instalasi lama yang kurang tabel payments)
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS sales_payments (

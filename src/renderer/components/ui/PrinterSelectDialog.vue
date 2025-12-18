@@ -123,9 +123,9 @@ export default {
 
       printing.value = true;
       try {
-        // Emit print event - parent will handle the actual printing
+        // Kirim event print - parent yang handle printing-nya
         emit("print", selectedPrinter.value);
-        // Close dialog after emit (parent handles async printing)
+        // Tutup dialog setelah emit (parent handle async printing)
         visible.value = false;
       } catch (error) {
         console.error("Error in print handler:", error);

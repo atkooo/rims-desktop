@@ -1,4 +1,4 @@
--- Migration: Create stock_receipts tables
+-- Migration: Buat tabel stock_receipts
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS stock_receipts (

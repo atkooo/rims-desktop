@@ -2,10 +2,10 @@
 -- Seeder: Items (SQLite Compatible)
 -- ============================================
 
--- Reset items so the new data seeds clean
+-- Reset items biar data seed baru bersih
 DELETE FROM items;
 
--- Insert curated item master data with stock and discount links
+-- Insert item master data dengan stock sama discount links
 INSERT INTO items (
   code,
   name,

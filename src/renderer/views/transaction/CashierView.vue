@@ -339,12 +339,12 @@ export default {
     const errors = ref({});
     const closeErrors = ref({});
 
-    // Check if user can open session (must be kasir role)
+    // Cek apakah user bisa buka sesi (harus role kasir)
     const canOpenSession = computed(() => {
       return currentUser.value?.role === "kasir";
     });
 
-    // Check if user can close session (must be kasir role AND same user who opened)
+    // Cek apakah user bisa tutup sesi (harus role kasir DAN user yang sama yang buka)
     const canCloseSession = computed(() => {
       if (!currentUser.value || currentUser.value.role !== "kasir") {
         return false;
@@ -357,10 +357,10 @@ export default {
 
     const { formatCurrency } = useCurrency();
 
-    // Timezone from settings
+    // Timezone dari settings
     const currentTimezone = ref("Asia/Jakarta");
 
-    // Load timezone from settings
+    // Ambil timezone dari settings
     const loadTimezone = async () => {
       try {
         const settings = await ipcRenderer.invoke("settings:get");
@@ -404,15 +404,15 @@ export default {
       clockInterval = null;
     };
 
-    // Use number format composable
+    // Pakai number format composable
     const { formatNumberInput, createInputHandler } = useNumberFormat();
 
-    // Handle opening balance input
+    // Handle input saldo awal
     const handleOpeningBalanceInput = createInputHandler(
       (value) => (openForm.value.openingBalance = value)
     );
 
-    // Handle actual balance input
+    // Handle input saldo akhir
     const handleActualBalanceInput = createInputHandler(
       (value) => (closeForm.value.actualBalance = value)
     );
@@ -467,7 +467,7 @@ export default {
     };
 
     const confirmOpenSession = async () => {
-      // Validate before opening
+      // Validasi dulu sebelum buka
       errors.value = {};
       if (
         !openForm.value.openingBalance ||
@@ -478,7 +478,7 @@ export default {
         return;
       }
       
-      // Proceed to open session
+      // Lanjut buka sesi
       await handleOpenSession();
     };
 
@@ -516,7 +516,7 @@ export default {
         const newSession = await openSession(sessionData);
         currentSession.value = newSession;
 
-        // Emit event to notify CashierLayout to refresh status
+        // Kirim event ke CashierLayout biar refresh status
         eventBus.emit("cashier:sessionOpened");
 
         // Reset form
@@ -525,7 +525,7 @@ export default {
           notes: "",
         };
 
-        // Reload sessions list
+        // Reload daftar sesi
         await loadData();
       } catch (err) {
         console.error("Error opening session:", err);
@@ -563,7 +563,7 @@ export default {
 
         await closeSession(sessionData);
 
-        // Emit event to notify CashierLayout to refresh status
+        // Kirim event ke CashierLayout biar refresh status
         eventBus.emit("cashier:sessionClosed");
 
         // Reset
@@ -611,9 +611,9 @@ export default {
     });
 
     onMounted(async () => {
-      // Load timezone from settings
+      // Ambil timezone dari settings
       await loadTimezone();
-      // Listen for timezone update events
+      // Dengerin event update timezone
       eventBus.on("settings:timezoneUpdated", loadTimezone);
       
       startClock();
@@ -761,7 +761,7 @@ export default {
   margin: 0;
 }
 
-/* Using global badge utility classes */
+/* Pakai global badge utility classes */
 .status-badge {
   font-size: 0.75rem;
   font-weight: 600;
@@ -822,7 +822,7 @@ export default {
   margin: 0 0 1.5rem 0;
 }
 
-/* Using global utility classes for form-input, form-textarea, error-message */
+/* Pakai global utility classes untuk form-input, form-textarea, error-message */
 .cashier-form {
   display: flex;
   flex-direction: column;
@@ -964,7 +964,7 @@ export default {
   font-weight: 600;
 }
 
-/* Confirm Dialog Styles */
+/* Style Confirm Dialog */
 .confirm-dialog-content {
   padding: 0.5rem 0;
 }

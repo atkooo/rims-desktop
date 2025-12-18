@@ -1,4 +1,4 @@
--- Migration: Create stock_movements and payments tables
+-- Migration: Buat tabel stock_movements sama payments
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE stock_movements (
@@ -23,14 +23,14 @@ CREATE TABLE stock_movements (
     CHECK ((item_id IS NOT NULL) OR (bundle_id IS NOT NULL) OR (accessory_id IS NOT NULL))
 );
 
--- Create indexes for bundle_id and accessory_id
+-- Buat index untuk bundle_id sama accessory_id
 CREATE INDEX IF NOT EXISTS idx_stock_movements_bundle ON stock_movements(bundle_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_accessory ON stock_movements(accessory_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_reference ON stock_movements(reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_sync ON stock_movements(is_sync);
 
--- Create sales_payments table
+-- Buat tabel sales_payments
 CREATE TABLE sales_payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     transaction_id INTEGER NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE sales_payments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Create rental_payments table
+-- Buat tabel rental_payments
 CREATE TABLE rental_payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     transaction_id INTEGER NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE rental_payments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Create indexes for payments
+-- Buat index untuk payments
 CREATE INDEX idx_sales_payments_transaction ON sales_payments(transaction_id);
 CREATE INDEX idx_sales_payments_user ON sales_payments(user_id);
 CREATE INDEX idx_sales_payments_date ON sales_payments(payment_date);

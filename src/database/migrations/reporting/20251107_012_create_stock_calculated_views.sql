@@ -1,4 +1,4 @@
--- Migration: Create view to compare current stock with calculated values derived from stock_movements
+-- Migration: Buat view buat bandingin stock sekarang dengan nilai yang dihitung dari stock_movements
 PRAGMA foreign_keys = ON;
 
 CREATE VIEW IF NOT EXISTS v_items_stock_calculated AS

@@ -1,4 +1,4 @@
--- Migration: Create customers table
+-- Migration: Buat tabel customers
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE customers (
@@ -19,6 +19,6 @@ CREATE TABLE customers (
     FOREIGN KEY (discount_group_id) REFERENCES discount_groups(id) ON DELETE SET NULL
 );
 
--- Create index for discount_group_id
+-- Buat index untuk discount_group_id
 CREATE INDEX IF NOT EXISTS idx_customers_discount_group ON customers(discount_group_id);
 

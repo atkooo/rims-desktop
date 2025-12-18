@@ -438,10 +438,10 @@ export default {
       return "Diskon diatur otomatis berdasarkan grup diskon customer (jika ada).";
     });
 
-    // Barcode scanner - supports item, accessory, and bundle
+    // Barcode scanner - support item, accessory, sama bundle
     const handleBarcodeScan = async (barcode) => {
       try {
-        // 1. Cari di items terlebih dahulu
+        // 1. Cari di items dulu
         let item = itemStore.getItemByCode(barcode);
         if (!item) {
           item = await itemStore.searchItemByCode(barcode);
@@ -618,13 +618,13 @@ export default {
     };
 
     const resetForm = () => {
-      // Create completely new form object with new array references
+      // Buat form object baru dengan array reference baru
       form.value = createDefaultForm();
-      // Force Vue reactivity by creating new arrays
+      // Paksa Vue reactivity dengan bikin array baru
       form.value.items = [];
       form.value.bundles = [];
       form.value.accessories = [];
-      // Increment key to force re-render of child components
+      // Increment key biar child components re-render
       formKey.value += 1;
     };
 
@@ -670,21 +670,21 @@ export default {
       if (!data.partial) {
         showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
         showPaymentModal.value = false;
-        // Keep transaction ID for receipt preview
-        // Don't reset form yet, wait until receipt is printed/closed
-        // Auto-open receipt preview after successful payment
+        // Simpan transaction ID buat receipt preview
+        // Jangan reset form dulu, tunggu sampai receipt dicetak/ditutup
+        // Auto-buka receipt preview setelah pembayaran berhasil
         setTimeout(() => {
           showReceiptPreview.value = true;
         }, 500);
       } else {
-        // Partial payment, keep modal open
+        // Pembayaran sebagian, tetap buka modal
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
       }
     };
 
     const handlePaymentModalClose = () => {
       showPaymentModal.value = false;
-      // Don't reset form if payment was successful (receipt preview might be open)
+      // Jangan reset form kalau pembayaran berhasil (receipt preview mungkin masih terbuka)
       if (!showReceiptPreview.value) {
         savedTransactionId.value = null;
         resetForm();
@@ -695,15 +695,15 @@ export default {
       if (result && result.success) {
         showSuccess("Struk berhasil dicetak!");
       }
-      // Reset form and clear transaction ID after receipt is printed
+      // Reset form dan clear transaction ID setelah receipt dicetak
       savedTransactionId.value = null;
       resetForm();
     };
 
-    // Watch for receipt preview dialog close to reset form
+    // Dengerin kalau receipt preview dialog ditutup buat reset form
     watch(showReceiptPreview, (newValue) => {
       if (!newValue && savedTransactionId.value) {
-        // Dialog was closed, reset form if not already reset
+        // Dialog ditutup, reset form kalau belum di-reset
         setTimeout(() => {
           savedTransactionId.value = null;
           resetForm();

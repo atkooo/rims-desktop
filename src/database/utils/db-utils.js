@@ -4,10 +4,10 @@ const sqlite3 = require("sqlite3").verbose();
 const dbConfig = require("../../main/config/database");
 
 /**
- * Shared database utilities for migrations and seeders
+ * Utility database yang dipake buat migrations sama seeders
  */
 
-// Promisify database operations
+// Promisify operasi database
 function createDatabaseConnection(dbPath = null) {
   const targetPath = dbPath || dbConfig.path;
   const dataDir = path.dirname(targetPath);
@@ -22,7 +22,7 @@ function createDatabaseConnection(dbPath = null) {
 function promisifyDb(db) {
   return {
     runAsync(sql, params = []) {
-      // Safety check: never execute empty SQL statements
+      // Safety check: jangan pernah execute SQL statement yang kosong
       const trimmedSql = sql ? String(sql).trim() : '';
       if (!trimmedSql || trimmedSql.length === 0) {
         return Promise.resolve({ lastID: 0, changes: 0 });
@@ -57,9 +57,9 @@ function promisifyDb(db) {
 }
 
 /**
- * Recursively collect all SQL files from a directory
- * @param {string} dir - Directory path to search
- * @returns {Array<string>} Array of full file paths
+ * Kumpulin semua file SQL dari directory secara recursive
+ * @param {string} dir - Path directory yang mau dicari
+ * @returns {Array<string>} Array berisi full file paths
  */
 function collectSqlFiles(dir) {
   if (!fs.existsSync(dir)) {
@@ -82,10 +82,10 @@ function collectSqlFiles(dir) {
 }
 
 /**
- * Parse SQL file into individual statements
- * Handles BEGIN...END blocks in triggers and procedures
- * @param {string} sqlContent - SQL file content
- * @returns {Array<string>} Array of SQL statements
+ * Parse file SQL jadi statement-statement individual
+ * Handle block BEGIN...END di triggers sama procedures
+ * @param {string} sqlContent - Isi file SQL
+ * @returns {Array<string>} Array berisi SQL statements
  */
 function parseSqlStatements(sqlContent) {
   const statements = [];
@@ -100,7 +100,7 @@ function parseSqlStatements(sqlContent) {
     const char = sqlContent[i];
     const prevChar = i > 0 ? sqlContent[i - 1] : null;
 
-    // Handle string literals (single and double quotes)
+    // Handle string literal (single quote sama double quote)
     if ((char === "'" || char === '"') && prevChar !== "\\") {
       if (!inString) {
         inString = true;
@@ -114,17 +114,17 @@ function parseSqlStatements(sqlContent) {
       continue;
     }
 
-    // If we're inside a string, just add the character
+    // Kalau kita lagi di dalam string, tambahin karakter aja
     if (inString) {
       currentStatement += char;
       i++;
       continue;
     }
 
-    // Track BEGIN/END blocks and CASE/END statements (case-insensitive)
+    // Track block BEGIN/END sama statement CASE/END (case-insensitive)
     const remaining = sqlContent.substring(i).toUpperCase();
 
-    // Check for CASE statement
+    // Cek untuk statement CASE
     if (remaining.startsWith("CASE") && !/\w/.test(sqlContent[i + 4] || "")) {
       inCase = true;
       currentStatement += sqlContent.substring(i, i + 4);
@@ -132,7 +132,7 @@ function parseSqlStatements(sqlContent) {
       continue;
     }
 
-    // Check for BEGIN block
+    // Cek untuk block BEGIN
     if (remaining.startsWith("BEGIN") && !/\w/.test(sqlContent[i + 5] || "")) {
       depth++;
       currentStatement += sqlContent.substring(i, i + 5);
@@ -140,14 +140,14 @@ function parseSqlStatements(sqlContent) {
       continue;
     }
 
-    // Check for END
+    // Cek untuk END
     if (remaining.startsWith("END") && !/\w/.test(sqlContent[i + 3] || "")) {
-      // If we're inside a CASE statement, close it
+      // Kalau kita lagi di dalam statement CASE, tutup
       if (inCase) {
         inCase = false;
         currentStatement += sqlContent.substring(i, i + 3);
         i += 3;
-        // Check if END is followed by semicolon
+        // Cek apakah END diikuti sama semicolon
         if (sqlContent[i] === ";") {
           currentStatement += ";";
           i++;
@@ -155,7 +155,7 @@ function parseSqlStatements(sqlContent) {
         continue;
       }
 
-      // Otherwise, it's closing a BEGIN block
+      // Kalau gak, berarti lagi nutup block BEGIN
       depth--;
       currentStatement += sqlContent.substring(i, i + 3);
       i += 3;
@@ -163,7 +163,7 @@ function parseSqlStatements(sqlContent) {
       if (sqlContent[i] === ";") {
         currentStatement += ";";
         i++;
-        // If depth is 0 after closing the block, this semicolon terminates the statement
+        // Kalau depth 0 setelah nutup block, semicolon ini terminate statement-nya
         if (depth === 0) {
           const trimmed = currentStatement.trim();
           if (trimmed.length > 0) {
@@ -176,7 +176,7 @@ function parseSqlStatements(sqlContent) {
       continue;
     }
 
-    // If we encounter a semicolon and we're not in a block, it's a statement terminator
+    // Kalau ketemu semicolon dan kita gak di dalam block, itu statement terminator
     if (char === ";" && depth === 0) {
       const trimmed = currentStatement.trim();
       if (trimmed.length > 0) {
@@ -187,12 +187,12 @@ function parseSqlStatements(sqlContent) {
       continue;
     }
 
-    // Add character to current statement
+    // Tambahin karakter ke statement sekarang
     currentStatement += char;
     i++;
   }
 
-  // Add any remaining statement
+  // Tambahin statement yang masih tersisa
   const trimmed = currentStatement.trim();
   if (trimmed.length > 0) {
     statements.push(trimmed);
@@ -202,10 +202,10 @@ function parseSqlStatements(sqlContent) {
 }
 
 /**
- * Execute SQL statements in a transaction
- * @param {Object} dbPromisified - Promisified database object
- * @param {Array<string>} statements - Array of SQL statements
- * @param {Function} onStatement - Optional callback for each statement
+ * Execute SQL statements dalam transaction
+ * @param {Object} dbPromisified - Object database yang sudah di-promisify
+ * @param {Array<string>} statements - Array berisi SQL statements
+ * @param {Function} onStatement - Optional callback buat setiap statement
  */
 async function executeStatements(
   dbPromisified,
@@ -221,14 +221,14 @@ async function executeStatements(
 }
 
 /**
- * Execute SQL file with retry logic and error handling
- * @param {Object} dbOps - Database operations object with runAsync, allAsync, getAsync
- * @param {string} filePath - Path to SQL file
- * @param {Object} options - Options for execution
- * @param {number} options.maxRetries - Maximum retries for SQLITE_BUSY errors (default: 5)
- * @param {boolean} options.skipEmpty - Skip empty statements (default: true)
- * @param {boolean} options.allowDuplicateColumn - Allow duplicate column errors (default: true)
- * @param {boolean} options.allowMissingTable - Allow missing table errors (default: false)
+ * Execute file SQL dengan retry logic sama error handling
+ * @param {Object} dbOps - Object operasi database dengan runAsync, allAsync, getAsync
+ * @param {string} filePath - Path ke file SQL
+ * @param {Object} options - Opsi buat execution
+ * @param {number} options.maxRetries - Maximum retry buat error SQLITE_BUSY (default: 5)
+ * @param {boolean} options.skipEmpty - Skip statement yang kosong (default: true)
+ * @param {boolean} options.allowDuplicateColumn - Allow error duplicate column (default: true)
+ * @param {boolean} options.allowMissingTable - Allow error missing table (default: false)
  * @returns {Promise<void>}
  */
 async function executeSqlFile(dbOps, filePath, options = {}) {
@@ -243,44 +243,44 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
   const statements = parseSqlStatements(sqlContent);
 
   for (const statement of statements) {
-    // Trim and validate statement - more robust check
+    // Trim sama validasi statement - check yang lebih robust
     const trimmed = statement ? statement.trim() : '';
     
-    // Skip empty statements - check after trimming
+    // Skip statement yang kosong - check setelah trim
     if (skipEmpty && (!trimmed || trimmed.length === 0)) {
       continue;
     }
 
-    // Additional safety check: skip statements that are only whitespace or comments
-    // A valid SQL statement should start with a SQL keyword, not a comment
+    // Safety check tambahan: skip statement yang cuma whitespace atau komentar
+    // SQL statement yang valid harus mulai dengan SQL keyword, bukan komentar
     const withoutComments = trimmed.replace(/^--.*$/gm, '').trim();
     if (!withoutComments || withoutComments.length === 0) {
       continue;
     }
 
-    // Retry logic for SQLITE_BUSY errors
+    // Retry logic buat error SQLITE_BUSY
     let retries = maxRetries;
     let executed = false;
 
     while (retries > 0 && !executed) {
       try {
-        // Final safety check before executing
+        // Safety check terakhir sebelum execute
         if (!trimmed || trimmed.length === 0) {
           executed = true;
           continue;
         }
         
-        // Check if this is an ALTER TABLE ADD COLUMN statement
-        // If so, check if the column already exists before executing
+        // Cek apakah ini statement ALTER TABLE ADD COLUMN
+        // Kalau iya, cek apakah kolomnya udah ada sebelum execute
         const alterTableMatch = trimmed.match(/ALTER\s+TABLE\s+([`"\[\]?\w]+)\s+ADD\s+COLUMN\s+([`"\[\]?\w]+)/i);
         if (alterTableMatch && allowDuplicateColumn) {
           let tableName = alterTableMatch[1].replace(/[`"\[\]]/g, '');
           let columnName = alterTableMatch[2].replace(/[`"\[\]]/g, '');
           
-          // Check if column already exists using PRAGMA table_info
+          // Cek apakah kolomnya udah ada pakai PRAGMA table_info
           try {
-            // Use parameterized query for table name to prevent SQL injection
-            // Note: PRAGMA doesn't support parameters, but table name should be safe from migration files
+            // Pakai parameterized query buat nama tabel buat prevent SQL injection
+            // Catatan: PRAGMA gak support parameter, tapi nama tabel harus aman dari migration files
             const columns = await dbOps.allAsync(`PRAGMA table_info("${tableName}")`);
             const columnExists = columns.some(col => col.name.toLowerCase() === columnName.toLowerCase());
             
@@ -292,18 +292,18 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
               break;
             }
           } catch (pragmaError) {
-            // If PRAGMA fails (e.g., table doesn't exist), continue with original statement
-            // The original error handling will catch it
+            // Kalau PRAGMA gagal (misal tabel gak ada), lanjutin dengan statement original
+            // Error handling original bakal catch
           }
         }
         
-        // Use trimmed statement to avoid any whitespace issues
+        // Pakai statement yang udah di-trim buat avoid masalah whitespace
         await dbOps.runAsync(trimmed);
         executed = true;
       } catch (error) {
         const errorMsg = error.message || String(error);
 
-        // Retry for SQLITE_BUSY errors
+        // Retry buat error SQLITE_BUSY
         if (errorMsg.includes("SQLITE_BUSY") && retries > 1) {
           retries--;
           await new Promise((resolve) =>
@@ -312,7 +312,7 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
           continue;
         }
 
-        // Handle duplicate column errors (acceptable for ALTER TABLE ADD COLUMN)
+        // Handle error duplicate column (acceptable buat ALTER TABLE ADD COLUMN)
         if (
           allowDuplicateColumn &&
           (errorMsg.includes("duplicate column") ||
@@ -325,7 +325,7 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
           break;
         }
 
-        // Handle missing table errors (acceptable for migrations on existing databases)
+        // Handle error missing table (acceptable buat migrations di database yang udah ada)
         if (allowMissingTable && errorMsg.includes("no such table")) {
           console.log(
             `Info: Table doesn't exist yet (fresh install). Skipping statement: ${trimmed.substring(0, 50)}...`,
@@ -334,7 +334,7 @@ async function executeSqlFile(dbOps, filePath, options = {}) {
           break;
         }
 
-        // Re-throw other errors if no more retries
+        // Re-throw error lain kalau gak ada retry lagi
         if (retries === 1) {
           throw error;
         }

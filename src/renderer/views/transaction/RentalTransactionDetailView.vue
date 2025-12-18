@@ -347,11 +347,11 @@ export default {
         rental.value = found;
         await loadDetails(true);
 
-        // Auto-open receipt preview if query parameter is set and transaction is paid
+        // Auto-buka receipt preview kalau query parameter diset dan transaksi sudah dibayar
         if (shouldAutoPrintReceipt.value && isPaid(found)) {
-          // Remove query parameter from URL
+          // Hapus query parameter dari URL
           router.replace({ query: {} });
-          // Open receipt preview after a short delay
+          // Buka receipt preview setelah delay sebentar
           setTimeout(() => {
             showReceiptPreview.value = true;
           }, 300);
@@ -387,12 +387,12 @@ export default {
 
     const displayStatus = (rental) => {
       if (!rental) return "-";
-      // Check if transaction is cancelled
+      // Cek apakah transaksi dibatalkan
       const status = (rental.status || "").toString().toLowerCase();
       if (status === "cancelled") {
         return "Dibatalkan";
       }
-      // Otherwise show payment status
+      // Kalau gak, tampilkan status pembayaran
       const paymentStatus = (rental.payment_status || rental.paymentStatus || "").toString().toLowerCase();
       if (paymentStatus === "paid") return "Lunas";
       if (paymentStatus === "unpaid") return "Belum Lunas";
@@ -406,19 +406,19 @@ export default {
 
     const handlePaymentSuccess = async (data) => {
       if (!data.partial) {
-        // Payment is complete
+        // Pembayaran selesai
         showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
         showPaymentModal.value = false;
-        // Reload rental data to update payment status
+        // Reload data rental buat update status pembayaran
         await loadRental();
-        // Auto-open receipt preview after successful payment
+        // Auto-buka receipt preview setelah pembayaran berhasil
         setTimeout(() => {
           showReceiptPreview.value = true;
         }, 500);
       } else {
-        // Partial payment, keep modal open
+        // Pembayaran sebagian, tetap buka modal
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
-        loadRental(); // Reload to update payment status
+        loadRental(); // Reload buat update status pembayaran
       }
     };
 
@@ -431,9 +431,9 @@ export default {
     const handlePaymentModalClose = (data) => {
       showPaymentModal.value = false;
 
-      // If modal closed without payment (unpaid), just reload data
+      // Kalau modal ditutup tanpa pembayaran (unpaid), cukup reload data aja
       if (data?.unpaid) {
-        loadRental(); // Reload to refresh data
+        loadRental(); // Reload buat refresh data
       }
     };
 
@@ -453,7 +453,7 @@ export default {
       returning.value = true;
       try {
         const user = await getCurrentUser();
-        // Ensure all values are primitives and serializable
+        // Pastikan semua nilai itu primitif dan bisa di-serialize
         const result = await returnRentalItems({
           rentalTransactionId: Number(rental.value.id),
           detailIds: Array.isArray(returnDetailIds.value) ? returnDetailIds.value.map(id => Number(id)) : null,
@@ -469,7 +469,7 @@ export default {
               : `${result.itemsReturned} item berhasil dikembalikan!`,
           );
           showReturnDialog.value = false;
-          // Reload data to reflect changes
+          // Reload data buat nunjukin perubahan
           await loadRental();
           await loadDetails(true);
           eventBus.emit("inventory:updated");
@@ -753,7 +753,7 @@ export default {
   margin: 0.35rem 0 0;
 }
 
-/* Cancelled Status Banner */
+/* Banner Status Dibatalkan */
 .cancelled-banner {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   border: 1px solid #fca5a5;
@@ -819,7 +819,7 @@ export default {
   transform: scale(0.95);
 }
 
-/* Using global badge utility classes */
+/* Pakai global badge utility classes */
 .status-badge {
   font-size: 0.85rem;
   border-radius: 4px;
@@ -860,7 +860,7 @@ export default {
   font-size: 0.875rem;
 }
 
-/* Return dialog styles */
+/* Style dialog return */
 .return-dialog {
   display: flex;
   flex-direction: column;
@@ -893,7 +893,7 @@ export default {
   font-style: italic;
 }
 
-/* Responsive styles */
+/* Style responsive */
 @media (max-width: 1200px) {
   .data-page.transaction-page.detail-page {
     padding: 1rem 1.5rem;

@@ -303,7 +303,7 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-/* Detail Dialog Styles */
+/* Style Detail Dialog */
 .detail-dialog {
   padding: 0.5rem 0;
 }

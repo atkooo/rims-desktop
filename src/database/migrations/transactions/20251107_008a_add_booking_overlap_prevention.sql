@@ -1,11 +1,11 @@
--- Migration: Add booking overlap prevention triggers
+-- Migration: Tambah trigger buat prevent booking overlap
 -- Priority: SEDANG - Prevent double booking
 -- Date: 2025-01-17
 
 PRAGMA foreign_keys = ON;
 
 -- ============================================
--- Trigger untuk validasi overlap saat INSERT
+-- Trigger buat validasi overlap pas INSERT
 -- ============================================
 CREATE TRIGGER IF NOT EXISTS check_booking_overlap_insert
 BEFORE INSERT ON bookings
@@ -26,7 +26,7 @@ BEGIN
 END;
 
 -- ============================================
--- Trigger untuk validasi overlap saat UPDATE
+-- Trigger buat validasi overlap pas UPDATE
 -- ============================================
 CREATE TRIGGER IF NOT EXISTS check_booking_overlap_update
 BEFORE UPDATE ON bookings

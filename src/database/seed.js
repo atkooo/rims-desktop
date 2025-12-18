@@ -8,21 +8,21 @@ const {
   executeSqlFile,
 } = require("./utils/db-utils");
 
-// Setup database connection using shared config
+// Setup database connection pakai shared config
 const db = createDatabaseConnection();
 const dbPromisified = promisifyDb(db);
 
-// Alias for backward compatibility
+// Alias buat backward compatibility
 const runAsync = dbPromisified.runAsync.bind(dbPromisified);
 
 async function runSeeders() {
   const seedersPath = path.join(__dirname, "seeders");
 
   try {
-    // Begin transaction
+    // Mulai transaction
     await runAsync("BEGIN TRANSACTION");
 
-    // Get all seeder files (nested structure supported)
+    // Ambil semua file seeder (support nested structure)
     const files = collectSqlFiles(seedersPath)
       .map((fullPath) => ({
         name: path.basename(fullPath),
@@ -34,15 +34,15 @@ async function runSeeders() {
     for (const file of files) {
       console.log(`Running seeder: ${file.displayName}`);
       
-      // Execute SQL file using shared helper
+      // Execute file SQL pakai shared helper
       await executeSqlFile(
         dbPromisified,
         file.fullPath,
         {
           maxRetries: 3,
           skipEmpty: true,
-          allowDuplicateColumn: false, // Seeders should fail if duplicate
-          allowMissingTable: false, // Seeders should fail if table doesn't exist
+          allowDuplicateColumn: false, // Seeders harus fail kalau duplicate
+          allowMissingTable: false, // Seeders harus fail kalau tabelnya gak ada
         },
       );
 
@@ -53,17 +53,17 @@ async function runSeeders() {
     await runAsync("COMMIT");
     console.log(`All seeders completed successfully`);
   } catch (error) {
-    // Rollback on error
+    // Rollback kalau ada error
     await runAsync("ROLLBACK");
     console.error("Error running seeders:", error);
     throw error;
   } finally {
-    // Close database connection
+    // Tutup database connection
     db.close();
   }
 }
 
-// Add main execution if script is run directly
+// Tambah main execution kalau script di-run langsung
 if (require.main === module) {
   runSeeders()
     .then(() => process.exit(0))

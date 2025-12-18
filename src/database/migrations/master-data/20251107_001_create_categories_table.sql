@@ -1,4 +1,4 @@
--- Migration: Create categories table
+-- Migration: Buat tabel categories
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE categories (

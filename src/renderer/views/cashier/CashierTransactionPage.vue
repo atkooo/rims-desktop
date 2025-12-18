@@ -54,7 +54,7 @@ export default {
         const saleKey = ref(0);
         const rentalKey = ref(0);
         
-        // Load collapsed state from localStorage (same key as parent)
+        // Ambil state collapsed dari localStorage (pakai key yang sama kayak parent)
         const STORAGE_KEY = "cashier:headerCollapsed";
         const loadCollapsedState = () => {
             try {
@@ -69,7 +69,7 @@ export default {
         const isCollapsed = ref(loadCollapsedState());
 
         const setTransactionMode = (mode) => {
-            // Force recreate component dengan mengubah key untuk reset form
+            // Paksa recreate component dengan ubah key biar form reset
             if (mode === "sale") {
                 saleKey.value += 1;
             } else if (mode === "rental") {
@@ -83,9 +83,9 @@ export default {
         };
 
         onMounted(() => {
-            // Listen for header toggle events from CashierLayout
+            // Dengerin event toggle header dari CashierLayout
             eventBus.on("cashier:headerToggle", handleHeaderToggle);
-            // Also sync with current state from parent (in case event was already emitted)
+            // Sync juga dengan state dari parent (kalau event udah di-emit duluan)
             const currentState = loadCollapsedState();
             if (currentState !== isCollapsed.value) {
                 isCollapsed.value = currentState;
@@ -116,7 +116,7 @@ export default {
     height: 100%;
 }
 
-/* Transaction Type Selector */
+/* Selector Tipe Transaksi */
 .transaction-type-selector {
     background: white;
     border-bottom: 2px solid #e5e7eb;
@@ -226,7 +226,7 @@ export default {
     font-weight: 500;
 }
 
-/* Transaction Content */
+/* Konten Transaksi */
 .transaction-content {
     flex: 1;
     overflow-y: auto;

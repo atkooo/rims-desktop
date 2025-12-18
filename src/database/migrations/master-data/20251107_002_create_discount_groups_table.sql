@@ -1,4 +1,4 @@
--- Migration: Create discount_groups table
+-- Migration: Buat tabel discount_groups
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE discount_groups (

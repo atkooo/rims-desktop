@@ -228,18 +228,18 @@ export default {
       return candidate;
     };
 
-    // Refresh all data stores
+    // Refresh semua data store
     const refreshAllData = async () => {
       try {
-        // Refresh all stores in parallel for better performance
+        // Refresh semua store secara bersamaan biar lebih cepat
         await Promise.all([
           itemStore.fetchItems(),
           transactionStore.fetchTransactions(),
-          bundleStore.fetchBundles(true), // Force refresh bundles
+          bundleStore.fetchBundles(true), // Paksa refresh bundles
         ]);
       } catch (error) {
         console.error("Error refreshing data:", error);
-        // Don't throw error, just log it - login should still succeed
+        // Jangan throw error, cukup log aja - login tetap harus berhasil
       }
     };
 
@@ -251,14 +251,14 @@ export default {
       try {
         const user = await login(username.value, password.value);
 
-        // Refresh all data while showing loading/notification
+        // Refresh semua data sambil nunjukin loading/notification
         await refreshAllData();
 
         showNotification.value = true;
         loading.value = false;
 
         setTimeout(() => {
-          // Redirect cashier to cashier page
+          // Redirect kasir ke halaman kasir
           if (user?.role === "kasir") {
             router.push("/cashier");
           } else {
@@ -501,7 +501,7 @@ export default {
   }
 }
 
-/* Responsive adjustments */
+/* Penyesuaian responsive */
 @media (max-width: 480px) {
   .login-card {
     padding: 32px 24px;

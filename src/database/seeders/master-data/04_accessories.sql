@@ -2,10 +2,10 @@
 -- Seeder: Accessories (SQLite Compatible)
 -- ============================================
 
--- Reset accessories so the new data seeds clean
+-- Reset accessories biar data seed baru bersih
 DELETE FROM accessories;
 
--- Insert seeded accessories with pricing, availability, and discount links
+-- Insert accessories dengan pricing, availability, sama discount links
 INSERT INTO accessories (
   code,
   name,
@@ -96,7 +96,7 @@ INSERT INTO accessories (
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   );
-  -- Additional accessories for richer master data
+  -- Aksesoris tambahan buat master data yang lebih lengkap
   INSERT INTO accessories (
     code,
     name,

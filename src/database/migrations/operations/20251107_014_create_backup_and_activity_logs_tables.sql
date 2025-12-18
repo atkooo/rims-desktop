@@ -1,4 +1,4 @@
--- Migration: Create backup_history and activity_logs tables
+-- Migration: Buat tabel backup_history sama activity_logs
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE backup_history (

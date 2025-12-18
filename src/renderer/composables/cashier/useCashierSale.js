@@ -55,7 +55,7 @@ export function useCashierSale(form) {
   const subtotal = computed(() => baseSubtotal.value + bundleSubtotal.value + accessorySubtotal.value);
 
   const calculatedTax = computed(() => {
-    // Tax calculation handled by parent with taxPercentage
+    // Perhitungan tax dihandle sama parent dengan taxPercentage
     return 0;
   });
 

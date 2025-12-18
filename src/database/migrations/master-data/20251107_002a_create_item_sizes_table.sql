@@ -1,4 +1,4 @@
--- Migration: Create item_sizes table
+-- Migration: Buat tabel item_sizes
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE item_sizes (

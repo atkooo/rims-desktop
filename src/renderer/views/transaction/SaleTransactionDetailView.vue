@@ -262,11 +262,11 @@ export default {
         sale.value = found;
         await loadDetails(true);
 
-        // Auto-open receipt preview if query parameter is set and transaction is paid
+        // Auto-buka receipt preview kalau query parameter diset dan transaksi sudah dibayar
         if (shouldAutoPrintReceipt.value && isPaid(found)) {
-          // Remove query parameter from URL
+          // Hapus query parameter dari URL
           router.replace({ query: {} });
-          // Open receipt preview after a short delay
+          // Buka receipt preview setelah delay sebentar
           setTimeout(() => {
             showReceiptPreview.value = true;
           }, 300);
@@ -302,12 +302,12 @@ export default {
 
     const displayStatus = (sale) => {
       if (!sale) return "-";
-      // Check if transaction is cancelled
+      // Cek apakah transaksi dibatalkan
       const status = (sale.status || "").toString().toLowerCase();
       if (status === "cancelled" || status === "CANCELLED") {
         return "Dibatalkan";
       }
-      // Otherwise show payment status
+      // Kalau gak, tampilkan status pembayaran
       const paymentStatus = (sale.payment_status || sale.paymentStatus || "").toString().toLowerCase();
       if (paymentStatus === "paid") return "Lunas";
       if (paymentStatus === "unpaid") return "Belum Lunas";
@@ -321,19 +321,19 @@ export default {
 
     const handlePaymentSuccess = async (data) => {
       if (!data.partial) {
-        // Payment is complete
+        // Pembayaran selesai
         showSuccess("Pembayaran berhasil! Transaksi telah dilunasi.");
         showPaymentModal.value = false;
-        // Reload sale data to update payment status
+        // Reload data sale buat update status pembayaran
         await loadSale();
-        // Auto-open receipt preview after successful payment
+        // Auto-buka receipt preview setelah pembayaran berhasil
         setTimeout(() => {
           showReceiptPreview.value = true;
         }, 500);
       } else {
-        // Partial payment, keep modal open
+        // Pembayaran sebagian, tetap buka modal
         showSuccess("Pembayaran berhasil! Masih ada sisa pembayaran.");
-        loadSale(); // Reload to update payment status
+        loadSale(); // Reload buat update status pembayaran
       }
     };
 
@@ -346,9 +346,9 @@ export default {
     const handlePaymentModalClose = (data) => {
       showPaymentModal.value = false;
 
-      // If modal closed without payment (unpaid), just reload data
+      // Kalau modal ditutup tanpa pembayaran (unpaid), cukup reload data aja
       if (data?.unpaid) {
-        loadSale(); // Reload to refresh data
+        loadSale(); // Reload buat refresh data
       }
     };
 
@@ -589,7 +589,7 @@ export default {
   font-weight: 600;
 }
 
-/* Using global badge utility classes */
+/* Pakai global badge utility classes */
 .type-badge {
   padding: 0.25rem 0.6rem;
   border-radius: 12px;
@@ -615,7 +615,7 @@ export default {
   margin: 0.35rem 0 0;
 }
 
-/* Cancelled Status Banner */
+/* Banner Status Dibatalkan */
 .cancelled-banner {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   border: 1px solid #fca5a5;
@@ -681,7 +681,7 @@ export default {
   transform: scale(0.95);
 }
 
-/* Responsive styles */
+/* Style responsive */
 @media (max-width: 1200px) {
   .data-page.transaction-page.detail-page {
     padding: 1rem 1.5rem;

@@ -1,29 +1,29 @@
 const LOCALE = "id-ID";
 const DEFAULT_TIMEZONE = "Asia/Jakarta";
 
-// Dynamic timezone that can be changed
+// Timezone dinamis yang bisa diubah
 let currentTimezone = DEFAULT_TIMEZONE;
 
 const createDate = (value) => {
   if (!value) return null;
   
-  // Handle SQLite datetime strings (format: 'YYYY-MM-DD HH:MM:SS' without timezone)
-  // SQLite CURRENT_TIMESTAMP stores UTC time, so we parse it as UTC by appending 'Z'
+  // Handle string datetime SQLite (format: 'YYYY-MM-DD HH:MM:SS' tanpa timezone)
+  // SQLite CURRENT_TIMESTAMP nyimpen waktu UTC, jadi kita parse sebagai UTC dengan nambahin 'Z'
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
-    // SQLite datetime format - treat as UTC by appending 'Z'
-    // This ensures correct timezone conversion when formatting
+    // Format datetime SQLite - treat sebagai UTC dengan nambahin 'Z'
+    // Ini memastikan konversi timezone yang benar pas format
     const date = new Date(value.replace(" ", "T") + "Z");
     return Number.isNaN(date.getTime()) ? null : date;
   }
   
-  // Handle DATE format (YYYY-MM-DD) - parse as local time at midnight
-  // DATE fields don't have time, so we use local midnight
+  // Handle format DATE (YYYY-MM-DD) - parse sebagai local time di tengah malam
+  // Field DATE gak punya waktu, jadi kita pakai local midnight
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const date = new Date(value + "T00:00:00");
     return Number.isNaN(date.getTime()) ? null : date;
   }
   
-  // For ISO strings with timezone info, or other formats, use standard Date parsing
+  // Untuk ISO string dengan info timezone, atau format lain, pakai standard Date parsing
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };
@@ -33,7 +33,7 @@ const withTimezone = (options = {}) => ({
   ...options,
 });
 
-// Create formatter function that uses current timezone
+// Buat fungsi formatter yang pakai timezone sekarang
 const getEnCADateFormatter = () => new Intl.DateTimeFormat("en-CA", {
   timeZone: currentTimezone,
 });
@@ -125,23 +125,23 @@ export function setTimezone(timezone) {
  */
 export async function loadTimezoneFromSettings() {
   try {
-    // Check if we're in a browser environment with IPC access
+    // Cek apakah kita di environment browser dengan akses IPC
     if (typeof window !== "undefined" && window.api?.invoke) {
       const settings = await window.api.invoke("settings:get");
       if (settings && settings.timezone) {
         setTimezone(settings.timezone);
       } else {
-        // Use system timezone as fallback
+        // Pakai system timezone sebagai fallback
         const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         setTimezone(systemTimezone);
       }
     } else {
-      // Fallback to default timezone if IPC is not available
+      // Fallback ke default timezone kalau IPC gak tersedia
       setTimezone(DEFAULT_TIMEZONE);
     }
   } catch (error) {
     console.error("Error loading timezone from settings:", error);
-    // Fallback to default timezone on error
+    // Fallback ke default timezone kalau error
     setTimezone(DEFAULT_TIMEZONE);
   }
 }

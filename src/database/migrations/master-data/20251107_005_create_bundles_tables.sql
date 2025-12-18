@@ -1,4 +1,4 @@
--- Migration: Create bundles and bundle_details tables
+-- Migration: Buat tabel bundles sama bundle_details
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE bundles (
@@ -19,7 +19,7 @@ CREATE TABLE bundles (
     FOREIGN KEY (discount_group_id) REFERENCES discount_groups(id) ON DELETE SET NULL
 );
 
--- Create index for discount_group_id
+-- Buat index untuk discount_group_id
 CREATE INDEX IF NOT EXISTS idx_bundles_discount_group ON bundles(discount_group_id);
 
 CREATE TABLE bundle_details (

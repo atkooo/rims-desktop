@@ -1,8 +1,8 @@
--- Migration: Create performance indexes
--- This improves query performance for frequently accessed columns
+-- Migration: Buat performance indexes
+-- Ini nambahin performa query buat kolom yang sering diakses
 PRAGMA foreign_keys = ON;
 
--- Stock Movements indexes
+-- Index untuk Stock Movements
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements(movement_type);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_ref ON stock_movements(reference_type, reference_id);

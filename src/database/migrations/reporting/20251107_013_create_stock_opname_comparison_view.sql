@@ -1,4 +1,4 @@
--- Migration: Create a view for unified Stock Opname comparison across items, bundles, and accessories
+-- Migration: Buat view buat perbandingan Stock Opname yang unified untuk items, bundles, sama accessories
 PRAGMA foreign_keys = ON;
 
 CREATE VIEW IF NOT EXISTS v_stock_opname_comparison AS

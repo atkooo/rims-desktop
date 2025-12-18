@@ -1,4 +1,4 @@
--- Migration: Ensure rental_payments table exists (fix for older installations)
+-- Migration: Pastikan tabel rental_payments ada (fix buat instalasi lama)
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS rental_payments (

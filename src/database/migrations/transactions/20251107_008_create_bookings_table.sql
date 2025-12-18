@@ -1,4 +1,4 @@
--- Migration: Create bookings table
+-- Migration: Buat tabel bookings
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE bookings (

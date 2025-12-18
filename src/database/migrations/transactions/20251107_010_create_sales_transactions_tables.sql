@@ -1,4 +1,4 @@
--- Migration: Create sales transactions tables
+-- Migration: Buat tabel sales transactions
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE sales_transactions (
@@ -46,10 +46,10 @@ CREATE TABLE sales_transaction_details (
     CHECK (subtotal >= 0)
 );
 
--- Create index for accessory_id
+-- Buat index untuk accessory_id
 CREATE INDEX IF NOT EXISTS idx_sales_transaction_details_accessory ON sales_transaction_details(accessory_id);
 
--- Create indexes for better query performance
+-- Buat index buat performa query yang lebih baik
 CREATE INDEX idx_sales_transactions_customer ON sales_transactions(customer_id);
 CREATE INDEX idx_sales_transactions_user ON sales_transactions(user_id);
 CREATE INDEX idx_sales_transactions_cashier_session ON sales_transactions(cashier_session_id);

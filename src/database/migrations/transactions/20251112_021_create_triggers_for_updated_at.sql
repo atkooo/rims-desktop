@@ -1,7 +1,7 @@
--- Migration: Create triggers for auto-updating updated_at timestamp
+-- Migration: Buat trigger buat auto-update updated_at timestamp
 PRAGMA foreign_keys = ON;
 
--- Trigger for rental_transactions
+-- Trigger untuk rental_transactions
 CREATE TRIGGER IF NOT EXISTS update_rental_transactions_updated_at 
 AFTER UPDATE ON rental_transactions
 BEGIN
@@ -10,7 +10,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for sales_transactions
+-- Trigger untuk sales_transactions
 CREATE TRIGGER IF NOT EXISTS update_sales_transactions_updated_at 
 AFTER UPDATE ON sales_transactions
 BEGIN
@@ -19,7 +19,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for items
+-- Trigger untuk items
 CREATE TRIGGER IF NOT EXISTS update_items_updated_at 
 AFTER UPDATE ON items
 BEGIN
@@ -28,7 +28,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for customers
+-- Trigger untuk customers
 CREATE TRIGGER IF NOT EXISTS update_customers_updated_at 
 AFTER UPDATE ON customers
 BEGIN
@@ -37,7 +37,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for categories
+-- Trigger untuk categories
 CREATE TRIGGER IF NOT EXISTS update_categories_updated_at 
 AFTER UPDATE ON categories
 BEGIN
@@ -46,7 +46,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for accessories
+-- Trigger untuk accessories
 CREATE TRIGGER IF NOT EXISTS update_accessories_updated_at 
 AFTER UPDATE ON accessories
 BEGIN
@@ -55,7 +55,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for bundles
+-- Trigger untuk bundles
 CREATE TRIGGER IF NOT EXISTS update_bundles_updated_at 
 AFTER UPDATE ON bundles
 BEGIN
@@ -64,7 +64,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for cashier_sessions
+-- Trigger untuk cashier_sessions
 CREATE TRIGGER IF NOT EXISTS update_cashier_sessions_updated_at 
 AFTER UPDATE ON cashier_sessions
 BEGIN
@@ -73,7 +73,7 @@ BEGIN
     WHERE id = NEW.id;
 END;
 
--- Trigger for bookings
+-- Trigger untuk bookings
 CREATE TRIGGER IF NOT EXISTS update_bookings_updated_at 
 AFTER UPDATE ON bookings
 BEGIN

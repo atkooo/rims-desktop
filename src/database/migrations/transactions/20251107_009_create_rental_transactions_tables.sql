@@ -1,4 +1,4 @@
--- Migration: Create rental transactions tables
+-- Migration: Buat tabel rental transactions
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE rental_transactions (

@@ -59,7 +59,7 @@ export default {
     const route = useRoute();
     const cashierStatus = ref(null);
     
-    // Load collapsed state from localStorage
+    // Ambil state collapsed dari localStorage
     const STORAGE_KEY = "cashier:headerCollapsed";
     const loadCollapsedState = () => {
       try {
@@ -91,30 +91,30 @@ export default {
 
     const toggleCollapse = () => {
       isCollapsed.value = !isCollapsed.value;
-      // Save to localStorage
+      // Simpan ke localStorage
       saveCollapsedState(isCollapsed.value);
-      // Emit event untuk memberitahu child components
+      // Kirim event ke child components biar mereka tahu
       eventBus.emit("cashier:headerToggle", isCollapsed.value);
     };
 
-    // Check if a nav item should be active
+    // Cek apakah nav item harus aktif
     const isActive = (item) => {
       const currentPath = route.path;
 
-      // For exact match items (like /cashier), only match exact path
+      // Untuk exact match (kayak /cashier), cuma match exact path aja
       if (item.exact) {
         return currentPath === item.path || currentPath === item.path + "/";
       }
 
-      // Exact match first
+      // Exact match dulu
       if (currentPath === item.path) {
         return true;
       }
 
-      // For /cashier/* routes, match if current path starts with the item path
-      // but not if it's a parent route (e.g., /cashier should not be active when on /cashier/sale)
+      // Untuk route /cashier/*, match kalau current path dimulai dengan item path
+      // tapi jangan kalau itu parent route (misal /cashier jangan aktif pas di /cashier/sale)
       if (item.path.startsWith("/cashier/")) {
-        // Match exact or if current path is a sub-route
+        // Match exact atau kalau current path itu sub-route
         return currentPath === item.path || currentPath.startsWith(item.path + "/");
       }
 
@@ -148,16 +148,16 @@ export default {
       }
     };
 
-    // Listen for cashier session events
+    // Dengerin event sesi kasir
     const handleCashierSessionUpdate = () => {
       loadCashierStatus();
     };
 
     onMounted(() => {
       loadCashierStatus();
-      // Emit initial state to child components
+      // Kirim state awal ke child components
       eventBus.emit("cashier:headerToggle", isCollapsed.value);
-      // Listen for cashier session open/close events
+      // Dengerin event buka/tutup sesi kasir
       eventBus.on("cashier:sessionOpened", handleCashierSessionUpdate);
       eventBus.on("cashier:sessionClosed", handleCashierSessionUpdate);
     });
@@ -291,7 +291,7 @@ export default {
   background: #e5e7eb;
 }
 
-/* Navigation Tabs - Like Microsoft Word */
+/* Navigation Tabs - Style kayak Microsoft Word */
 .cashier-nav {
   background: white;
   padding: 0 2rem;

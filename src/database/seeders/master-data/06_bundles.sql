@@ -2,11 +2,11 @@
 -- Seeder: Bundles / Packages (SQLite Compatible)
 -- ============================================
 
--- Clear existing bundles and dependent details so the new packages align
+-- Hapus bundles yang ada sama detail-nya biar paket baru selaras
 DELETE FROM bundle_details;
 DELETE FROM bundles;
 
--- Insert bundled packages with stock tracking and discounts
+-- Insert paket bundle dengan stock tracking sama discounts
 INSERT INTO bundles (
   code,
   name,
@@ -98,7 +98,7 @@ INSERT INTO bundles (
     CURRENT_TIMESTAMP
   );
 
--- Bundle details associate each package with its items/accessories
+-- Bundle details menghubungkan setiap paket dengan items/accessories-nya
 INSERT INTO bundle_details (
   bundle_id,
   item_id,

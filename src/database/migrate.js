@@ -8,8 +8,8 @@ const {
   executeSqlFile,
 } = require("./utils/db-utils");
 
-// Create a function to get fresh database connection and promisified methods
-// This ensures we always use a fresh connection, especially after restore
+// Buat fungsi buat dapetin database connection yang fresh sama method yang di-promisify
+// Ini memastikan kita selalu pakai connection yang fresh, terutama setelah restore
 function getDbConnection() {
   const db = createDatabaseConnection();
   const dbPromisified = promisifyDb(db);
@@ -58,46 +58,46 @@ async function getCurrentBatch(dbOps) {
   }
 }
 
-// collectSqlFiles is now imported from utils/db-utils
+// collectSqlFiles sekarang di-import dari utils/db-utils
 
 async function runMigrations(providedDb = null) {
   const migrationsPath = path.join(__dirname, "migrations");
   
-  // Use provided database connection if available, otherwise create a new one
-  // If called from database.js, it should provide its own connection
+  // Pakai database connection yang disediakan kalau ada, kalau gak bikin yang baru
+  // Kalau dipanggil dari database.js, harus provide connection sendiri
   let db, runAsync, allAsync, getAsync;
   let shouldClose = true;
   
   if (providedDb) {
-    // Use provided connection (from database.js)
+    // Pakai connection yang disediakan (dari database.js)
     db = providedDb;
     const dbPromisified = promisifyDb(db);
     runAsync = dbPromisified.runAsync.bind(dbPromisified);
     allAsync = dbPromisified.allAsync.bind(dbPromisified);
     getAsync = dbPromisified.getAsync.bind(dbPromisified);
-    shouldClose = false; // Don't close connection provided by caller
+    shouldClose = false; // Jangan tutup connection yang disediakan caller
   } else {
-    // Create fresh database connection for each migration run
-    // This is important after restore, as the old connection may be invalid
+    // Bikin database connection yang fresh buat setiap migration run
+    // Ini penting setelah restore, karena connection lama mungkin udah invalid
     const connection = getDbConnection();
     db = connection.db;
     runAsync = connection.runAsync;
     allAsync = connection.allAsync;
     getAsync = connection.getAsync;
-    shouldClose = true; // Close our own connection
+    shouldClose = true; // Tutup connection kita sendiri
   }
   
   const dbOps = { runAsync, allAsync, getAsync };
 
   try {
-    // Ensure migrations table exists
+    // Pastikan tabel migrations ada
     await ensureMigrationsTable(dbOps);
 
-    // Get executed migrations
+    // Ambil migrations yang udah di-execute
     const executedMigrations = await getExecutedMigrations(dbOps);
     const executedFiles = new Set(executedMigrations.map((m) => m.migration));
 
-    // Get all migration files that haven't been executed (nested folders supported)
+    // Ambil semua file migration yang belum di-execute (support nested folders)
     const pendingFiles = collectSqlFiles(migrationsPath)
       .map((fullPath) => ({
         name: path.basename(fullPath),
@@ -112,31 +112,31 @@ async function runMigrations(providedDb = null) {
       return;
     }
 
-    // Get current batch number
+    // Ambil nomor batch sekarang
     const currentBatch = await getCurrentBatch(dbOps);
     const newBatch = currentBatch + 1;
 
-    // Begin transaction
+    // Mulai transaction
     await runAsync("BEGIN TRANSACTION");
 
     for (const file of pendingFiles) {
       console.log(`Running migration: ${file.displayName}`);
       
-      // Execute SQL file with proper error handling
-      // allowDuplicateColumn: true allows ALTER TABLE ADD COLUMN to skip if column already exists
-      // allowMissingTable: false ensures tables must exist (for ALTER TABLE migrations)
+      // Execute file SQL dengan error handling yang proper
+      // allowDuplicateColumn: true allow ALTER TABLE ADD COLUMN buat skip kalau kolomnya udah ada
+      // allowMissingTable: false memastikan tabel harus ada (buat ALTER TABLE migrations)
       await executeSqlFile(
         dbOps,
         file.fullPath,
         {
           maxRetries: 5,
           skipEmpty: true,
-          allowDuplicateColumn: true, // Allow skipping if column already exists (for ALTER TABLE migrations)
-          allowMissingTable: false, // Tables must exist (for ALTER TABLE migrations)
+          allowDuplicateColumn: true, // Allow skip kalau kolomnya udah ada (buat ALTER TABLE migrations)
+          allowMissingTable: false, // Tabel harus ada (buat ALTER TABLE migrations)
         },
       );
 
-      // Record the migration
+      // Record migration-nya
       await runAsync(
         "INSERT INTO migrations (migration, batch) VALUES (?, ?)",
         [file.name, newBatch],
@@ -151,7 +151,7 @@ async function runMigrations(providedDb = null) {
       `Batch ${newBatch}: ${pendingFiles.length} migrations completed successfully`,
     );
   } catch (error) {
-    // Rollback on error
+    // Rollback kalau ada error
     try {
       await runAsync("ROLLBACK");
     } catch (rollbackError) {
@@ -160,11 +160,11 @@ async function runMigrations(providedDb = null) {
     console.error("Error running migrations:", error);
     throw error;
   } finally {
-    // Only close connection if we created it (not when called from database.js)
-    // database.js manages its own connection lifecycle
+    // Cuma tutup connection kalau kita yang bikin (bukan kalau dipanggil dari database.js)
+    // database.js manage lifecycle connection sendiri
     if (shouldClose) {
       try {
-        // Close connection and wait for it to complete
+        // Tutup connection sama tunggu sampai selesai
         await new Promise((resolve, reject) => {
         db.close((err) => {
           if (err) {
@@ -182,7 +182,7 @@ async function runMigrations(providedDb = null) {
   }
 }
 
-// Add main execution if script is run directly
+// Tambah main execution kalau script di-run langsung
 if (require.main === module) {
   runMigrations()
     .then(() => process.exit(0))

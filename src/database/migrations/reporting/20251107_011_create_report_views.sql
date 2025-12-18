@@ -1,7 +1,7 @@
--- Migration: Create reporting views
+-- Migration: Buat reporting views
 PRAGMA foreign_keys = ON;
 
--- Items with stock overview
+-- Overview items dengan stock
 CREATE VIEW IF NOT EXISTS v_items_with_stock AS
 SELECT
   i.id,

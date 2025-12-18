@@ -1,4 +1,4 @@
--- Migration: Create cashier_sessions table
+-- Migration: Buat tabel cashier_sessions
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE cashier_sessions (
