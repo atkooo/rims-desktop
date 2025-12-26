@@ -297,6 +297,7 @@ export default {
     });
 
     const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
+    const formatDate = formatDateShort;
 
     const loadDetails = async (force = false) => {
       if (details.value.length && !force) return;
@@ -505,7 +506,7 @@ export default {
       detailError,
       filteredDetails,
       formatCurrency,
-      formatDate,
+      formatDateShort,
       loadDetails,
       loading,
       error,
