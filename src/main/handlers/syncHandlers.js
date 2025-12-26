@@ -1,6 +1,5 @@
 const { ipcMain } = require('electron');
 const syncService = require('../services/syncService');
-const syncServiceManager = require('../services/syncServiceManager');
 const autoSyncService = require('../services/autoSyncService');
 const logger = require('../helpers/logger');
 const settingsUtils = require('../helpers/settingsUtils');
@@ -80,58 +79,6 @@ function setupSyncHandlers() {
       return result;
     } catch (error) {
       logger.error('Error in sync:check-status handler:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Start sync service process
-   */
-  ipcMain.handle('sync-service:start', async (event) => {
-    try {
-      const result = await syncServiceManager.startSyncService();
-      return result;
-    } catch (error) {
-      logger.error('Error in sync-service:start handler:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Stop sync service process
-   */
-  ipcMain.handle('sync-service:stop', async (event) => {
-    try {
-      const result = await syncServiceManager.stopSyncService();
-      return result;
-    } catch (error) {
-      logger.error('Error in sync-service:stop handler:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Restart sync service process
-   */
-  ipcMain.handle('sync-service:restart', async (event) => {
-    try {
-      const result = await syncServiceManager.restartSyncService();
-      return result;
-    } catch (error) {
-      logger.error('Error in sync-service:restart handler:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Get sync service process status
-   */
-  ipcMain.handle('sync-service:get-status', async (event) => {
-    try {
-      const status = syncServiceManager.getSyncServiceStatus();
-      return { success: true, status };
-    } catch (error) {
-      logger.error('Error in sync-service:get-status handler:', error);
       return { success: false, error: error.message };
     }
   });

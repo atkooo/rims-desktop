@@ -283,7 +283,7 @@
           <div>
             <h2>Sinkronisasi Data</h2>
             <p class="section-subtitle">
-              Sinkronkan data transaksi ke Supabase melalui sync service. Data yang sudah disinkronkan akan ditandai dengan is_sync = 1.
+              Sinkronkan data transaksi ke Supabase melalui service internal RIMS Desktop. Data yang sudah disinkronkan akan ditandai dengan is_sync = 1.
             </p>
           </div>
         </header>

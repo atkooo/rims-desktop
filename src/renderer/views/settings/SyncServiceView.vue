@@ -4,7 +4,7 @@
       <div>
         <h1>RIMS Sync Service</h1>
         <p class="subtitle">
-          Monitor status layanan sinkronisasi data ke Supabase. Service harus diaktifkan manual melalui aplikasi RIMS Sync Service.
+          Monitor status layanan sinkronisasi data ke Supabase. Service berjalan otomatis di dalam RIMS Desktop.
         </p>
       </div>
     </div>
@@ -137,7 +137,7 @@
           <Icon name="info" :size="18" />
           <div>
             <strong>Sync Service Tidak Terhubung</strong>
-            <p>Pastikan aplikasi RIMS Sync Service berjalan dan service sudah diaktifkan. Klik "Cek Koneksi" untuk memverifikasi koneksi.</p>
+            <p>Pastikan konfigurasi Supabase sudah diisi di .env RIMS Desktop, lalu klik "Cek Koneksi" untuk memverifikasi koneksi.</p>
           </div>
         </div>
       </div>
@@ -215,20 +215,12 @@ import Icon from '@/components/ui/Icon.vue';
 import { invoke } from '@/services/ipc';
 import { syncAllPending as syncAllPendingService, checkSyncServiceStatus } from '@/services/sync';
 import { useNotification } from '@/composables/useNotification';
-import { formatDateTime } from "@/utils/dateUtils";
 
 export default {
   name: 'SyncServiceView',
   components: { AppButton, Icon },
   setup() {
     const { showNotification, showSuccess, showError } = useNotification();
-    const serviceStatus = ref({
-      running: false,
-      port: 3001,
-      pid: null,
-      startTime: null,
-      lastError: null
-    });
     const connectionStatus = ref({
       serviceConnected: false,
       supabaseConnected: false,
@@ -240,8 +232,6 @@ export default {
       pendingPayments: 0,
       pendingStockMovements: 0
     });
-    const actionLoading = ref(false);
-    const refreshing = ref(false);
     const checkingConnection = ref(false);
     const syncing = ref(false);
     const updatingAutoSync = ref(false);
@@ -253,20 +243,6 @@ export default {
       interval: 300000
     });
     let statusInterval = null;
-
-    const refreshStatus = async () => {
-      refreshing.value = true;
-      try {
-        const result = await invoke('sync-service:get-status');
-        if (result.success) {
-          serviceStatus.value = { ...result.status };
-        }
-      } catch (error) {
-        console.error('Error refreshing status:', error);
-      } finally {
-        refreshing.value = false;
-      }
-    };
 
     const checkConnection = async () => {
       checkingConnection.value = true;
@@ -295,7 +271,7 @@ export default {
       }
     };
 
-    // Start/Stop/Restart functions removed - service must be controlled manually through rims-sync-service app
+    // Service runs automatically inside RIMS Desktop
 
     const syncAllPending = async () => {
       syncing.value = true;
@@ -408,18 +384,14 @@ export default {
     // Auto-start functionality removed - service must be started manually
 
     onMounted(async () => {
-      await refreshStatus();
       await checkConnection();
       await loadStats();
       await loadAutoSyncStatus();
       
       // Auto-refresh status every 5 seconds
       statusInterval = setInterval(() => {
-        refreshStatus();
         loadAutoSyncStatus();
-        if (serviceStatus.value.running) {
-          checkConnection();
-        }
+        checkConnection();
       }, 5000);
     });
 
@@ -430,20 +402,15 @@ export default {
     });
 
     return {
-      serviceStatus,
       connectionStatus,
       stats,
-      actionLoading,
-      refreshing,
       checkingConnection,
       syncing,
       updatingAutoSync,
       autoSyncEnabled,
       autoSyncIntervalSeconds,
       autoSyncStatus,
-      formatDateTime,
       formatInterval,
-      refreshStatus,
       checkConnection,
       syncAllPending,
       updateAutoSyncSettings

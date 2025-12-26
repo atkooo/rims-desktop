@@ -1,159 +1,7 @@
-const https = require('https');
-const http = require('http');
-const { URL } = require('url');
 const logger = require('../helpers/logger');
 const database = require('../helpers/database');
-const settingsUtils = require('../helpers/settingsUtils');
-
-/**
- * Get sync service URL from settings or environment
- */
-async function getSyncServiceUrl() {
-  const settings = await settingsUtils.loadSettings();
-  
-  // Check environment variable first, then settings
-  const syncServiceUrl = 
-    process.env.SYNC_SERVICE_URL || 
-    settings.sync?.service_url || 
-    'http://localhost:3001';
-  
-  return syncServiceUrl;
-}
-
-/**
- * Check if error is retryable (transient error)
- */
-function isRetryableError(error) {
-  if (!error) return false;
-  
-  const errorMessage = error.message || error.toString();
-  const errorCode = error.code;
-  
-  // Network errors that are typically transient
-  const retryableCodes = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', 'EAI_AGAIN'];
-  const retryableMessages = ['timeout', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'];
-  
-  // Check error code
-  if (errorCode && retryableCodes.includes(errorCode)) {
-    return true;
-  }
-  
-  // Check error message
-  if (errorMessage && retryableMessages.some(msg => errorMessage.includes(msg))) {
-    return true;
-  }
-  
-  // HTTP 5xx errors are retryable
-  if (errorMessage && /HTTP 5\d{2}/.test(errorMessage)) {
-    return true;
-  }
-  
-  return false;
-}
-
-/**
- * Make HTTP request to sync service with retry support
- * @param {string} url - Request URL
- * @param {string} method - HTTP method (default: 'GET')
- * @param {object|null} data - Request body data (default: null)
- * @param {number} timeout - Request timeout in milliseconds (default: 10000)
- * @param {number} maxRetries - Maximum number of retries (default: 0, no retry)
- * @param {number} retryDelay - Delay between retries in milliseconds (default: 1000)
- */
-async function makeRequest(url, method = 'GET', data = null, timeout = 10000, maxRetries = 0, retryDelay = 1000) {
-  let lastError;
-  let attempt = 0;
-  
-  while (attempt <= maxRetries) {
-    try {
-      return await new Promise((resolve, reject) => {
-        const urlObj = new URL(url);
-        const isHttps = urlObj.protocol === 'https:';
-        const client = isHttps ? https : http;
-        
-        const options = {
-          hostname: urlObj.hostname,
-          port: urlObj.port || (isHttps ? 443 : 80),
-          path: urlObj.pathname + urlObj.search,
-          method: method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: timeout,
-        };
-
-        if (data) {
-          const jsonData = JSON.stringify(data);
-          options.headers['Content-Length'] = Buffer.byteLength(jsonData);
-        }
-
-        const req = client.request(options, (res) => {
-          let responseData = '';
-
-          res.on('data', (chunk) => {
-            responseData += chunk;
-          });
-
-          res.on('end', () => {
-            try {
-              const parsed = JSON.parse(responseData);
-              if (res.statusCode >= 200 && res.statusCode < 300) {
-                resolve(parsed);
-              } else {
-                // Extract error message from response
-                const errorMsg = parsed.error || parsed.message || `HTTP ${res.statusCode}: ${responseData}`;
-                logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-                const error = new Error(errorMsg);
-                error.statusCode = res.statusCode;
-                reject(error);
-              }
-            } catch (error) {
-              if (res.statusCode >= 200 && res.statusCode < 300) {
-                resolve(responseData);
-              } else {
-                const errorMsg = `HTTP ${res.statusCode}: ${responseData}`;
-                logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-                const httpError = new Error(errorMsg);
-                httpError.statusCode = res.statusCode;
-                reject(httpError);
-              }
-            }
-          });
-        });
-
-        req.on('error', (error) => {
-          reject(error);
-        });
-
-        req.on('timeout', () => {
-          req.destroy();
-          reject(new Error(`Request timeout after ${timeout}ms`));
-        });
-
-        if (data) {
-          req.write(JSON.stringify(data));
-        }
-
-        req.end();
-      });
-    } catch (error) {
-      lastError = error;
-      
-      // If not retryable or no more retries, throw error
-      if (!isRetryableError(error) || attempt >= maxRetries) {
-        throw error;
-      }
-      
-      // Wait before retrying with exponential backoff
-      const delay = retryDelay * Math.pow(2, attempt);
-      logger.warn(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error.message);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      attempt++;
-    }
-  }
-  
-  throw lastError;
-}
+const syncCore = require('../sync-service/services/syncService');
+const supabase = require('../sync-service/config/supabase');
 
 /**
  * Sync rental transaction to sync service
@@ -175,15 +23,7 @@ async function syncRentalTransaction(transactionId) {
       `SELECT * FROM rental_transaction_details WHERE rental_transaction_id = ?`,
       [transactionId]
     );
-
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/rental-transaction`;
-    
-    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
-    const result = await makeRequest(url, 'POST', {
-      transaction,
-      details
-    }, 30000, 2, 1000);
+    const result = await syncCore.syncRentalTransaction({ transaction, details });
 
     if (result.success) {
       // Update is_sync to 1
@@ -232,28 +72,15 @@ async function syncSalesTransaction(transactionId) {
       [transactionId]
     );
 
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/sales-transaction`;
-    
-    logger.info(`Attempting to sync sales transaction ${transactionId} to ${url}`);
+    logger.info(`Attempting to sync sales transaction ${transactionId} (direct mode)`);
     logger.info(`Transaction data:`, { 
       transaction_code: transaction.transaction_code,
       total_amount: transaction.total_amount,
       details_count: details.length 
     });
 
-    let result;
-    try {
-      // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
-      result = await makeRequest(url, 'POST', {
-        transaction,
-        details
-      }, 30000, 2, 1000);
-      logger.info(`Sync service response:`, result);
-    } catch (requestError) {
-      logger.error(`Request error for sales transaction ${transactionId}:`, requestError);
-      throw new Error(`Failed to connect to sync service: ${requestError.message}. Pastikan sync service berjalan di port 3001.`);
-    }
+    const result = await syncCore.syncSalesTransaction({ transaction, details });
+    logger.info(`Sync service response:`, result);
 
     if (result && result.success) {
       // Update is_sync to 1
@@ -309,11 +136,7 @@ async function syncPayment(paymentId) {
       throw new Error(`Payment ${paymentId} not found`);
     }
 
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/payment`;
-    
-    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
-    const result = await makeRequest(url, 'POST', payment, 30000, 2, 1000);
+    const result = await syncCore.syncPayment(payment);
 
     if (result.success) {
       // Update is_sync to 1
@@ -348,11 +171,7 @@ async function syncStockMovement(movementId) {
       throw new Error(`Stock movement ${movementId} not found`);
     }
 
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/stock-movement`;
-    
-    // Use longer timeout for sync operations (30 seconds) with retry (2 retries)
-    const result = await makeRequest(url, 'POST', movement, 30000, 2, 1000);
+    const result = await syncCore.syncStockMovement(movement);
 
     if (result.success) {
       // Update is_sync to 1
@@ -466,12 +285,36 @@ async function syncAllPending() {
  */
 async function checkSyncServiceStatus() {
   try {
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/status`;
-    
-    // Use shorter timeout for status check (5 seconds)
-    const result = await makeRequest(url, 'GET', null, 5000);
-    return { success: true, status: result };
+    let supabaseConnected = false;
+    let supabaseError = null;
+
+    try {
+      const { error } = await supabase.from("rental_transactions").select("id").limit(1);
+
+      if (error) {
+        supabaseError = error.message || "Unknown Supabase error";
+        logger.warn("Supabase connection test failed:", error);
+      } else {
+        supabaseConnected = true;
+        logger.info("Supabase connection test successful");
+      }
+    } catch (configError) {
+      supabaseError = configError.message || "Supabase configuration error";
+      logger.error("Supabase configuration error:", configError);
+    }
+
+    return {
+      success: true,
+      status: {
+        success: true,
+        message: "Sync service is running",
+        supabase: {
+          connected: supabaseConnected,
+          error: supabaseError,
+        },
+        timestamp: new Date().toISOString(),
+      },
+    };
   } catch (error) {
     logger.error('Error checking sync service status:', error);
     // Return more detailed error information

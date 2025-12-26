@@ -440,6 +440,17 @@ app.whenReady().then(async () => {
     logger.warn("Failed to initialize timezone cache:", err);
   }
 
+  // Initialize sync service (direct mode, no HTTP server)
+  try {
+    const syncServiceManager = require("./services/syncServiceManager");
+    const syncStartResult = await syncServiceManager.startSyncService();
+    if (!syncStartResult.success) {
+      logger.warn("Failed to start embedded sync service:", syncStartResult.error);
+    }
+  } catch (error) {
+    logger.error("Error starting embedded sync service:", error);
+  }
+
   // Setup activation handlers first
   setupActivationHandlers();
 
@@ -513,10 +524,6 @@ app.whenReady().then(async () => {
   setupReceiptHandlers();
   setupUserHandlers();
   setupSyncHandlers();
-  
-  // Sync service must be started manually through rims-sync-service application
-  // RIMS-Desktop will only check status and communicate with the service if it's running
-  logger.info('Sync service must be started manually through rims-sync-service application');
   
   // Setup auto sync
   const autoSyncService = require('./services/autoSyncService');

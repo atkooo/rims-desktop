@@ -4,11 +4,8 @@ const fs = require("fs").promises;
 const fsSync = require("fs");
 const path = require("path");
 const { app } = require("electron");
-const https = require("https");
-const http = require("http");
-const { URL } = require("url");
 const logger = require("../helpers/logger");
-const settingsUtils = require("../helpers/settingsUtils");
+const syncCore = require("../sync-service/services/syncService");
 
 /**
  * Resolve settings file path
@@ -140,98 +137,6 @@ async function getOrGenerateMachineId() {
 }
 
 /**
- * Get sync service URL from settings or environment
- */
-async function getSyncServiceUrl() {
-  const settings = await settingsUtils.loadSettings();
-  
-  // Check environment variable first, then settings
-  const syncServiceUrl = 
-    process.env.SYNC_SERVICE_URL || 
-    settings.sync?.service_url || 
-    'http://localhost:3001';
-  
-  return syncServiceUrl;
-}
-
-/**
- * Make HTTP request to sync service
- * @param {string} url - Request URL
- * @param {string} method - HTTP method (default: 'GET')
- * @param {object|null} data - Request body data (default: null)
- * @param {number} timeout - Request timeout in milliseconds (default: 10000)
- */
-function makeRequest(url, method = 'GET', data = null, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const isHttps = urlObj.protocol === 'https:';
-    const client = isHttps ? https : http;
-    
-    const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || (isHttps ? 443 : 80),
-      path: urlObj.pathname + urlObj.search,
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: timeout,
-    };
-
-    if (data) {
-      const jsonData = JSON.stringify(data);
-      options.headers['Content-Length'] = Buffer.byteLength(jsonData);
-    }
-
-    const req = client.request(options, (res) => {
-      let responseData = '';
-
-      res.on('data', (chunk) => {
-        responseData += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(responseData);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(parsed);
-          } else {
-            // Extract error message from response
-            const errorMsg = parsed.error || parsed.message || `HTTP ${res.statusCode}: ${responseData}`;
-            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-            reject(new Error(errorMsg));
-          }
-        } catch (error) {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(responseData);
-          } else {
-            const errorMsg = `HTTP ${res.statusCode}: ${responseData}`;
-            logger.error(`HTTP Error ${res.statusCode}: ${errorMsg}`);
-            reject(new Error(errorMsg));
-          }
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      logger.error(`Request error: ${error.message}`);
-      reject(error);
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error(`Request timeout after ${timeout}ms`));
-    });
-
-    if (data) {
-      req.write(JSON.stringify(data));
-    }
-
-    req.end();
-  });
-}
-
-/**
  * Check if sync/activation is enabled in development
  */
 function isSyncAndActivationEnabled() {
@@ -281,15 +186,9 @@ async function checkActivationStatus(forceRefresh = false) {
   try {
     const machineId = await getOrGenerateMachineId();
     const trimmedMachineId = machineId.trim();
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/activation/check`;
+    const result = await syncCore.checkActivationStatus(trimmedMachineId);
 
-    // Use shorter timeout for activation check (5 seconds)
-    const result = await makeRequest(url, 'POST', {
-      machineId: trimmedMachineId
-    }, 5000);
-
-    if (result.success) {
+    if (result) {
       cachedStatus = {
         isActive: result.isActive || false,
         machineId: result.machineId || trimmedMachineId,
@@ -316,19 +215,6 @@ async function checkActivationStatus(forceRefresh = false) {
     const trimmedMachineId = machineId?.trim() || null;
 
     // Check if it's a connection error (sync service not available)
-    const isConnectionError =
-      error.message?.includes("ECONNREFUSED") ||
-      error.message?.includes("ENOTFOUND") ||
-      error.message?.includes("timeout");
-
-    if (isConnectionError) {
-      logger.warn("Sync service not available, using cached status if available");
-      if (cachedStatus?.isActive) {
-        logger.warn("Using cached active status");
-        return { ...cachedStatus, offline: true, error: error.message };
-      }
-    }
-
     return {
       isActive: false,
       machineId: trimmedMachineId,
@@ -344,13 +230,7 @@ async function checkActivationStatus(forceRefresh = false) {
 async function verifyActivation() {
   try {
     const machineId = (await getOrGenerateMachineId()).trim();
-    const syncServiceUrl = await getSyncServiceUrl();
-    const url = `${syncServiceUrl}/api/sync/activation/verify`;
-
-    // Use timeout for activation verify (10 seconds)
-    const result = await makeRequest(url, 'POST', {
-      machineId: machineId
-    }, 10000);
+    const result = await syncCore.verifyActivation(machineId);
 
     if (result.success) {
       clearCache();
