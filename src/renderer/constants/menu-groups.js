@@ -48,24 +48,9 @@ export const menuGroups = [
     title: "Data Master",
     items: [
       {
-        to: "/master/categories",
-        label: "Kategori Produk",
-        icon: "tag",
-      },
-      {
         to: "/master/items",
         label: "Manajemen Item",
         icon: "package",
-      },
-      {
-        to: "/master/bulk-labels",
-        label: "Generate Label Barcode",
-        icon: "barcode",
-      },
-      {
-        to: "/master/item-sizes",
-        label: "Ukuran Item",
-        icon: "ruler",
       },
       {
         to: "/master/accessories",
@@ -76,6 +61,21 @@ export const menuGroups = [
         to: "/master/bundles",
         label: "Paket & Koleksi",
         icon: "grid",
+      },
+      {
+        to: "/master/categories",
+        label: "Kategori Produk",
+        icon: "tag",
+      },
+      {
+        to: "/master/bulk-labels",
+        label: "Generate Label Barcode",
+        icon: "barcode",
+      },
+      {
+        to: "/master/item-sizes",
+        label: "Ukuran Item",
+        icon: "ruler",
       },
       {
         to: "/master/discount-groups",

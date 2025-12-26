@@ -264,6 +264,12 @@ export default {
         format: formatText,
       },
       {
+        key: "size_name",
+        label: "Ukuran",
+        sortable: true,
+        format: formatText,
+      },
+      {
         key: "stock_quantity",
         label: "Stok",
         sortable: true,
