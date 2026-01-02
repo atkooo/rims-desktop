@@ -323,16 +323,17 @@ async function importItemsFromExcel(filePath) {
           // Insert item
           await database.execute(
             `INSERT INTO items (
-              code, name, description, sale_price, type,
+              code, name, description, purchase_price, sale_price, type,
               size_id, category_id, rental_price_per_day, deposit,
               discount_group_id, stock_quantity, available_quantity,
               min_stock_alert, is_available_for_rent, is_available_for_sale,
               is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               finalCode,
               name,
               description,
+              purchasePrice,
               salePrice,
               type,
               sizeId,
