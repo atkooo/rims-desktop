@@ -107,7 +107,6 @@
     <!-- Printer Selection (shown when print button is clicked) -->
     <PrinterSelectDialog
       v-model="showPrinterDialog"
-      :initial-printer-name="defaultPrinterName"
       @print="handlePrintToPrinter"
     />
   </AppDialog>
@@ -156,7 +155,6 @@ export default {
     const previewUrl = ref("");
     const previewBlobUrl = ref("");
     const showPrinterDialog = ref(false);
-    const defaultPrinterName = ref("");
 
     const receiptSettings = ref({
       showCompanyName: true,
@@ -186,7 +184,6 @@ export default {
             ...settings.receiptSettings,
           };
         }
-        defaultPrinterName.value = settings?.printer || "";
       } catch (err) {
         console.warn("Could not load receipt settings:", err);
       }
@@ -262,17 +259,11 @@ export default {
 
     // Handle print button click
     const handlePrint = () => {
-      if (defaultPrinterName.value) {
-        handlePrintToPrinter({ name: defaultPrinterName.value });
-        return;
-      }
       showPrinterDialog.value = true;
     };
 
     // Handle actual printing to printer
     const handlePrintToPrinter = async (printer) => {
-      const printerName =
-        typeof printer === "string" ? printer : printer?.name || null;
       printing.value = true;
       try {
         // Convert reactive objects to plain objects for IPC
@@ -283,7 +274,7 @@ export default {
         const result = await ipcRenderer.invoke("receipt:print", {
           transactionId: props.transactionId,
           transactionType: props.transactionType,
-          printerName,
+          printerName: printer.name,
           silent: true,
           receiptSettings: receiptSettingsPlain,
         });
@@ -337,7 +328,6 @@ export default {
       error,
       previewUrl,
       receiptSettings,
-      defaultPrinterName,
       showPrinterDialog,
       refreshPreview,
       handlePrint,
