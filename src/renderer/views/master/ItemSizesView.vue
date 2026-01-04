@@ -118,12 +118,14 @@ import AppTable from "@/components/ui/AppTable.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { useNotification } from "@/composables/useNotification";
 import { formatDateShort } from "@/utils/dateUtils";
+import { useItemStore } from "@/store/items";
 
 export default {
   name: "ItemSizesView",
   components: { Dialog, AppTable, AppButton },
   setup() {
     const { showError, showSuccess } = useNotification();
+    const itemStore = useItemStore();
     const sizes = ref([]);
     const loading = ref(false);
     const showDialog = ref(false);
@@ -154,6 +156,7 @@ export default {
       loading.value = true;
       try {
         sizes.value = await window.api.invoke("itemSizes:getAll");
+        itemStore.sizes = sizes.value;
       } catch (error) {
         console.error("Gagal memuat ukuran item:", error);
       } finally {

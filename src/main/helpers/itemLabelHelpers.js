@@ -94,8 +94,8 @@ async function generateBarcodeLabel(itemId, options = {}) {
 
     // Title block (align vertically centered)
     const maxNameWidth = labelWidth - 20;
-    const nameFontSize = 13;
-    const nameLineHeight = 16;
+    const nameFontSize = 12;
+    const nameLineHeight = 14;
     const priceFontSize = 11;
     const priceLineHeight = 12;
     const sizeFontSize = 10;
@@ -290,6 +290,7 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       labelHeight: 46,
       spacing: 2,
       margin: 3,
+      bottomPadding: 8,
       saveFile: true,
       previewPadding: 0,
       ...options,
@@ -422,6 +423,7 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       labelHeight,
       spacing,
       margin,
+      bottomPadding,
       saveFile,
       previewPadding,
     } = resolvedOptions;
@@ -437,6 +439,7 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       totalLabels * labelHeight +
       Math.max(0, totalLabels - 1) * spacing +
       2 +
+      bottomPadding +
       previewPadding;
 
     const doc = new jsPDF({
@@ -450,6 +453,18 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
 
     // Draw labels vertically to mimic a thermal roll
     let currentY = margin;
+
+    const truncateToWidth = (text, maxWidth, ellipsis = "...") => {
+      if (doc.getTextWidth(text) <= maxWidth) return text;
+      let truncated = text;
+      while (
+        truncated.length > 0 &&
+        doc.getTextWidth(truncated + ellipsis) > maxWidth
+      ) {
+        truncated = truncated.slice(0, -1);
+      }
+      return truncated + ellipsis;
+    };
 
     for (const item of itemsWithQuantity) {
       // Generate multiple labels for this item based on quantity
@@ -478,19 +493,14 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
 
       const topPadding = Math.max(effectiveMargin + 2, 5) + 6;
       let cursorY = labelTop + topPadding;
-      const maxNameLines = 2;
       const nameText = (item.name || "N/A").trim();
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor(20, 20, 20);
 
-      const nameLines = doc
-        .splitTextToSize(nameText, contentWidth - 2)
-        .slice(0, maxNameLines);
-      for (const line of nameLines) {
-        doc.text(line, centerX, cursorY, { align: "center" });
-        cursorY += 4.5;
-      }
+      const truncatedName = truncateToWidth(nameText, contentWidth - 2);
+      doc.text(truncatedName, centerX, cursorY, { align: "center" });
+      cursorY += 4.2;
 
       // Price - handle different product types
       let displayPrice = 0;
