@@ -275,7 +275,7 @@ export default {
           transactionId: props.transactionId,
           transactionType: props.transactionType,
           printerName: printer.name,
-          silent: false,
+          silent: true,
           receiptSettings: receiptSettingsPlain,
         });
 

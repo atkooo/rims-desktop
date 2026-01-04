@@ -16,7 +16,7 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
   // For thermal printers, prefer Electron print API for better quality control
   // pdf-to-printer may not handle grayscale/quality settings well for thermal printers
   const isThermalPrinter = thermalOptions.paperSize || thermalOptions.printDensity;
-  
+
   if (!isThermalPrinter) {
     // For non-thermal printers, try pdf-to-printer first
     try {
@@ -51,11 +51,10 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
         ptpError,
       );
     }
-  } else {
-    // For thermal printers, skip pdf-to-printer and use Electron print API directly
-    // This gives us better control over grayscale and quality settings
-    logger.info("Using Electron print API for thermal printer with quality optimization");
   }
+  // For thermal printers, skip pdf-to-printer and use Electron print API directly
+  // This gives us better control over grayscale and quality settings
+  logger.info("Using Electron print API for thermal printer with quality optimization");
 
   // Use Electron's webContents.print() method (primary for thermal, fallback for others)
   try {

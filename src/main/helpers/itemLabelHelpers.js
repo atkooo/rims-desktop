@@ -83,20 +83,20 @@ async function generateBarcodeLabel(itemId, options = {}) {
     // Set font
     doc.setFont("helvetica");
 
-    // Background color (light gray)
-    doc.setFillColor(245, 245, 245);
+    // Background color (white for thermal printers)
+    doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, labelWidth, labelHeight, "F");
 
     // Border
-    doc.setDrawColor(200, 200, 200);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(1);
     doc.rect(5, 5, labelWidth - 10, labelHeight - 10, "S");
 
     // Title block (align vertically centered)
     const maxNameWidth = labelWidth - 20;
-    const nameFontSize = 12;
-    const nameLineHeight = 14;
-    const priceFontSize = 11;
+    const nameFontSize = 10;
+    const nameLineHeight = 12;
+    const priceFontSize = 10;
     const priceLineHeight = 12;
     const sizeFontSize = 10;
     const sizeLineHeight = 12;
@@ -157,9 +157,9 @@ async function generateBarcodeLabel(itemId, options = {}) {
 
     // Draw name directly at contentTop (minimal space before)
     writeLine(nameLineHeight, gapAfterName, (y) => {
-      doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(nameFontSize);
-      doc.setTextColor(30, 30, 30);
+      doc.setTextColor(0, 0, 0);
       doc.text(itemNameText, labelWidth / 2, y, {
         align: "center",
         maxWidth: maxNameWidth,
@@ -167,9 +167,9 @@ async function generateBarcodeLabel(itemId, options = {}) {
     });
 
     writeLine(priceLineHeight, priceGapAfter, (y) => {
-      doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(priceFontSize);
-      doc.setTextColor(0, 100, 0);
+      doc.setTextColor(0, 0, 0);
       doc.text(
         formatCurrency(item.sale_price || item.rental_price_per_day || 0),
         labelWidth / 2,
@@ -184,13 +184,13 @@ async function generateBarcodeLabel(itemId, options = {}) {
       writeLine(sizeLineHeight, barcodeSpacing, (y) => {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(sizeFontSize);
-        doc.setTextColor(75, 85, 99);
+        doc.setTextColor(0, 0, 0);
         doc.text(`Ukuran: ${sizeLabel}`, labelWidth / 2, y, {
           align: "center",
           maxWidth: maxNameWidth,
         });
       });
-      doc.setTextColor(30, 30, 30);
+      doc.setTextColor(0, 0, 0);
     }
 
     // Barcode image - fixed size, centered vertically within remaining area
@@ -481,7 +481,7 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       // Background
       doc.setFillColor(255, 255, 255);
       doc.rect(0, labelTop, paperWidth, labelHeight, "F");
-      doc.setDrawColor(220, 220, 220);
+      doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
       doc.rect(
         effectiveMargin / 2,
@@ -494,9 +494,9 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       const topPadding = Math.max(effectiveMargin + 2, 5) + 6;
       let cursorY = labelTop + topPadding;
       const nameText = (item.name || "N/A").trim();
-      doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.setTextColor(20, 20, 20);
+      doc.setTextColor(0, 0, 0);
 
       const truncatedName = truncateToWidth(nameText, contentWidth - 2);
       doc.text(truncatedName, centerX, cursorY, { align: "center" });
@@ -511,9 +511,9 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       } else if (item.product_type === 'bundle') {
         displayPrice = item.price || item.rental_price_per_day || 0;
       }
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(0, 100, 0);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
       doc.text(formatCurrency(displayPrice), centerX, cursorY, {
         align: "center",
       });
@@ -524,7 +524,7 @@ async function generateBulkLabelsPDF(itemIdsOrItems, options = {}) {
       if (sizeLabel) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
-        doc.setTextColor(75, 75, 75);
+        doc.setTextColor(0, 0, 0);
         doc.text(`Ukuran: ${sizeLabel}`, centerX, cursorY, {
           align: "center",
         });
