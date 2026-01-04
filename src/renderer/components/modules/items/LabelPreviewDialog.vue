@@ -303,7 +303,7 @@ export default {
         await ipcRenderer.invoke("items:printBulkLabels", {
           items: itemsData,
           printerName: printer?.name || null,
-          silent: true,
+          silent: false,
         });
         visible.value = false;
       } catch (error) {

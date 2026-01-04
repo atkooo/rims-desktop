@@ -130,7 +130,7 @@
           <AppButton
             type="button"
             variant="primary"
-            :disabled="!openForm.openingBalance || openForm.openingBalance <= 0"
+            :disabled="openForm.openingBalance < 0"
             @click="showConfirmDialog = true"
           >
             Buka Kasir
@@ -469,11 +469,8 @@ export default {
     const confirmOpenSession = async () => {
       // Validasi dulu sebelum buka
       errors.value = {};
-      if (
-        !openForm.value.openingBalance ||
-        openForm.value.openingBalance <= 0
-      ) {
-        errors.value.openingBalance = "Saldo awal harus lebih dari 0";
+      if (openForm.value.openingBalance < 0) {
+        errors.value.openingBalance = "Saldo awal harus 0 atau lebih";
         showConfirmDialog.value = false;
         return;
       }
@@ -498,11 +495,8 @@ export default {
           throw new Error("User tidak ditemukan. Silakan login ulang.");
         }
 
-        if (
-          !openForm.value.openingBalance ||
-          openForm.value.openingBalance <= 0
-        ) {
-          errors.value.openingBalance = "Saldo awal harus lebih dari 0";
+        if (openForm.value.openingBalance < 0) {
+          errors.value.openingBalance = "Saldo awal harus 0 atau lebih";
           opening.value = false;
           return;
         }

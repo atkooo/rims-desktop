@@ -255,6 +255,7 @@ import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPic
 import { getStoredUser } from "@/services/auth";
 import { createStockReceipt, fetchBundleAvailability } from "@/services/stock";
 import { eventBus } from "@/utils/eventBus";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "StockReceiptPage",
@@ -267,6 +268,7 @@ export default {
     AccessoryPickerDialog,
   },
   setup() {
+    const { showSuccess, showError } = useNotification();
     const form = ref({
       type: null,
       bundleType: null,
@@ -435,10 +437,10 @@ export default {
       }
       loading.value = true;
 
-    try {
-      const payload = {
-        userId: getStoredUser()?.id || null,
-        notes: form.value.notes,
+      try {
+        const payload = {
+          userId: getStoredUser()?.id || null,
+          notes: form.value.notes,
           lines: lines.value.map((line) => ({
             type: line.type,
             referenceId: line.referenceId,
@@ -447,10 +449,12 @@ export default {
         };
         await createStockReceipt(payload);
         eventBus.emit("inventory:updated");
+        showSuccess("Penerimaan stok berhasil disimpan.");
         resetForm();
       } catch (error) {
-        errors.value.submit =
-          error.message || "Gagal menyimpan penerimaan stok.";
+        const message = error.message || "Gagal menyimpan penerimaan stok.";
+        errors.value.submit = message;
+        showError(message);
       } finally {
         loading.value = false;
       }

@@ -195,6 +195,7 @@ import AccessoryPickerDialog from "@/components/modules/accessories/AccessoryPic
 import { getStoredUser } from "@/services/auth";
 import { createStockReceipt } from "@/services/stock";
 import { eventBus } from "@/utils/eventBus";
+import { useNotification } from "@/composables/useNotification";
 
 export default {
   name: "StockReceiptDialog",
@@ -212,6 +213,7 @@ export default {
   },
   emits: ["update:modelValue", "saved"],
   setup(props, { emit }) {
+    const { showSuccess, showError } = useNotification();
     const showDialog = computed({
       get: () => props.modelValue,
       set: (value) => emit("update:modelValue", value),
@@ -341,10 +343,10 @@ export default {
       }
 
       loading.value = true;
-    try {
-      const payload = {
-        userId: getStoredUser()?.id || null,
-        notes: form.value.notes,
+      try {
+        const payload = {
+          userId: getStoredUser()?.id || null,
+          notes: form.value.notes,
           lines: lines.value.map((line) => ({
             type: line.type,
             referenceId: line.referenceId,
@@ -353,10 +355,13 @@ export default {
         };
         await createStockReceipt(payload);
         eventBus.emit("inventory:updated");
+        showSuccess("Penerimaan stok berhasil disimpan.");
         emit("saved");
         closeDialog();
       } catch (error) {
-        errors.value.submit = error.message || "Gagal menyimpan penerimaan stok.";
+        const message = error.message || "Gagal menyimpan penerimaan stok.";
+        errors.value.submit = message;
+        showError(message);
       } finally {
         loading.value = false;
       }

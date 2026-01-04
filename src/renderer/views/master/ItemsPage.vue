@@ -43,11 +43,7 @@
       <div class="filters">
         <select v-model="filters.category" class="filter-select">
           <option value="">Semua Kategori</option>
-          <option
-            v-for="category in categories"
-            :key="category.id"
-            :value="category.id"
-          >
+          <option v-for="category in categories" :key="category.id" :value="category.id">
             {{ category.name }}
           </option>
         </select>
@@ -73,23 +69,57 @@
           <option value="RENTED">Rented</option>
           <option value="MAINTENANCE">Maintenance</option>
         </select>
+
+        <div class="filter-group">
+          <div class="filter-range">
+            <input
+              :value="formatNumberInput(filters.salePriceMin)"
+              type="text"
+              inputmode="numeric"
+              placeholder="Min"
+              class="filter-input"
+              @input="handleSalePriceMinInput"
+            />
+            <span class="filter-separator">-</span>
+            <input
+              :value="formatNumberInput(filters.salePriceMax)"
+              type="text"
+              inputmode="numeric"
+              placeholder="Max"
+              class="filter-input"
+              @input="handleSalePriceMaxInput"
+            />
+          </div>
+        </div>
       </div>
 
+      <div class="table-meta">
+        <div class="price-summary">
+          <div class="price-summary-title">Rekap jumlah per harga jual</div>
+          <div v-if="priceSummary.length === 0" class="price-summary-empty">
+            Tidak ada data untuk diringkas.
+          </div>
+          <div v-else class="price-summary-list">
+            <span v-for="entry in priceSummary" :key="entry.key" class="price-summary-item">
+              {{ entry.label }}: {{ entry.quantity }} pcs
+            </span>
+          </div>
+        </div>
+        <div class="table-caption">
+          <span v-if="hasActiveFilters">
+            Menampilkan {{ filteredItems.length }} dari {{ totalItems }} item.
+          </span>
+          <span v-else>Total item: {{ totalItems }}.</span>
+        </div>
+      </div>
       <div class="table-container">
-        <AppTable
-          :columns="columns"
-          :rows="filteredItems"
-          :loading="loading"
-          :searchable-keys="[
-            'code',
-            'name',
-            'description',
-            'category_name',
-            'size_name',
-          ]"
-          row-key="id"
-          :default-page-size="10"
-        >
+        <AppTable :columns="columns" :rows="filteredItems" :loading="loading" :searchable-keys="[
+          'code',
+          'name',
+          'description',
+          'category_name',
+          'size_name',
+        ]" row-key="id" :default-page-size="10">
           <template #cell-code="{ row }">
             <a href="#" class="row-link" @click.prevent="handleViewDetail(row)">
               {{ row.code }}
@@ -104,53 +134,28 @@
             {{ row.category_name || "-" }}
           </template>
           <template #cell-status="{ row }">
-            <span
-              class="status-badge"
-              :class="getStatusBadge(row).class"
-            >
+            <span class="status-badge" :class="getStatusBadge(row).class">
               {{ getStatusBadge(row).label }}
             </span>
           </template>
           <template #actions="{ row }">
             <div class="action-menu-wrapper">
-              <button
-                type="button"
-                class="action-menu-trigger"
-                :data-item-id="row.id"
-                @click.stop="toggleActionMenu(row.id)"
-                :aria-expanded="openMenuId === row.id"
-              >
+              <button type="button" class="action-menu-trigger" :data-item-id="row.id"
+                @click.stop="toggleActionMenu(row.id)" :aria-expanded="openMenuId === row.id">
                 <Icon name="more-vertical" :size="18" />
               </button>
               <Teleport to="body">
                 <transition name="fade-scale">
-                  <div
-                    v-if="openMenuId === row.id"
-                    class="action-menu"
-                    :style="getMenuPosition(row.id)"
-                    @click.stop
-                  >
-                    <button
-                      type="button"
-                      class="action-menu-item"
-                      @click="handleViewDetail(row)"
-                    >
+                  <div v-if="openMenuId === row.id" class="action-menu" :style="getMenuPosition(row.id)" @click.stop>
+                    <button type="button" class="action-menu-item" @click="handleViewDetail(row)">
                       <Icon name="eye" :size="16" />
                       <span>Detail</span>
                     </button>
-                    <button
-                      type="button"
-                      class="action-menu-item"
-                      @click="handleEdit(row)"
-                    >
+                    <button type="button" class="action-menu-item" @click="handleEdit(row)">
                       <Icon name="pencil" :size="16" />
                       <span>Edit</span>
                     </button>
-                    <button
-                      type="button"
-                      class="action-menu-item danger"
-                      @click="promptDelete(row)"
-                    >
+                    <button type="button" class="action-menu-item danger" @click="promptDelete(row)">
                       <Icon name="trash" :size="16" />
                       <span>Hapus</span>
                     </button>
@@ -163,14 +168,8 @@
       </div>
     </section>
 
-    <AppDialog
-      v-model="showDeleteConfirm"
-      title="Hapus Item"
-      confirm-text="Hapus"
-      confirm-variant="danger"
-      :loading="deleteLoading"
-      @confirm="confirmDelete"
-    >
+    <AppDialog v-model="showDeleteConfirm" title="Hapus Item" confirm-text="Hapus" confirm-variant="danger"
+      :loading="deleteLoading" @confirm="confirmDelete">
       <p>
         Yakin ingin menghapus item
         <strong>{{ itemToDelete?.name }}</strong> ({{ itemToDelete?.code }})?
@@ -183,11 +182,7 @@
 
     <ItemForm v-model="showForm" :edit-data="itemToEdit" @saved="handleFormSaved" />
 
-    <BulkImportDialog
-      v-model="showBulkImport"
-      type="items"
-      @imported="handleBulkImported"
-    />
+    <BulkImportDialog v-model="showBulkImport" type="items" @imported="handleBulkImported" />
   </div>
 </template>
 
@@ -197,6 +192,7 @@ import { useRouter } from "vue-router";
 import { useItemStore } from "@/store/items";
 import { ITEM_TYPE } from "@shared/constants";
 import { useItemStatus } from "@/composables/useItemStatus";
+import { useNumberFormat } from "@/composables/useNumberFormat";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppTable from "@/components/ui/AppTable.vue";
 import AppDialog from "@/components/ui/AppDialog.vue";
@@ -220,6 +216,7 @@ export default {
     const router = useRouter();
     const itemStore = useItemStore();
     const { getStatusBadge } = useItemStatus();
+    const { formatNumberInput, parseNumberInput } = useNumberFormat();
     const loading = ref(false);
     const openMenuId = ref(null);
     const menuPositions = ref({});
@@ -236,6 +233,8 @@ export default {
       size: "",
       type: "",
       status: "",
+      salePriceMin: "",
+      salePriceMax: "",
     });
 
     // Categories and sizes
@@ -252,6 +251,10 @@ export default {
 
     // Format helper
     const formatText = (value) => value || "-";
+    const formatCurrencyOrDash = (value) => {
+      if (value === null || value === undefined || Number(value) <= 0) return "-";
+      return formatCurrency(value);
+    };
 
     // Table columns - simplified
     const columns = [
@@ -274,6 +277,13 @@ export default {
         label: "Stok",
         sortable: true,
         align: "center",
+      },
+      {
+        key: "sale_price",
+        label: "Harga Jual",
+        sortable: true,
+        align: "right",
+        format: formatCurrencyOrDash,
       },
       {
         key: "status",
@@ -306,7 +316,60 @@ export default {
         result = result.filter((item) => item.status === filters.value.status);
       }
 
+      const hasMinPrice = filters.value.salePriceMin !== "";
+      const hasMaxPrice = filters.value.salePriceMax !== "";
+      if (hasMinPrice || hasMaxPrice) {
+        const minPrice = hasMinPrice ? Number(filters.value.salePriceMin) : null;
+        const maxPrice = hasMaxPrice ? Number(filters.value.salePriceMax) : null;
+
+        result = result.filter((item) => {
+          const salePriceRaw = item.sale_price;
+          const salePrice = Number(salePriceRaw);
+          const hasSalePrice = salePriceRaw !== null && salePriceRaw !== undefined && salePrice > 0;
+          if (!hasSalePrice) return false;
+          if (minPrice !== null && !Number.isNaN(minPrice) && salePrice < minPrice) {
+            return false;
+          }
+          if (maxPrice !== null && !Number.isNaN(maxPrice) && salePrice > maxPrice) {
+            return false;
+          }
+          return true;
+        });
+      }
+
       return result;
+    });
+
+    const totalItems = computed(() => itemStore.items.length);
+    const hasActiveFilters = computed(() =>
+      Object.values(filters.value).some((value) => value !== ""),
+    );
+    const priceSummary = computed(() => {
+      if (!filteredItems.value.length) return [];
+
+      const summaryMap = new Map();
+      for (const item of filteredItems.value) {
+        const salePrice = Number(item.sale_price || 0);
+        const quantity = Number(item.stock_quantity || 0);
+        const key = salePrice > 0 ? `price-${salePrice}` : "price-empty";
+        const current = summaryMap.get(key);
+        if (current) {
+          current.quantity += quantity;
+        } else {
+          summaryMap.set(key, {
+            key,
+            price: salePrice,
+            label: salePrice > 0 ? formatCurrency(salePrice) : "Harga jual belum diisi",
+            quantity,
+          });
+        }
+      }
+
+      return Array.from(summaryMap.values()).sort((a, b) => {
+        if (a.price === 0 && b.price !== 0) return 1;
+        if (a.price !== 0 && b.price === 0) return -1;
+        return a.price - b.price;
+      });
     });
 
     const itemsAvailable = computed(
@@ -325,6 +388,24 @@ export default {
     );
 
     // Methods
+    const handleSalePriceMinInput = (event) => {
+      const value = event.target.value;
+      if (value === "") {
+        filters.value.salePriceMin = "";
+        return;
+      }
+      filters.value.salePriceMin = parseNumberInput(value);
+    };
+
+    const handleSalePriceMaxInput = (event) => {
+      const value = event.target.value;
+      if (value === "") {
+        filters.value.salePriceMax = "";
+        return;
+      }
+      filters.value.salePriceMax = parseNumberInput(value);
+    };
+
     const handleViewDetail = (item) => {
       openMenuId.value = null;
       router.push(`/master/items/${item.id}`);
@@ -377,7 +458,7 @@ export default {
       } catch (err) {
         alert(
           err.message ||
-            "Gagal menghapus item. Pastikan item tidak digunakan dalam transaksi.",
+          "Gagal menghapus item. Pastikan item tidak digunakan dalam transaksi.",
         );
       } finally {
         deleteLoading.value = false;
@@ -447,6 +528,9 @@ export default {
       filters,
       columns,
       filteredItems,
+      totalItems,
+      hasActiveFilters,
+      priceSummary,
       itemsAvailable,
       itemsRented,
       totalValue,
@@ -471,6 +555,9 @@ export default {
       showBulkImport,
       handleBulkImported,
       getStatusBadge,
+      formatNumberInput,
+      handleSalePriceMinInput,
+      handleSalePriceMaxInput,
     };
   },
 };
@@ -494,6 +581,54 @@ export default {
   margin-top: 1.5rem;
 }
 
+.table-meta {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 55%, #f8fafc 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.table-caption {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.price-summary {
+  color: #374151;
+}
+
+.price-summary-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.price-summary-empty {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.price-summary-list {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.price-summary-item {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #e0e7ff;
+}
+
 .filter-select {
   padding: 0.5rem;
   border: 1px solid #e5e7eb;
@@ -502,6 +637,46 @@ export default {
   min-width: 150px;
   height: 40px;
   font-size: 0.875rem;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 40px;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 40px;
+  white-space: nowrap;
+}
+
+.filter-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 40px;
+}
+
+.filter-input {
+  padding: 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  min-width: 110px;
+  height: 40px;
+  font-size: 0.875rem;
+  line-height: 40px;
+  box-sizing: border-box;
+}
+
+.filter-separator {
+  color: #9ca3af;
+  font-weight: 600;
+  line-height: 40px;
 }
 
 .row-link {
