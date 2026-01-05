@@ -10,8 +10,8 @@ const { getDataDir } = require("../helpers/pathUtils");
 const { Image } = require("canvas");
 
 const PAPER_FEED_SPACING = {
-  SMALL: 12,
-  STANDARD: 15,
+  SMALL: 20,
+  STANDARD: 24,
 };
 
 const LOGO_BOTTOM_SPACING = 6;
