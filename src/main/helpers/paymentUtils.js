@@ -1,6 +1,6 @@
 /**
  * Helper functions for payment queries
- * Supports both old payments table and new split tables (sales_payments, rental_payments)
+ * Uses split tables (sales_payments, rental_payments)
  */
 
 const database = require("./database");
@@ -15,7 +15,7 @@ function getPaymentTable(transactionType) {
 }
 
 /**
- * Query payments with fallback to old payments table if new tables don't exist
+ * Query payments for a transaction
  * @param {string} transactionType - 'rental' or 'sale'
  * @param {number} transactionId - Transaction ID
  * @returns {Promise<Array>} Array of payments
