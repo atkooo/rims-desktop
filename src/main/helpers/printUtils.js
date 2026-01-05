@@ -2,6 +2,7 @@
  * Utility functions for printing PDFs
  */
 const { BrowserWindow, shell } = require("electron");
+const { pathToFileURL } = require("url");
 const logger = require("./logger");
 
 /**
@@ -70,9 +71,9 @@ async function printPDF(filePath, printerName, silent = false, thermalOptions = 
       });
 
       try {
-        // Load PDF file using file:// protocol
-        const normalizedPath = filePath.replace(/\\/g, "/");
-        await printWindow.loadURL(`file://${normalizedPath}`);
+        // Load PDF file using a properly formatted file:// URL (handles Windows paths)
+        const pdfUrl = pathToFileURL(filePath).toString();
+        await printWindow.loadURL(pdfUrl);
 
         // Wait for PDF to load
         await new Promise((resolve) => {
