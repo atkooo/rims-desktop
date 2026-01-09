@@ -146,6 +146,7 @@ export default {
       ],
       finance: [
         { value: "payments", label: "Laporan Pembayaran", hasDate: true },
+        { value: "net-profit", label: "Laporan Laba Bersih", hasDate: true },
       ],
       stock: [
         { value: "stock-items", label: "Stok Items", hasDate: false },

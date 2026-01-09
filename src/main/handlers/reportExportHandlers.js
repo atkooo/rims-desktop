@@ -18,6 +18,7 @@ const reportTypeMap = {
   "daily-revenue": "reports:getDailyRevenue",
   "revenue-by-cashier": "reports:getRevenueByCashier",
   payments: "reports:getPayments",
+  "net-profit": "reports:getNetProfitReport",
   "stock-items": "reports:getStockItems",
   "stock-accessories": "reports:getStockAccessories",
   "stock-bundles": "reports:getStockBundles",
@@ -171,6 +172,8 @@ function setupReportExportHandlers() {
     } else if (reportType === "payments") {
       dateColumn = "payment_date";
     } else if (reportType === "sales-transactions") {
+      dateColumn = "sale_date";
+    } else if (reportType === "net-profit") {
       dateColumn = "sale_date";
     } else if (reportType === "rental-transactions") {
       dateColumn = "rental_date";
@@ -418,6 +421,7 @@ function setupReportExportHandlers() {
       "daily-revenue": reportQueries.getDailyRevenueQuery,
       "revenue-by-cashier": reportQueries.getRevenueByCashierQuery,
       payments: reportQueries.getPaymentsQuery,
+      "net-profit": reportQueries.getNetProfitReportQuery,
       "stock-items": reportQueries.getStockItemsQuery,
       "stock-accessories": reportQueries.getStockAccessoriesQuery,
       "stock-bundles": reportQueries.getStockBundlesQuery,

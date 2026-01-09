@@ -59,6 +59,13 @@ function setupReportViewHandlers() {
     "payments report",
   );
 
+  // Net Profit Report
+  register(
+    "reports:getNetProfitReport",
+    reportQueries.getNetProfitReportQuery,
+    "net profit report",
+  );
+
   // Transactions by Customer Report
   register(
     "reports:getTransactionsByCustomer",

@@ -340,6 +340,37 @@ function getFinanceReportQuery() {
   `;
 }
 
+function getNetProfitReportQuery() {
+  return `
+    SELECT
+      st.transaction_code AS kode_transaksi,
+      st.sale_date AS tanggal_penjualan,
+      c.name AS nama_pelanggan,
+      u.full_name AS nama_kasir,
+      CASE 
+        WHEN std.item_id IS NOT NULL THEN 'Item'
+        WHEN std.accessory_id IS NOT NULL THEN 'Aksesoris'
+        ELSE 'Unknown'
+      END AS tipe_produk,
+      COALESCE(i.code, a.code) AS kode_produk,
+      COALESCE(i.name, a.name) AS nama_produk,
+      std.quantity AS jumlah,
+      std.sale_price AS harga_jual,
+      COALESCE(i.purchase_price, a.purchase_price, 0) AS harga_beli,
+      (std.sale_price - COALESCE(i.purchase_price, a.purchase_price, 0)) AS laba_per_unit,
+      (std.sale_price - COALESCE(i.purchase_price, a.purchase_price, 0)) * std.quantity AS laba_total,
+      std.subtotal AS subtotal_penjualan,
+      COALESCE(st.status, 'pending') AS status
+    FROM sales_transactions st
+    JOIN sales_transaction_details std ON std.sales_transaction_id = st.id
+    LEFT JOIN items i ON std.item_id = i.id
+    LEFT JOIN accessories a ON std.accessory_id = a.id
+    LEFT JOIN customers c ON st.customer_id = c.id
+    LEFT JOIN users u ON st.user_id = u.id
+    ORDER BY st.sale_date DESC, st.transaction_code DESC
+  `;
+}
+
 function getStockReportQuery() {
   return `
     SELECT
@@ -625,6 +656,7 @@ module.exports = {
   getRevenueByCashierQuery,
   getPaymentsQuery,
   getFinanceReportQuery,
+  getNetProfitReportQuery,
   getStockReportQuery,
   getStockItemsQuery,
   getStockAccessoriesQuery,
